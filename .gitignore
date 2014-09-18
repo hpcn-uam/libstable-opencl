@@ -13,3 +13,4 @@ data_*.txt
 stable_performance
 stable_precision
 errlog.txt
+results/*
