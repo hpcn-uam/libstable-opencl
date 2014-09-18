@@ -48,6 +48,11 @@ fittest: fittest.o
 	$(CC) $(LDFLAGS) $< ../stable/libstable.a -o $@ $(LIBS)
 	@echo
 
+example: example.o
+	@echo -ne '\n$@:\n\t'
+	$(CC) $(LDFLAGS) $< ../stable/libstable.a -o $@ $(LIBS)
+	@echo
+
 %.o : %.c
 	@echo -ne '$@:\t'
 	$(CC) -c $(CFLAGS) $< -o $@
