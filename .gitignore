@@ -1,3 +1,15 @@
 *.o
 *.a
 *.sublime-*
+example
+fittest
+stable_array
+stable_test
+cachegrind.out.*
+callgrind.out.*
+cg_annotated.*
+data_*.txt
+*.so
+stable_performance
+stable_precision
+errlog.txt
