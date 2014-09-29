@@ -696,7 +696,10 @@ double stable_pdf_point_STABLE(StableDist *dist, const double x, double *err)
 #endif
         return pdf / dist->sigma;
     }
-    else if (xxi < 0) /* pdf(x<xi,a,b) = pdf(-x,a,-b)*/
+    
+    /* No tenemos la suerte de x ~ ξ, toca usar la otra expresión. */ 
+
+    if (xxi < 0) /* pdf(x<xi,a,b) = pdf(-x,a,-b)*/
     {
         xxi = -xxi;
         dist->theta0_ = -dist->theta0; /*theta0(a,-b)=-theta0(a,b)*/
@@ -731,6 +734,8 @@ double stable_pdf_point_STABLE(StableDist *dist, const double x, double *err)
     //  else
     //    {
     //    }
+
+    /* TODO: ¿De dónde sale dist->c2_part? */
 
     pdf = dist->c2_part / xxi * pdf;
 
