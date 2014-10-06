@@ -1,7 +1,7 @@
 #ifndef OPENCLENV_H
 #define OPENCLENV_H
 
-#include <OpenCL/opencl.h>
+#include <CL/opencl.h>
 
 struct openclenv
 {

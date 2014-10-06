@@ -4,6 +4,7 @@ obj
 lib
 
 # Data files and Sublime project.
+*.sublime-workspace
 cachegrind.out.*
 callgrind.out.*
 cg_annotated.*

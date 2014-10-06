@@ -1,12 +1,12 @@
 CC = gcc
 CLC = openclc
-CLC_ARCH = gpu_64
-CFLAGS = -Wall -framework OpenCL -D_GNU_SOURCE -DHAVE_INLINE -fPIC
+CLC_ARCH = gpu_32
+CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC
 CLFLAGS = -emit-llvm -c -arch $(CLC_ARCH)
 DEBUG_CFLAGS = -O0 -ggdb -DDEBUG -ftrapv 
 RELEASE_CFLAGS = -O3 -march=native -ffast-math
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -pg -static-libgcc
-E_LIBS = -lgsl -pthread -lgslcblas -lm -L/opt/local/lib/
+E_LIBS = -static $(shell pkg-config --libs gsl) -lOpenCL -pthread -L/opt/local/lib/
 
 PROJECT_NAME = libstable
 
