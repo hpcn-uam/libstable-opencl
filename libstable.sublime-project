@@ -2,7 +2,7 @@
 	"folders":
 	[
 		{
-			"path": "/Volumes/Macintosh HD/Users/gjulian/Dropbox/HPCN/cuda/libstable",
+			"path": "./",
 			"folder_exclude_patterns": ["bin", "obj", "pcap", "doc"]
 		}
 	],
