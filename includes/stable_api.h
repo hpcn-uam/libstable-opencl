@@ -38,6 +38,8 @@
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_vector.h>
 
+#include "opencl_integ.h"
+
 #define TINY 1e-50
 #define EPS 2.2204460492503131E-16
 
@@ -109,7 +111,8 @@ enum
     STABLE_QNG,
     STABLE_QAG1,
     STABLE_QAG5,
-    STABLE_VECT
+    STABLE_VECT,
+    STABLE_OCL
   };
 
 
@@ -168,6 +171,8 @@ struct StableDistStruct
 
     /* gsl random numbers generator */
     gsl_rng * gslrand;
+
+    struct stable_clinteg cli;
   };
 
 typedef struct StableDistStruct StableDist;

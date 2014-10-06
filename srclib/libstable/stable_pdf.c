@@ -502,7 +502,7 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 
     stable_integration(dist, integrando, theta[1], theta[2],
                        absTOL, relTOL, IT_MAX,
-                       &pdf_aux, &err_aux, STABLE_QNG);
+                       &pdf_aux, &err_aux, STABLE_OCL);
     pdf1 = fabs(pdf_aux);
     *err = err_aux * err_aux;
 
@@ -513,7 +513,7 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 
     stable_integration(dist, integrando, theta[2], theta[3],
                        max(pdf1 * relTOL, absTOL) * 0.25, relTOL, IT_MAX,
-                       &pdf_aux, &err_aux, STABLE_QAG2);
+                       &pdf_aux, &err_aux, STABLE_OCL);
     pdf2 = fabs(pdf_aux);
     *err += err_aux * err_aux;
 #ifdef DEBUG
@@ -523,7 +523,7 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 
     stable_integration(dist, integrando, theta[3], theta[4],
                        max((pdf2 + pdf1)*relTOL, absTOL) * 0.25, relTOL, IT_MAX,
-                       &pdf_aux, &err_aux, STABLE_QAG1);
+                       &pdf_aux, &err_aux, STABLE_OCL);
     pdf3 = fabs(pdf_aux);
     *err += err_aux * err_aux;
 #ifdef DEBUG

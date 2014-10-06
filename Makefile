@@ -1,5 +1,8 @@
 CC = gcc
-CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC
+CLC = openclc
+CLC_ARCH = gpu_64
+CFLAGS = -Wall -framework OpenCL -D_GNU_SOURCE -DHAVE_INLINE -fPIC
+CLFLAGS = -emit-llvm -c -arch $(CLC_ARCH)
 DEBUG_CFLAGS = -O0 -ggdb -DDEBUG -ftrapv 
 RELEASE_CFLAGS = -O3 -march=native -ffast-math
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -pg -static-libgcc
@@ -17,7 +20,7 @@ BINDIR = bin
 DOCDIR = doc
 LIBDIR = lib
 LIBSRCDIR = srclib
-
+CLDIR = opencl
 TARGETS = example fittest stable_array \
 			stable_test stable_performance stable_precision
 INCLUDES = -I./includes/
@@ -34,6 +37,9 @@ LIBS +=	$(addsuffix .so, $(LIB_NAMES))
 LIB_DEPS := $(addsuffix .deps, $(addprefix $(OBJDIR)/., $(LIB_NAMES)))
 LIB_OBJDIRS := $(foreach conf, $(CONFS), $(addprefix $(OBJDIR)/$(conf)/$(LIBSRCDIR)/, $(LIB_NAMES)))
 LIB_OUTDIRS := $(addprefix $(LIBDIR)/, $(CONFS))
+
+CL_SRCS := $(wildcard $(CLDIR)/*.cl)
+CL_OBJS := $(patsubst $(CLDIR)/%.cl, $(OBJDIR)/%.bc, $(CL_SRCS))
 
 TEST_SRCS := $(wildcard $(TESTDIR)/*.c)
 TEST_OBJS := $(patsubst %.c,%.o, $(TEST_SRCS))
@@ -118,10 +124,10 @@ $(OBJDIR)/.conf_flags.mk: Makefile | $(OBJDIR)
 			echo "$(BINDIR)/$$c/$$t: LDFLAGS += \$$(""$$cnf""_LDFLAGS)" >> $@; \
 			echo "$(BINDIR)/$$c/$$t: \$$(addprefix $(OBJDIR)/$$c/, \$$(OBJS_NOMAIN)) $(OBJDIR)/$$c/$(SRCDIR)/$$t.o $(addprefix $(LIBDIR)/$$c/, $(LIBS))" >> $@; \
 		done; \
-		echo "$$c: $(addprefix $(BINDIR)/$$c/, $(TARGETS))" >> $@; \
+		echo "$$c: $(addprefix $(BINDIR)/$$c/, $(TARGETS)) $(CL_OBJS)" >> $@; \
 	done
 	@for t in $(TARGETS); do \
-		echo "$$t: $(BINDIR)/$(DEFAULT_CONF)/$$t" >> $@; \
+		echo "$$t: $(BINDIR)/$(DEFAULT_CONF)/$$t $(CL_OBJS)" >> $@; \
 	done
 
 
@@ -181,6 +187,11 @@ $(LIBDIR)/%.so: | $(LIBDIR)
 $(OBJDIR)/%.o: | $(OBJDIR) depend configs
 	@echo "$< -> $@"
 	@$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+## OpenCL compilation
+$(OBJDIR)/%.bc: $(CLDIR)/%.cl Makefile
+	@echo "$< - > $@"
+	@$(CLC) $(CLFLAGS) $< -o $@
 
 ## Executable
 
