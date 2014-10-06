@@ -1,0 +1,21 @@
+{
+	"folders":
+	[
+		{
+			"path": "/Volumes/Macintosh HD/Users/gjulian/Dropbox/HPCN/cuda/libstable",
+			"folder_exclude_patterns": ["bin", "obj", "pcap", "doc"]
+		}
+	],
+	"settings": 
+	{
+		"sublimeclang_options":
+    	[
+    		"-I${folder:${project_path:libstable.sublime-project}}/includes",
+    		"-Wall",
+    		"-pedantic",
+    		"-std=c99",
+    		"-DDEBUG",
+    		"-D_GNU_SOURCE"
+       	]
+	}
+}
