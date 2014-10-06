@@ -33,7 +33,7 @@ int stable_clinteg_init(struct stable_clinteg *cli)
         return -1;
     }
 
-    if (opencl_initenv(&cli->env, "obj/stable_pdf.bc", "stable_pdf"))
+    if (opencl_initenv(&cli->env, "opencl/stable_pdf.cl", "stable_pdf"))
     {
         fprintf(stderr, "[Stable-OpenCl] OpenCL environment failure.\n");
         return -1;

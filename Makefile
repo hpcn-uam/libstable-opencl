@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 CLC = openclc
 CLC_ARCH = gpu_32
 CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC
@@ -6,7 +6,7 @@ CLFLAGS = -emit-llvm -c -arch $(CLC_ARCH)
 DEBUG_CFLAGS = -O0 -ggdb -DDEBUG -ftrapv 
 RELEASE_CFLAGS = -O3 -march=native -ffast-math
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -pg -static-libgcc
-E_LIBS = -static $(shell pkg-config --libs gsl) -lOpenCL -pthread -L/opt/local/lib/
+E_LIBS = $(shell pkg-config --libs gsl) -lOpenCL -pthread -L/opt/local/lib/
 
 PROJECT_NAME = libstable
 
@@ -124,7 +124,7 @@ $(OBJDIR)/.conf_flags.mk: Makefile | $(OBJDIR)
 			echo "$(BINDIR)/$$c/$$t: LDFLAGS += \$$(""$$cnf""_LDFLAGS)" >> $@; \
 			echo "$(BINDIR)/$$c/$$t: \$$(addprefix $(OBJDIR)/$$c/, \$$(OBJS_NOMAIN)) $(OBJDIR)/$$c/$(SRCDIR)/$$t.o $(addprefix $(LIBDIR)/$$c/, $(LIBS))" >> $@; \
 		done; \
-		echo "$$c: $(addprefix $(BINDIR)/$$c/, $(TARGETS)) $(CL_OBJS)" >> $@; \
+		echo "$$c: $(addprefix $(BINDIR)/$$c/, $(TARGETS))" >> $@; \
 	done
 	@for t in $(TARGETS); do \
 		echo "$$t: $(BINDIR)/$(DEFAULT_CONF)/$$t $(CL_OBJS)" >> $@; \

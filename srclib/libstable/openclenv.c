@@ -6,7 +6,7 @@
 #define USE_GPU 1
 #endif
 
-#define BUILD_LOG_SIZE 32000
+#define MAX_OPENCL_PLATFORMS 5
 
 #include <stdio.h>
 #include <string.h>
@@ -19,6 +19,27 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
     size_t pathlen = strlen(bitcode_path);
     char *build_log;
     size_t build_log_size;
+    cl_platform_id platforms[MAX_OPENCL_PLATFORMS];
+    cl_uint platform_num;
+    int i;
+    char version[500], name[500], vendor[500];
+
+    err = clGetPlatformIDs(MAX_OPENCL_PLATFORMS, platforms, &platform_num);
+
+    if(err)
+    {
+        err_msg = "clGetPlatformIDs";
+        goto error;
+    }
+
+    printf("[Stable-OpenCL] Available platforms: %d\n", platform_num);
+    for(i = 0; i < platform_num; i++)
+    {
+        clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
+        clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, 500, version, NULL);
+        clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, 500, vendor, NULL);
+        printf("[Stable-OpenCL] %d: %s. Version %s. Vendor %s", i, name, version, vendor);
+    }
 
     err = clGetDeviceIDs(NULL, USE_GPU ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &(env->device), NULL);
 
@@ -46,8 +67,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    env->program = clCreateProgramWithBinary(env->context, 1, &env->device, &pathlen,
-                   (const unsigned char **)&bitcode_path, NULL, &err);
+    env->program = clCreateProgramWithSource(env->context, 1, (const char **)&bitcode_path, &pathlen, &err);
 
     if (err)
     {
@@ -79,7 +99,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
             if (log_err)
                 printf("[Stable-OpenCL] Couldn't get build log: %s\n", opencl_strerr(log_err));
             else
-                printf("[Stable-OpenCL] Build log (size %lu):\n%s\n", build_log_size, build_log);
+                printf("[Stable-OpenCL] Build log (size %u):\n%s\n", build_log_size, build_log);
         }
     }
 
