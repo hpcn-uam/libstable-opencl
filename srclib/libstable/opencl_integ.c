@@ -4,7 +4,8 @@
 #include <stdio.h>
 
 
-struct stable_info {
+struct stable_info
+{
     double beta_;
     double k1;
     double xxipow;
@@ -33,8 +34,11 @@ int stable_clinteg_init(struct stable_clinteg *cli)
         return -1;
     }
 
-    if (opencl_initenv(&cli->env, "../obj/stable_pdf.cl", "stable_pdf"))
+    if (opencl_initenv(&cli->env, "opencl/stable_pdf.cl", "stable_pdf"))
+    {
+        fprintf(stderr, "[Stable-OpenCl] OpenCL environment failure.\n");
         return -1;
+    }
 
     cli->h_gauss = (double *) calloc(cli->subdivisions, sizeof(double));
     cli->h_kronrod = (double *) calloc(cli->subdivisions, sizeof(double));
@@ -49,8 +53,8 @@ int stable_clinteg_init(struct stable_clinteg *cli)
     return 0;
 }
 
-double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, double epsabs, double epsrel, unsigned short limit,
-                   double *result, double *abserr, double beta_, double k1, double xxipow)
+double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, double epsabs, double epsrel, unsigned short limit,
+                                double *result, double *abserr, double beta_, double k1, double xxipow)
 {
     cl_int err = 0;
     size_t work_threads;
@@ -62,16 +66,19 @@ double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
     h_args.ibegin = a;
     h_args.iend = b;
 
-    cl_mem gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY,
+    fprintf(stderr, "[Stable-OpenCL] Integration begin.\n");
+
+    cl_mem gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
                                   sizeof(double) * cli->subdivisions, NULL, &err);
-    cl_mem kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY,
+    cl_mem kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
                                     sizeof(double) * cli->subdivisions, NULL, &err);
-    cl_mem args = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY, sizeof(struct stable_info)
-                                   , &h_args, &err);
+    cl_mem args = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, sizeof(struct stable_info)
+                                 , &h_args, &err);
 
     if (!gauss || !kronrod || !args)
     {
-        fprintf(stderr, "[Stable-OpenCl] Buffer creation failed with code %d\n", err);
+        fprintf(stderr, "[Stable-OpenCl] Buffer creation failed with code %d: %s\n", err, opencl_strerr(err));
+        fprintf(stderr, "[Stable-OpenCl] Pointers gauss, kronrod, args: %p, %p, %p\n", gauss, kronrod, args);
         goto cleanup;
     }
 
@@ -97,10 +104,10 @@ double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
         goto cleanup;
     }
 
-    err |= clEnqueueReadBuffer(cli->env.queue, gauss, CL_TRUE, 0, sizeof(double) * cli->subdivisions, 
-        cli->h_gauss, 0, NULL, NULL);
-    err |= clEnqueueReadBuffer(cli->env.queue, kronrod, CL_TRUE, 0, sizeof(double) * cli->subdivisions, 
-        cli->h_kronrod, 0, NULL, NULL);
+    err |= clEnqueueReadBuffer(cli->env.queue, gauss, CL_TRUE, 0, sizeof(double) * cli->subdivisions,
+                               cli->h_gauss, 0, NULL, NULL);
+    err |= clEnqueueReadBuffer(cli->env.queue, kronrod, CL_TRUE, 0, sizeof(double) * cli->subdivisions,
+                               cli->h_kronrod, 0, NULL, NULL);
 
     if (err)
     {
@@ -117,6 +124,8 @@ cleanup:
     if (gauss) clReleaseMemObject(gauss);
     if (kronrod) clReleaseMemObject(kronrod);
 
+    fprintf(stderr, "[Stable-OpenCl] Integration end.\n");
+
     return err;
 }
 
@@ -131,6 +140,8 @@ static int _stable_set_results(struct stable_clinteg *cli)
         kronrod_sum += cli->h_kronrod[i];
         cli->subinterval_errors[i] = cli->h_gauss[i] - cli->h_kronrod[i];
     }
+
+    fprintf(stderr, "[Stable-OpenCl] Results set: gauss_sum = %.3f, kronrod_sum = %.3f\n", gauss_sum, kronrod_sum);
 
     cli->result = kronrod_sum;
     cli->abs_error = kronrod_sum - gauss_sum;

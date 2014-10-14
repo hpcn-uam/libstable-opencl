@@ -38,7 +38,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
         clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, 500, version, NULL);
         clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, 500, vendor, NULL);
-        printf("[Stable-OpenCL] %d: %s. Version %s. Vendor %s", i, name, version, vendor);
+        printf("[Stable-OpenCL] %d: %s. Version %s. Vendor %s\n", i, name, version, vendor);
     }
 
     err = clGetDeviceIDs(NULL, USE_GPU ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &(env->device), NULL);
@@ -99,7 +99,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
             if (log_err)
                 printf("[Stable-OpenCL] Couldn't get build log: %s\n", opencl_strerr(log_err));
             else
-                printf("[Stable-OpenCL] Build log (size %u):\n%s\n", build_log_size, build_log);
+                printf("[Stable-OpenCL] Build log (size %zu):\n%s\n", build_log_size, build_log);
         }
     }
 
