@@ -11,6 +11,8 @@
 		"sublimeclang_options":
     	[
     		"-I${folder:${project_path:libstable.sublime-project}}/includes",
+    		"-I/System/Library/Frameworks/OpenCL.framework/Headers",
+    		"-I/opt/local/include/",
     		"-Wall",
     		"-pedantic",
     		"-std=c99",
