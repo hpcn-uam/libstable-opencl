@@ -1,0 +1,36 @@
+#!/bin/bash
+
+tbold=$(tput bold)
+treset=$(tput sgr0)
+tred=$(tput setaf 1)
+tgreen=$(tput setaf 2)
+tyellow=$(tput setaf 3)
+host=gjulian@nrg.ii.uam.es
+function echob()
+{
+	echo ${tbold}$@${treset}
+}
+
+function remote_make()
+{
+	path=$1
+	name=$2
+
+
+	out=$(ssh $host "cd $path; make" 2>&1)
+	retval=$?
+	echo "$out" | ./hilite.sh -f red [Ee]rror | ./hilite.sh -f yellow warning
+
+	if [ $retval -ne 0 ]; then
+		echob ${tred}Compilation failed.
+		exit 1
+	fi
+
+	echob ${tgreen}$name is compiling.
+}
+
+echob "Syncing files..."
+rsync -avtP --exclude=.git --exclude=data --exclude=results ./ $host:/home/gjulian/libstable || (echo ${tred}Sync failed.${tnorm} && exit 1)
+echob "Synced. Remoting to compile..."
+
+remote_make /home/gjulian/libstable Library
