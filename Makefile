@@ -23,7 +23,7 @@ LIBSRCDIR = srclib
 CLDIR = opencl
 TARGETS = example fittest stable_array \
 			stable_test stable_performance stable_precision
-INCLUDES = -I./includes/
+INCLUDES = -I./includes/ -I/System/Library/Frameworks/OpenCL.framework/Headers -I/opt/local/include/
 
 INCS := $(wildcard $(INCDIR)/*.h)
 SRCS := $(wildcard $(SRCDIR)/*.c)
