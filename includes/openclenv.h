@@ -1,7 +1,13 @@
 #ifndef OPENCLENV_H
 #define OPENCLENV_H
 
+#ifdef __LINUX__
 #include <CL/opencl.h>
+#endif
+
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#endif
 
 struct openclenv
 {

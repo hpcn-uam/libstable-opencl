@@ -6,7 +6,7 @@ CLFLAGS = -emit-llvm -c -arch $(CLC_ARCH)
 DEBUG_CFLAGS = -O0 -ggdb -DDEBUG -ftrapv 
 RELEASE_CFLAGS = -O3 -march=native -ffast-math
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -pg -static-libgcc
-E_LIBS = $(shell pkg-config --libs gsl) -lOpenCL -pthread -L/opt/local/lib/
+E_LIBS = $(shell pkg-config --libs gsl) -pthread
 
 PROJECT_NAME = libstable
 
@@ -23,7 +23,7 @@ LIBSRCDIR = srclib
 CLDIR = opencl
 TARGETS = example fittest stable_array \
 			stable_test stable_performance stable_precision
-INCLUDES = -I./includes/ -I/System/Library/Frameworks/OpenCL.framework/Headers -I/opt/local/include/
+INCLUDES = -I./includes/ 
 
 INCS := $(wildcard $(INCDIR)/*.h)
 SRCS := $(wildcard $(SRCDIR)/*.c)
@@ -58,6 +58,8 @@ TAR_EXCLUDES = bin obj doc .tar.gz .git tasks \
 		cscope.out $(PROJECT_NAME).sublime-project $(PROJECT_NAME).sublime-workspace \
 		*.dat callgrind.* gmon.out
 TAR_EXCLUDES_ARG = $(addprefix --exclude=, $(TAR_EXCLUDES))
+
+include Makefile.$(shell uname)
 
 ### Makefile plugins
 
@@ -127,7 +129,7 @@ $(OBJDIR)/.conf_flags.mk: Makefile | $(OBJDIR)
 		echo "$$c: $(addprefix $(BINDIR)/$$c/, $(TARGETS))" >> $@; \
 	done
 	@for t in $(TARGETS); do \
-		echo "$$t: $(BINDIR)/$(DEFAULT_CONF)/$$t $(CL_OBJS)" >> $@; \
+		echo "$$t: $(BINDIR)/$(DEFAULT_CONF)/$$t \$$(CL_OBJS)" >> $@; \
 	done
 
 
