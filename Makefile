@@ -1,9 +1,9 @@
 CC = clang
 CLC = openclc
 CLC_ARCH = gpu_32
-CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC
+CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC -DUSE_GPU
 CLFLAGS = -emit-llvm -c -arch $(CLC_ARCH)
-DEBUG_CFLAGS = -O0 -ggdb -DDEBUG -ftrapv 
+DEBUG_CFLAGS = -O -ggdb -ftrapv
 RELEASE_CFLAGS = -O3 -march=native -ffast-math
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -pg -static-libgcc
 E_LIBS = $(shell pkg-config --libs gsl) -pthread
@@ -11,7 +11,7 @@ E_LIBS = $(shell pkg-config --libs gsl) -pthread
 PROJECT_NAME = libstable
 
 CONFS = debug release
-DEFAULT_CONF = release
+DEFAULT_CONF = debug
 
 OBJDIR = obj
 SRCDIR = src
@@ -68,7 +68,7 @@ include Makefile.$(shell uname)
 .PRECIOUS: %.o %.d %.g 
 .PHONY: benchmark clean pack doxydoc docclean benchmark-run configs $(TARGETS)
  
-all: release 
+all: debug 
 libs: $(LIBS)
 final: all docs pack
 
