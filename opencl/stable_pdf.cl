@@ -1,15 +1,22 @@
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
+#ifndef M_PI_2
+#define M_PI_2     1.57079632679489661923132169164      // Pi/2 
+#endif
+
 struct stable_info {
-    double theta;
-    double beta_;
-    double k1;
-    double xxipow;
-    double ibegin;
-    double iend;
+    float theta;
+    float beta_;
+    float k1;
+    float xxipow;
+    float ibegin;
+    float iend;
 };
 
-constant double xgk[31] =   /* abscissae of the 61-point kronrod rule */
+
+float stable_pdf_g1(float theta, constant struct stable_info* stable);
+
+constant float xgk[31] =   /* abscissae of the 61-point kronrod rule */
 {
   0.999484410050490637571325895705811,
   0.996893484074649540271630050918695,
@@ -47,7 +54,7 @@ constant double xgk[31] =   /* abscissae of the 61-point kronrod rule */
 /* xgk[1], xgk[3], ... abscissae of the 30-point gauss rule. 
    xgk[0], xgk[2], ... abscissae to optimally extend the 30-point gauss rule */
 
-constant double wg[15] =    /* weights of the 30-point gauss rule */
+constant float wg[15] =    /* weights of the 30-point gauss rule */
 {
   0.007968192496166605615465883474674,
   0.018466468311090959142302131912047,
@@ -66,7 +73,7 @@ constant double wg[15] =    /* weights of the 30-point gauss rule */
   0.102852652893558840341285636705415
 };
 
-constant double wgk[31] =   /* weights of the 61-point kronrod rule */
+constant float wgk[31] =   /* weights of the 61-point kronrod rule */
 {
   0.001389013698677007624551591226760,
   0.003890461127099884051267201844516,
@@ -101,9 +108,9 @@ constant double wgk[31] =   /* weights of the 61-point kronrod rule */
   0.051494729429451567558340433647099
 };
 
-double stable_pdf_g1(double theta, constant struct stable_info* stable)
+float stable_pdf_g1(float theta, constant struct stable_info* stable)
 { 
-    double g, V, aux;
+    float g, V, aux;
 
     //  g   = dist->beta_;
     //  aux = theta+dist->theta0_;
@@ -120,7 +127,7 @@ double stable_pdf_g1(double theta, constant struct stable_info* stable)
     g = V + stable->xxipow;
     //Obtenemos log(g), en realidad
     //Taylor: exp(-x) ~ 1-x en x ~ 0
-    //Si g<1.52e-8 -> exp(-g)=(1-g) -> g·exp(-g) = g·(1-g) con precision double.
+    //Si g<1.52e-8 -> exp(-g)=(1-g) -> g·exp(-g) = g·(1-g) con precision float.
     //Asi nos ahorramos calcular una exponencial. (que es costoso).
 
     if ((g = native_exp(g)) < 1.522e-8 ) return (1.0 - g) * g;
@@ -130,19 +137,19 @@ double stable_pdf_g1(double theta, constant struct stable_info* stable)
     return g;
 }
 
-kernel void stable_pdf(global double* gauss, global double* kronrod, constant struct stable_info* stable)
+kernel void stable_pdf(global float* gauss, global float* kronrod, constant struct stable_info* stable)
 {
     size_t thread_id = get_global_id(0);
     size_t subinterval_index = thread_id % 61;
     size_t interval = thread_id / 61;
 
-    const double half_length = (stable->iend - stable->ibegin) / 2; 
-    const double center = stable->ibegin + half_length;
+    const float half_length = (stable->iend - stable->ibegin) / 2; 
+    const float center = stable->ibegin + half_length;
     const int jtw = subinterval_index * 2 + 1;  /* in original fortran j=1,2,3 jtw=2,4,6 */
-    const double abscissa = half_length * xgk[jtw]; // Translated integrand evaluation
-    const double fval1 = stable_pdf_g1(center - abscissa, stable);
-    const double fval2 = stable_pdf_g1(center + abscissa, stable);
-    const double fsum = fval1 + fval2;
+    const float abscissa = half_length * xgk[jtw]; // Translated integrand evaluation
+    const float fval1 = stable_pdf_g1(center - abscissa, stable);
+    const float fval2 = stable_pdf_g1(center + abscissa, stable);
+    const float fsum = fval1 + fval2;
 
     if(thread_id % 2 == 1)
         gauss[interval] += wg[subinterval_index] * fsum;
