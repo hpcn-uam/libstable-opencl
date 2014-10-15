@@ -6,11 +6,11 @@
 
 struct stable_info
 {
-    double beta_;
-    double k1;
-    double xxipow;
-    double ibegin;
-    double iend;
+    float beta_;
+    float k1;
+    float xxipow;
+    float ibegin;
+    float iend;
 };
 
 static int _stable_set_results(struct stable_clinteg *cli);
@@ -40,9 +40,9 @@ int stable_clinteg_init(struct stable_clinteg *cli)
         return -1;
     }
 
-    cli->h_gauss = (double *) calloc(cli->subdivisions, sizeof(double));
-    cli->h_kronrod = (double *) calloc(cli->subdivisions, sizeof(double));
-    cli->subinterval_errors = (double *) calloc(cli->subdivisions, sizeof(double));
+    cli->h_gauss = (float *) calloc(cli->subdivisions, sizeof(float));
+    cli->h_kronrod = (float *) calloc(cli->subdivisions, sizeof(float));
+    cli->subinterval_errors = (float *) calloc(cli->subdivisions, sizeof(float));
 
     if (!cli->h_kronrod || !cli->h_gauss || !cli->subdivisions)
     {
@@ -66,12 +66,12 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
     h_args.ibegin = a;
     h_args.iend = b;
 
-    fprintf(stderr, "[Stable-OpenCL] Integration begin.\n");
+    fprintf(stderr, "[Stable-OpenCL] Integration begin - interval (%.3lf, %.3lf).\n", a,b);
 
     cl_mem gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                  sizeof(double) * cli->subdivisions, NULL, &err);
+                                  sizeof(float) * cli->subdivisions, NULL, &err);
     cl_mem kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                    sizeof(double) * cli->subdivisions, NULL, &err);
+                                    sizeof(float) * cli->subdivisions, NULL, &err);
     cl_mem args = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, sizeof(struct stable_info)
                                  , &h_args, &err);
 
@@ -104,9 +104,9 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
         goto cleanup;
     }
 
-    err |= clEnqueueReadBuffer(cli->env.queue, gauss, CL_TRUE, 0, sizeof(double) * cli->subdivisions,
+    err |= clEnqueueReadBuffer(cli->env.queue, gauss, CL_TRUE, 0, sizeof(float) * cli->subdivisions,
                                cli->h_gauss, 0, NULL, NULL);
-    err |= clEnqueueReadBuffer(cli->env.queue, kronrod, CL_TRUE, 0, sizeof(double) * cli->subdivisions,
+    err |= clEnqueueReadBuffer(cli->env.queue, kronrod, CL_TRUE, 0, sizeof(float) * cli->subdivisions,
                                cli->h_kronrod, 0, NULL, NULL);
 
     if (err)
@@ -136,8 +136,9 @@ static int _stable_set_results(struct stable_clinteg *cli)
 
     for (i = 0; i < cli->subdivisions; i++)
     {
-        gauss_sum += cli->h_gauss[i];
-        kronrod_sum += cli->h_kronrod[i];
+        fprintf(stderr, "[Stable-OpenCl] Interval %d: G %.3f K %.3f\n", i, cli->h_gauss[i], cli->h_kronrod[i]);
+        gauss_sum += (double) cli->h_gauss[i];
+        kronrod_sum += (double) cli->h_kronrod[i];
         cli->subinterval_errors[i] = cli->h_gauss[i] - cli->h_kronrod[i];
     }
 

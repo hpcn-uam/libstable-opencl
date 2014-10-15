@@ -110,7 +110,7 @@ constant float wgk[31] =   /* weights of the 61-point kronrod rule */
 
 float stable_pdf_g1(float theta, constant struct stable_info* stable)
 { 
-    float g, V, aux;
+    /*float g, V, aux;
 
     //  g   = dist->beta_;
     //  aux = theta+dist->theta0_;
@@ -132,9 +132,9 @@ float stable_pdf_g1(float theta, constant struct stable_info* stable)
 
     if ((g = native_exp(g)) < 1.522e-8 ) return (1.0 - g) * g;
     g = native_exp(-g) * g;
-    if (g < 0) return 0.0;
+    if (g < 0) return 0.0;*/
 
-    return g;
+    return theta * theta;
 }
 
 kernel void stable_pdf(global float* gauss, global float* kronrod, constant struct stable_info* stable)
