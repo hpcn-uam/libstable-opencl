@@ -1,4 +1,4 @@
-CC = clang
+CC = gcc
 CLC = openclc
 CLC_ARCH = gpu_32
 CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC -DUSE_GPU
@@ -66,12 +66,11 @@ include Makefile.$(shell uname)
 ### End Makefile plugins
 
 .PRECIOUS: %.o %.d %.g 
-.PHONY: benchmark clean pack doxydoc docclean benchmark-run configs $(TARGETS)
- 
-all: debug 
+.PHONY: benchmark clean pack doxydoc docclean benchmark-run configs $(TARGETS) depend
+
+all: example
 libs: $(LIBS)
 final: all docs pack
-
 
 ### Compilation
 
@@ -100,7 +99,7 @@ $(OBJDIR)/.deps: $(SRCS) Makefile | $(OBJDIR)
 	@mv "$@.0" $@
 
 # Library dependency detection.
-$(OBJDIR)/.%.deps: $(LIBSRCDIR)/%/*.c Makefile | $(OBJDIR)
+$(OBJDIR)/.%.deps: $(LIBSRCDIR)/**/*.c Makefile | $(OBJDIR)
 	@-rm -f $@
 	@$(CC) $(CFLAGS) $(INCLUDES) -MM $(filter-out Makefile, $^) >> $@;
 	@awk '{if (sub(/\\$$/,"")) printf "%s", $$0; else print $$0}' $@ > "$@.0"
