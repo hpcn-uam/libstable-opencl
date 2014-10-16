@@ -1,9 +1,9 @@
 #include "openclenv.h"
 
-#ifndef USE_GPU
-#define USE_GPU 0
+#ifndef OPENCL_FORCE_CPU
+#define OPENCL_FORCE_CPU 0
 #else
-#define USE_GPU 1
+#define OPENCL_FORCE_CPU 1
 #endif
 
 #define MAX_OPENCL_PLATFORMS 5
@@ -73,7 +73,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    printf("[Stable-OpenCL] Available platforms (USE_GPU = %d): %d\n", USE_GPU, platform_num);
+    printf("[Stable-OpenCL] Available platforms (OPENCL_FORCE_CPU = %d): %d\n", OPENCL_FORCE_CPU, platform_num);
     for(i = 0; i < platform_num; i++)
     {
         clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
@@ -82,7 +82,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         printf("[Stable-OpenCL] %d: %s. Version %s. Vendor %s\n", i, name, version, vendor);
     }
 
-    err = clGetDeviceIDs(platforms[0], USE_GPU ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &(env->device), NULL);
+    err = clGetDeviceIDs(platforms[0], OPENCL_FORCE_CPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU, 1, &(env->device), NULL);
 
     if (err)
     {
@@ -92,7 +92,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
 
     clGetDeviceInfo(env->device, CL_DEVICE_NAME, 128 * sizeof(char), dev_name, NULL);
 
-    printf("[Stable-OpenCL] Device obtained: %s. USE_GPU == %d\n", dev_name, USE_GPU);
+    printf("[Stable-OpenCL] Device obtained: %s\n", dev_name);
 
     env->context = clCreateContext(0, 1, &env->device, NULL, NULL, &err);
     if (!env->context)
