@@ -17,7 +17,7 @@ function remote_make()
 	path=$1
 	name=$2
 
-	out=$(ssh -t $host "cd $path; make" 2>&1)
+	out=$(ssh -t $host "cd $path; make all" 2>&1)
 	retval=$?
 	echo "$out" | ./hilite.sh -f red [Ee]rror | ./hilite.sh -f yellow warning
 
@@ -30,7 +30,7 @@ function remote_make()
 }
 
 echob "Syncing files..."
-rsync -at --exclude=.git --exclude=data --exclude=results ./ $host:/home/gjulian/libstable || (echo ${tred}Sync failed.${tnorm} && exit 1)
+rsync -avzPt --exclude=.git --exclude=data --exclude=results ./ $host:/home/gjulian/libstable || (echo ${tred}Sync failed.${tnorm} && exit 1)
 echob "Synced. Remoting to compile..."
 
 remote_make /home/gjulian/libstable Library
