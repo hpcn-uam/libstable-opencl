@@ -10,20 +10,7 @@
 #define M_PI_2     1.57079632679489661923132169164      // Pi/2 
 #endif
 
-struct stable_info {
-    double theta;
-    double beta_;
-    double k1;
-    double xxipow;
-    double ibegin;
-    double iend;
-    double subinterval_length;
-    double half_subint_length;
-    unsigned int threads_per_interval;
-    unsigned int gauss_points;
-    unsigned int kronrod_points;
-};
-
+#include "includes/opencl_common.h"
 
 double stable_pdf_g1(double theta, constant struct stable_info* stable);
 
@@ -151,12 +138,15 @@ double stable_pdf_g1(double theta, constant struct stable_info* stable)
 kernel void stable_pdf(global double* gauss, global double* kronrod, constant struct stable_info* stable)
 {
     size_t thread_id = get_global_id(0);
-    size_t subinterval_index = thread_id % stable->threads_per_interval;
-    size_t interval = thread_id / stable->threads_per_interval;
-    local double gauss_sum[15];
-    local double kronrod_sum[31];
+    size_t subinterval_index = get_local_id(0);
+    size_t interval = get_group_id(0);
 
-    if(subinterval_index < 31)
+    const int gauss_eval_points = GK_POINTS / 4;
+    const int kronrod_eval_points = GK_POINTS / 2 + 1;
+    local double gauss_sum[GK_POINTS / 4];
+    local double kronrod_sum[GK_POINTS / 2 + 1];
+
+    if(subinterval_index < kronrod_eval_points)
     {
       const double center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
       const double abscissa = stable->half_subint_length * xgk[subinterval_index]; // Translated integrand evaluation
@@ -164,7 +154,7 @@ kernel void stable_pdf(global double* gauss, global double* kronrod, constant st
       const double fval2 = stable_pdf_g1(center + abscissa, stable);
       double fsum = fval1 + fval2;
 
-      if(subinterval_index == 30)
+      if(subinterval_index == kronrod_eval_points - 1)
         fsum /= 2;
 
       if(subinterval_index % 2 == 1)
@@ -175,7 +165,7 @@ kernel void stable_pdf(global double* gauss, global double* kronrod, constant st
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if(subinterval_index == 31)
+    if(subinterval_index == kronrod_eval_points)
     {
       int i;
       for(i = 0; i < 15; i++)

@@ -1,22 +1,10 @@
 #include "opencl_integ.h"
+#include "opencl_common.h"
 
 #include <limits.h>
 #include <stdio.h>
 
-struct stable_info {
-    double theta;
-    double beta_;
-    double k1;
-    double xxipow;
-    double ibegin;
-    double iend;
-    double subinterval_length;
-    double half_subint_length;
-    unsigned int threads_per_interval;
-    unsigned int gauss_points;
-    unsigned int kronrod_points;
-};
-
+#define max(a,b) (a < b ? b : a)
 
 static int _stable_set_results(struct stable_clinteg *cli);
 
@@ -29,8 +17,8 @@ static int _stable_can_overflow(struct stable_clinteg *cli)
 
 int stable_clinteg_init(struct stable_clinteg *cli)
 {
-    cli->points_rule = 61;
-    cli->subdivisions = 200;
+    cli->points_rule = GK_POINTS;
+    cli->subdivisions = GK_SUBDIVISIONS;
 
     if (_stable_can_overflow(cli))
     {
@@ -72,7 +60,7 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
     h_args.iend = b;
     h_args.subinterval_length = (b - a) / (double) cli->subdivisions;
     h_args.half_subint_length = h_args.subinterval_length / 2;
-    h_args.threads_per_interval = 32;
+    h_args.threads_per_interval = cli->points_rule / 2 + 1 + 1; // Extra thread for sum.
     h_args.gauss_points = (cli->points_rule / 2 + 1) / 2;
     h_args.kronrod_points = cli->points_rule / 2;
 
@@ -104,8 +92,8 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
         goto cleanup;
     }
 
-    work_threads = h_args.threads_per_interval * cli->subdivisions; // We already checked for overflow.
-    workgroup_size = 64;
+    workgroup_size = 64; // Minimum accepted number, it seems.
+    work_threads = max(h_args.threads_per_interval, workgroup_size) * cli->subdivisions; // We already checked for overflow.
 
     fprintf(stderr, "[Stable-OpenCl] Enqueing kernel - %zu work threads, %zu workgroup size (%d points per interval)\n", work_threads, workgroup_size, cli->points_rule);
 
