@@ -33,9 +33,9 @@ int stable_clinteg_init(struct stable_clinteg *cli)
         return -1;
     }
 
-    cli->h_gauss = (double *) calloc(cli->subdivisions, sizeof(double));
-    cli->h_kronrod = (double *) calloc(cli->subdivisions, sizeof(double));
-    cli->subinterval_errors = (double *) calloc(cli->subdivisions, sizeof(double));
+    cli->h_gauss = (cl_precision *) calloc(cli->subdivisions, sizeof(cl_precision));
+    cli->h_kronrod = (cl_precision *) calloc(cli->subdivisions, sizeof(cl_precision));
+    cli->subinterval_errors = (cl_precision *) calloc(cli->subdivisions, sizeof(cl_precision));
 
     if (!cli->h_kronrod || !cli->h_gauss || !cli->subdivisions)
     {
@@ -68,9 +68,9 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
         a, b, cli->subdivisions, h_args.subinterval_length, h_args.threads_per_interval);
 
     cl_mem gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                sizeof(double) * cli->subdivisions, NULL, &err);
+                                sizeof(cl_precision) * cli->subdivisions, NULL, &err);
     cl_mem kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                sizeof(double) * cli->subdivisions, NULL, &err);
+                                sizeof(cl_precision) * cli->subdivisions, NULL, &err);
     cl_mem args = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, sizeof(struct stable_info)
                                  , &h_args, &err);
 
@@ -106,9 +106,9 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
         goto cleanup;
     }
 
-    err |= clEnqueueReadBuffer(cli->env.queue, gauss, CL_TRUE, 0, sizeof(double) * cli->subdivisions,
+    err |= clEnqueueReadBuffer(cli->env.queue, gauss, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
                                cli->h_gauss, 0, NULL, NULL);
-    err |= clEnqueueReadBuffer(cli->env.queue, kronrod, CL_TRUE, 0, sizeof(double) * cli->subdivisions,
+    err |= clEnqueueReadBuffer(cli->env.queue, kronrod, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
                                cli->h_kronrod, 0, NULL, NULL);
 
     if (err)

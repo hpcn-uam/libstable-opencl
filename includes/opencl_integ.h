@@ -3,6 +3,8 @@
 
 #include "openclenv.h"
 
+#include "opencl_common.h"
+
 struct stable_clinteg {
 	double interv_begin;
 	double interv_end;
@@ -10,11 +12,11 @@ struct stable_clinteg {
 	int points_rule; // Points for GK rule.
 	struct openclenv env;
 
-	double* h_gauss;
-	double* h_kronrod;
+	cl_precision* h_gauss;
+	cl_precision* h_kronrod;
 	double result;
 	double abs_error;
-	double* subinterval_errors;
+	cl_precision* subinterval_errors;
 };
 
 int stable_clinteg_init(struct stable_clinteg* cli);

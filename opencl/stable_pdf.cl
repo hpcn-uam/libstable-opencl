@@ -3,7 +3,7 @@
 #elif defined(cl_amd_fp64)
     #pragma OPENCL EXTENSION cl_amd_fp64 : enable
 #else
-    #error "Double precision floating point not supported by OpenCL implementation."
+    #warning "Double precision floating point not supported by OpenCL implementation."
 #endif
 
 #ifndef M_PI_2
@@ -12,9 +12,9 @@
 
 #include "includes/opencl_common.h"
 
-double stable_pdf_g1(double theta, constant struct stable_info* stable);
+cl_precision stable_pdf_g1(cl_precision theta, constant struct stable_info* stable);
 
-constant double xgk[31] =   /* abscissae of the 61-point kronrod rule */
+constant cl_precision xgk[31] =   /* abscissae of the 61-point kronrod rule */
 {
   0.999484410050490637571325895705811,
   0.996893484074649540271630050918695,
@@ -52,7 +52,7 @@ constant double xgk[31] =   /* abscissae of the 61-point kronrod rule */
 /* xgk[1], xgk[3], ... abscissae of the 30-point gauss rule. 
    xgk[0], xgk[2], ... abscissae to optimally extend the 30-point gauss rule */
 
-constant double wg[15] =    /* weights of the 30-point gauss rule */
+constant cl_precision wg[15] =    /* weights of the 30-point gauss rule */
 {
   0.007968192496166605615465883474674,
   0.018466468311090959142302131912047,
@@ -71,7 +71,7 @@ constant double wg[15] =    /* weights of the 30-point gauss rule */
   0.102852652893558840341285636705415
 };
 
-constant double wgk[31] =   /* weights of the 61-point kronrod rule */
+constant cl_precision wgk[31] =   /* weights of the 61-point kronrod rule */
 {
   0.001389013698677007624551591226760,
   0.003890461127099884051267201844516,
@@ -106,10 +106,10 @@ constant double wgk[31] =   /* weights of the 61-point kronrod rule */
   0.051494729429451567558340433647099
 };
 
-double stable_pdf_g1(double theta, constant struct stable_info* stable)
+cl_precision stable_pdf_g1(cl_precision theta, constant struct stable_info* stable)
 { 
-    double g, V, aux;
-    
+    cl_precision g, V, aux;
+
     //  g   = dist->beta_;
     //  aux = theta+dist->theta0_;
     //  V   = M_PI_2-theta;
@@ -125,7 +125,7 @@ double stable_pdf_g1(double theta, constant struct stable_info* stable)
     g = V + stable->xxipow;
     //Obtenemos log(g), en realidad
     //Taylor: exp(-x) ~ 1-x en x ~ 0
-    //Si g<1.52e-8 -> exp(-g)=(1-g) -> g·exp(-g) = g·(1-g) con precision double.
+    //Si g<1.52e-8 -> exp(-g)=(1-g) -> g·exp(-g) = g·(1-g) con precision cl_precision.
     //Asi nos ahorramos calcular una exponencial. (que es costoso).
     if(isnan(g)) return 0.0;
     if ((g = exp(g)) < 1.522e-8 ) return (1.0 - g) * g;
@@ -135,7 +135,7 @@ double stable_pdf_g1(double theta, constant struct stable_info* stable)
     return g;
 }
 
-kernel void stable_pdf(global double* gauss, global double* kronrod, constant struct stable_info* stable)
+kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod, constant struct stable_info* stable)
 {
     size_t thread_id = get_global_id(0);
     size_t subinterval_index = get_local_id(0);
@@ -143,16 +143,16 @@ kernel void stable_pdf(global double* gauss, global double* kronrod, constant st
 
     const int gauss_eval_points = GK_POINTS / 4;
     const int kronrod_eval_points = GK_POINTS / 2 + 1;
-    local double gauss_sum[GK_POINTS / 4];
-    local double kronrod_sum[GK_POINTS / 2 + 1];
+    local cl_precision gauss_sum[GK_POINTS / 4];
+    local cl_precision kronrod_sum[GK_POINTS / 2 + 1];
 
     if(subinterval_index < kronrod_eval_points)
     {
-      const double center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
-      const double abscissa = stable->half_subint_length * xgk[subinterval_index]; // Translated integrand evaluation
-      const double fval1 = stable_pdf_g1(center - abscissa, stable);
-      const double fval2 = stable_pdf_g1(center + abscissa, stable);
-      double fsum = fval1 + fval2;
+      const cl_precision center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
+      const cl_precision abscissa = stable->half_subint_length * xgk[subinterval_index]; // Translated integrand evaluation
+      const cl_precision fval1 = stable_pdf_g1(center - abscissa, stable);
+      const cl_precision fval2 = stable_pdf_g1(center + abscissa, stable);
+      cl_precision fsum = fval1 + fval2;
 
       if(subinterval_index == kronrod_eval_points - 1)
         fsum /= 2;
