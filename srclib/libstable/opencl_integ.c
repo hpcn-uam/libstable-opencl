@@ -4,14 +4,14 @@
 #include <stdio.h>
 
 struct stable_info {
-    float theta;
-    float beta_;
-    float k1;
-    float xxipow;
-    float ibegin;
-    float iend;
-    float subinterval_length;
-    float half_subint_length;
+    double theta;
+    double beta_;
+    double k1;
+    double xxipow;
+    double ibegin;
+    double iend;
+    double subinterval_length;
+    double half_subint_length;
     unsigned int threads_per_interval;
     unsigned int gauss_points;
     unsigned int kronrod_points;
@@ -45,9 +45,9 @@ int stable_clinteg_init(struct stable_clinteg *cli)
         return -1;
     }
 
-    cli->h_gauss = (float *) calloc(cli->subdivisions, sizeof(float));
-    cli->h_kronrod = (float *) calloc(cli->subdivisions, sizeof(float));
-    cli->subinterval_errors = (float *) calloc(cli->subdivisions, sizeof(float));
+    cli->h_gauss = (double *) calloc(cli->subdivisions, sizeof(double));
+    cli->h_kronrod = (double *) calloc(cli->subdivisions, sizeof(double));
+    cli->subinterval_errors = (double *) calloc(cli->subdivisions, sizeof(double));
 
     if (!cli->h_kronrod || !cli->h_gauss || !cli->subdivisions)
     {
@@ -70,7 +70,7 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
     h_args.xxipow = xxipow;
     h_args.ibegin = a;
     h_args.iend = b;
-    h_args.subinterval_length = (b - a) / (float) cli->subdivisions;
+    h_args.subinterval_length = (b - a) / (double) cli->subdivisions;
     h_args.half_subint_length = h_args.subinterval_length / 2;
     h_args.threads_per_interval = 32;
     h_args.gauss_points = (cli->points_rule / 2 + 1) / 2;
@@ -80,9 +80,9 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
         a, b, cli->subdivisions, h_args.subinterval_length, h_args.threads_per_interval);
 
     cl_mem gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                sizeof(float) * cli->subdivisions, NULL, &err);
+                                sizeof(double) * cli->subdivisions, NULL, &err);
     cl_mem kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                sizeof(float) * cli->subdivisions, NULL, &err);
+                                sizeof(double) * cli->subdivisions, NULL, &err);
     cl_mem args = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, sizeof(struct stable_info)
                                  , &h_args, &err);
 
@@ -118,9 +118,9 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
         goto cleanup;
     }
 
-    err |= clEnqueueReadBuffer(cli->env.queue, gauss, CL_TRUE, 0, sizeof(float) * cli->subdivisions,
+    err |= clEnqueueReadBuffer(cli->env.queue, gauss, CL_TRUE, 0, sizeof(double) * cli->subdivisions,
                                cli->h_gauss, 0, NULL, NULL);
-    err |= clEnqueueReadBuffer(cli->env.queue, kronrod, CL_TRUE, 0, sizeof(float) * cli->subdivisions,
+    err |= clEnqueueReadBuffer(cli->env.queue, kronrod, CL_TRUE, 0, sizeof(double) * cli->subdivisions,
                                cli->h_kronrod, 0, NULL, NULL);
 
     if (err)

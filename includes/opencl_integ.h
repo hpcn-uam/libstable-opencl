@@ -10,11 +10,11 @@ struct stable_clinteg {
 	int points_rule; // Points for GK rule.
 	struct openclenv env;
 
-	float* h_gauss;
-	float* h_kronrod;
+	double* h_gauss;
+	double* h_kronrod;
 	double result;
 	double abs_error;
-	float* subinterval_errors;
+	double* subinterval_errors;
 };
 
 int stable_clinteg_init(struct stable_clinteg* cli);

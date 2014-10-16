@@ -1,27 +1,33 @@
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#ifdef cl_khr_fp64
+    #pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#elif defined(cl_amd_fp64)
+    #pragma OPENCL EXTENSION cl_amd_fp64 : enable
+#else
+    #error "Double precision floating point not supported by OpenCL implementation."
+#endif
 
 #ifndef M_PI_2
 #define M_PI_2     1.57079632679489661923132169164      // Pi/2 
 #endif
 
 struct stable_info {
-    float theta;
-    float beta_;
-    float k1;
-    float xxipow;
-    float ibegin;
-    float iend;
-    float subinterval_length;
-    float half_subint_length;
+    double theta;
+    double beta_;
+    double k1;
+    double xxipow;
+    double ibegin;
+    double iend;
+    double subinterval_length;
+    double half_subint_length;
     unsigned int threads_per_interval;
     unsigned int gauss_points;
     unsigned int kronrod_points;
 };
 
 
-float stable_pdf_g1(float theta, constant struct stable_info* stable);
+double stable_pdf_g1(double theta, constant struct stable_info* stable);
 
-constant float xgk[31] =   /* abscissae of the 61-point kronrod rule */
+constant double xgk[31] =   /* abscissae of the 61-point kronrod rule */
 {
   0.999484410050490637571325895705811,
   0.996893484074649540271630050918695,
@@ -59,7 +65,7 @@ constant float xgk[31] =   /* abscissae of the 61-point kronrod rule */
 /* xgk[1], xgk[3], ... abscissae of the 30-point gauss rule. 
    xgk[0], xgk[2], ... abscissae to optimally extend the 30-point gauss rule */
 
-constant float wg[15] =    /* weights of the 30-point gauss rule */
+constant double wg[15] =    /* weights of the 30-point gauss rule */
 {
   0.007968192496166605615465883474674,
   0.018466468311090959142302131912047,
@@ -78,7 +84,7 @@ constant float wg[15] =    /* weights of the 30-point gauss rule */
   0.102852652893558840341285636705415
 };
 
-constant float wgk[31] =   /* weights of the 61-point kronrod rule */
+constant double wgk[31] =   /* weights of the 61-point kronrod rule */
 {
   0.001389013698677007624551591226760,
   0.003890461127099884051267201844516,
@@ -113,10 +119,10 @@ constant float wgk[31] =   /* weights of the 61-point kronrod rule */
   0.051494729429451567558340433647099
 };
 
-float stable_pdf_g1(float theta, constant struct stable_info* stable)
+double stable_pdf_g1(double theta, constant struct stable_info* stable)
 { 
-    float g, V, aux;
-
+    double g, V, aux;
+    
     //  g   = dist->beta_;
     //  aux = theta+dist->theta0_;
     //  V   = M_PI_2-theta;
@@ -125,36 +131,38 @@ float stable_pdf_g1(float theta, constant struct stable_info* stable)
     //    V = dist->Vbeta1;// printf("");
     //  }
     //  else {
-    aux = (stable->beta_ * theta + M_PI_2) / native_cos(theta);
-    V = native_sin(theta) * aux / stable->beta_ + native_log(aux) + stable->k1;
+    aux = (stable->beta_ * theta + M_PI_2) / cos(theta);
+    V = sin(theta) * aux / stable->beta_ + log(aux) + stable->k1;
     //  }
 
     g = V + stable->xxipow;
     //Obtenemos log(g), en realidad
     //Taylor: exp(-x) ~ 1-x en x ~ 0
-    //Si g<1.52e-8 -> exp(-g)=(1-g) -> g·exp(-g) = g·(1-g) con precision float.
+    //Si g<1.52e-8 -> exp(-g)=(1-g) -> g·exp(-g) = g·(1-g) con precision double.
     //Asi nos ahorramos calcular una exponencial. (que es costoso).
-    
-    if ((g = native_exp(g)) < 1.522e-8 ) return (1.0 - g) * g;
-    g = native_exp(-g) * g;
-    if (g < 0) return 0.0;
+    if(isnan(g)) return 0.0;
+    if ((g = exp(g)) < 1.522e-8 ) return (1.0 - g) * g;
+    g = exp(-g) * g;
+    if (isnan(g) || g < 0) return 0.0;
+
+    return g;
 }
 
-kernel void stable_pdf(global float* gauss, global float* kronrod, constant struct stable_info* stable)
+kernel void stable_pdf(global double* gauss, global double* kronrod, constant struct stable_info* stable)
 {
     size_t thread_id = get_global_id(0);
     size_t subinterval_index = thread_id % stable->threads_per_interval;
     size_t interval = thread_id / stable->threads_per_interval;
-    local float gauss_sum[15];
-    local float kronrod_sum[31];
+    local double gauss_sum[15];
+    local double kronrod_sum[31];
 
     if(subinterval_index < 31)
     {
-      const float center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
-      const float abscissa = stable->half_subint_length * xgk[subinterval_index]; // Translated integrand evaluation
-      const float fval1 = stable_pdf_g1(center - abscissa, stable);
-      const float fval2 = stable_pdf_g1(center + abscissa, stable);
-      float fsum = fval1 + fval2;
+      const double center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
+      const double abscissa = stable->half_subint_length * xgk[subinterval_index]; // Translated integrand evaluation
+      const double fval1 = stable_pdf_g1(center - abscissa, stable);
+      const double fval2 = stable_pdf_g1(center + abscissa, stable);
+      double fsum = fval1 + fval2;
 
       if(subinterval_index == 30)
         fsum /= 2;

@@ -10,6 +10,47 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
+
+char* _read_file(const char* filename, size_t* contents_len)
+{
+    FILE* f = fopen(filename, "r");
+    char* contents = NULL;
+    size_t read;
+
+    if(!f)
+        goto error;
+
+    if(fseek(f, 0, SEEK_END))
+        goto error;
+
+    *contents_len = ftell(f);
+
+    if(fseek(f, 0, SEEK_SET))
+        goto error;
+
+    contents = calloc(*contents_len + 1, sizeof(char));
+    
+    if(!contents)
+        goto error;    
+
+    read = fread(contents, *contents_len, 1, f);
+
+    if(read < 1)
+        goto error;
+
+    fclose(f);
+    contents[*contents_len] = 0;
+    *contents_len += 1;
+
+    return contents;
+
+error:
+    if(contents) free(contents);
+    if(f) fclose(f);
+
+    return NULL;
+}
 
 int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *kernname)
 {
@@ -32,7 +73,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    printf("[Stable-OpenCL] Available platforms: %d\n", platform_num);
+    printf("[Stable-OpenCL] Available platforms (USE_GPU = %d): %d\n", USE_GPU, platform_num);
     for(i = 0; i < platform_num; i++)
     {
         clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
@@ -41,7 +82,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         printf("[Stable-OpenCL] %d: %s. Version %s. Vendor %s\n", i, name, version, vendor);
     }
 
-    err = clGetDeviceIDs(NULL, USE_GPU ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &(env->device), NULL);
+    err = clGetDeviceIDs(platforms[0], USE_GPU ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 1, &(env->device), NULL);
 
     if (err)
     {
@@ -67,11 +108,28 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
+#ifdef __APPLE__
     env->program = clCreateProgramWithSource(env->context, 1, (const char **)&bitcode_path, &pathlen, &err);
+#else
+    size_t code_length;
+    char* code_contents = _read_file(bitcode_path, &code_length);
+
+    if(!code_contents)
+    {
+        err_msg = strerror(errno);
+        err = errno;
+        goto error;
+    }
+
+    env->program = clCreateProgramWithSource(env->context, 1 , (const char**)&code_contents, &code_length, &err);
+
+    free(code_contents);
+#endif
+
 
     if (err)
     {
-        err_msg = "clCreateProgramWithBinary";
+        err_msg = "clCreateProgramWithSource";
         goto error;
     }
 
