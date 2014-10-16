@@ -11,6 +11,11 @@ struct stable_info {
     float xxipow;
     float ibegin;
     float iend;
+    float subinterval_length;
+    float half_subint_length;
+    unsigned int threads_per_interval;
+    unsigned int gauss_points;
+    unsigned int kronrod_points;
 };
 
 
@@ -110,7 +115,7 @@ constant float wgk[31] =   /* weights of the 61-point kronrod rule */
 
 float stable_pdf_g1(float theta, constant struct stable_info* stable)
 { 
-    /*float g, V, aux;
+    float g, V, aux;
 
     //  g   = dist->beta_;
     //  aux = theta+dist->theta0_;
@@ -129,30 +134,54 @@ float stable_pdf_g1(float theta, constant struct stable_info* stable)
     //Taylor: exp(-x) ~ 1-x en x ~ 0
     //Si g<1.52e-8 -> exp(-g)=(1-g) -> g·exp(-g) = g·(1-g) con precision float.
     //Asi nos ahorramos calcular una exponencial. (que es costoso).
-
+    
     if ((g = native_exp(g)) < 1.522e-8 ) return (1.0 - g) * g;
     g = native_exp(-g) * g;
-    if (g < 0) return 0.0;*/
-
-    return theta * theta;
+    if (g < 0) return 0.0;
 }
 
 kernel void stable_pdf(global float* gauss, global float* kronrod, constant struct stable_info* stable)
 {
     size_t thread_id = get_global_id(0);
-    size_t subinterval_index = thread_id % 61;
-    size_t interval = thread_id / 61;
+    size_t subinterval_index = thread_id % stable->threads_per_interval;
+    size_t interval = thread_id / stable->threads_per_interval;
+    local float gauss_sum[15];
+    local float kronrod_sum[31];
 
-    const float half_length = (stable->iend - stable->ibegin) / 2; 
-    const float center = stable->ibegin + half_length;
-    const int jtw = subinterval_index * 2 + 1;  /* in original fortran j=1,2,3 jtw=2,4,6 */
-    const float abscissa = half_length * xgk[jtw]; // Translated integrand evaluation
-    const float fval1 = stable_pdf_g1(center - abscissa, stable);
-    const float fval2 = stable_pdf_g1(center + abscissa, stable);
-    const float fsum = fval1 + fval2;
+    if(subinterval_index < 31)
+    {
+      const float center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
+      const float abscissa = stable->half_subint_length * xgk[subinterval_index]; // Translated integrand evaluation
+      const float fval1 = stable_pdf_g1(center - abscissa, stable);
+      const float fval2 = stable_pdf_g1(center + abscissa, stable);
+      float fsum = fval1 + fval2;
 
-    if(thread_id % 2 == 1)
-        gauss[interval] += wg[subinterval_index] * fsum;
+      if(subinterval_index == 30)
+        fsum /= 2;
 
-    kronrod[interval] += wgk[jtw] * fsum;
+      if(subinterval_index % 2 == 1)
+        gauss_sum[subinterval_index / 2] = wg[subinterval_index / 2] * fsum;
+
+      kronrod_sum[subinterval_index] = wgk[subinterval_index] * fsum; 
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if(subinterval_index == 31)
+    {
+      int i;
+      for(i = 0; i < 15; i++)
+      {
+        gauss[interval] += gauss_sum[i];
+        kronrod[interval] += kronrod_sum[i];
+      }
+
+      for(; i < 31; i++)
+      {
+        kronrod[interval] += kronrod_sum[i];
+      }
+
+      gauss[interval] *= stable->half_subint_length;
+      kronrod[interval] *= stable->half_subint_length;
+    }
 }
