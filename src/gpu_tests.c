@@ -50,6 +50,10 @@ int main (void)
     double alfa = 1.25, beta = 0.5, sigma = 1.0, mu = 0.0;
     int param = 0;
     double x = 10;
+    double pdf = 0, gpu_pdf = 0;
+    int i;
+    int max_tries = 100;
+
     StableDist *dist = stable_create(alfa, beta, sigma, mu, param);
 
     if (!dist)
@@ -59,18 +63,27 @@ int main (void)
     }
 
     BENCHMARK_BEGIN;
-    double pdf = stable_pdf_point(dist, x, NULL);
+    for(i = 0; i < max_tries; i++)
+        pdf += stable_pdf_point(dist, x, NULL);
+    BENCHMARK_END(max_tries, "PDF CPU");
+
+    pdf /= max_tries;
+
     printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e\n",
            x, alfa, beta, sigma, mu, pdf);
-    BENCHMARK_END(1, "PDF CPU");
+    
 
     stable_activate_gpu(dist);
 
     BENCHMARK_BEGIN;
-    double gpu_pdf = stable_pdf_point(dist, x, NULL);
+    for(i = 0; i < max_tries; i++)
+        gpu_pdf += stable_pdf_point(dist, x, NULL);
+    BENCHMARK_END(max_tries, "PDF GPU");
+
+    gpu_pdf /= max_tries;
+
     printf("GPU PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e\n",
            x, alfa, beta, sigma, mu, gpu_pdf);
-    BENCHMARK_END(1, "PDF GPU");
 
     printf("GPU / CPU difference: %3.3g\n", fabs(gpu_pdf - pdf));
 

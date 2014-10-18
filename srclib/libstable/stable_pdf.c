@@ -412,6 +412,13 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 
     theta[0] = -dist->theta0_ + THETA_TH; warnz[0] = 0;
     theta[4] = M_PI_2 - THETA_TH;
+
+    if(dist->gpu_enabled)
+    {
+        stable_clinteg_integrate(&(dist->cli), theta[0], theta[4], -1, -1, -1, &pdf, err, dist);
+        return pdf;
+    }
+
     theta[2] = zbrent(integ_aux, (void *)dist, theta[0], theta[4],
                       0.0, 1e-6 * (theta[4] - theta[0]), &k);
 
@@ -552,7 +559,6 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
                        integration_algorithms[i++]);
     *err += err_aux * err_aux;
 
-
     //Sumar de menor a mayor contribucion para minimizar error de redondeo.
     pdf = fabs(pdf_aux) + pdf3 + pdf2 + pdf1;
     //pdf3=0;
@@ -562,7 +568,7 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
     *err = sqrt(*err) / pdf;
 
 #ifdef DEBUG
-    fprintf(FINTEG, "%+1.3e % 1.3e % 1.3e", x, pdf, *err);
+    // fprintf(FINTEG, "%+1.3e % 1.3e % 1.3e", x, pdf, *err);
     fprintf(FINTEG, " %+1.3e %+1.3e %+1.3e %+1.3e %+1.3e", theta[0], theta[1], theta[2], theta[3], theta[4]);
     fprintf(FINTEG, " % 1.3e % 1.3e % 1.3e % 1.3e", pdf1, pdf2, pdf3, fabs(pdf_aux));
     fprintf(FINTEG, " %d %d %d %d %d %d\n",
