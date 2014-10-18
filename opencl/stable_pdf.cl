@@ -106,7 +106,52 @@ constant cl_precision wgk[31] =   /* weights of the 61-point kronrod rule */
   0.051494729429451567558340433647099
 };
 
-cl_precision stable_pdf_g1(cl_precision theta, constant struct stable_info* stable)
+cl_precision stable_pdf_alpha_neq1(cl_precision theta, constant struct stable_info *args)
+{
+    cl_precision g, cos_theta, aux, V;
+
+    //  g   = dist->beta_;
+    //  aux = theta+dist->theta0_;
+    //  V   = M_PI_2-theta;
+
+    //  if ((g==1 && aux < THETA_TH*1.1 && dist->alfa <1) || (g==-1 && V<THETA_TH*1.1 && dist->alfa>1)) {
+    //    V = dist->Vbeta1;// printf("");
+    // }
+    //  else {
+
+    cos_theta = cos(theta);
+    aux = (args->theta0_ + theta) * args->alfa;
+    V = log(cos_theta / sin(aux)) * args->alfainvalfa1 +
+        + log(cos(aux - theta) / cos_theta) + args->k1;
+    //  }
+
+#ifdef DEBUG
+    integ_eval++;
+#endif
+
+    g = V + args->xxipow;
+    //g>6.55 -> exp(g-exp(g)) < 2.1E-301
+    if (g > 6.55 || g < -700) return 0.0;
+    //Taylor: x·exp(-x) ~ x·(1-x) cuando x ~ 0
+    //Si g < 1.52e-8 -> g·exp(-g) = g·(1-g) con precision cl_precision.
+    //Asi nos ahorramos calcular una exponencial (que es costoso).
+    else  g = exp(g);
+    //  if(isnan(g) || isinf(g)) {return 0.0;}
+    //  else if (g < 1.522e-8) {return (1.0-g)*g;}
+    /*  else*/ g = exp(-g) * g;
+    if (isnan(g) || isinf(g) || g < 0)
+    {
+        return 0.0;
+    }
+    /*
+      fprintf(FINTEG,"%1.16lf\t%1.16lf\t%1.16lf\t%1.16e\n",
+              args->alfa,args->beta_,theta,g);
+    */
+
+    return g;
+}
+
+cl_precision stable_pdf_alpha_eq1(cl_precision theta, constant struct stable_info* stable)
 { 
     cl_precision g, V, aux;
 
@@ -150,9 +195,20 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
     {
       const cl_precision center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
       const cl_precision abscissa = stable->half_subint_length * xgk[subinterval_index]; // Translated integrand evaluation
-      const cl_precision fval1 = stable_pdf_g1(center - abscissa, stable);
-      const cl_precision fval2 = stable_pdf_g1(center + abscissa, stable);
-      cl_precision fsum = fval1 + fval2;
+      cl_precision fval1, fval2, fsum;
+
+      if(stable->integrand == PDF_ALPHA_EQ1) 
+      {
+        fval1 = stable_pdf_alpha_eq1(center - abscissa, stable);
+        fval2 = stable_pdf_alpha_eq1(center + abscissa, stable);
+      }
+      else
+      {
+        fval1 = stable_pdf_alpha_neq1(center - abscissa, stable);
+        fval2 = stable_pdf_alpha_neq1(center + abscissa, stable);
+      }
+
+      fsum = fval1 + fval2;
 
       if(subinterval_index == kronrod_eval_points - 1)
         fsum /= 2;

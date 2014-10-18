@@ -4,6 +4,9 @@
 #include "openclenv.h"
 
 #include "opencl_common.h"
+#include "stable_api.h"
+
+struct StableDistStruct;
 
 struct stable_clinteg {
 	double interv_begin;
@@ -14,14 +17,16 @@ struct stable_clinteg {
 
 	cl_precision* h_gauss;
 	cl_precision* h_kronrod;
+	cl_precision* subinterval_errors;
 	double result;
 	double abs_error;
-	cl_precision* subinterval_errors;
 };
 
+
 int stable_clinteg_init(struct stable_clinteg* cli);
-double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, double epsabs, double epsrel, unsigned short limit,
-                   double *result, double *abserr, double beta_, double k1, double xxipow);
+double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
+		double epsabs, double epsrel, unsigned short limit,
+    	double *result, double *abserr, struct StableDistStruct* dist);
 void stable_clinteg_teardown(struct stable_clinteg* cli);
 
 

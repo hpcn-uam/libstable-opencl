@@ -206,7 +206,7 @@ stable_integration(StableDist *dist, double(function)(double, void *),
         stable_integration_QAG5(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
         break;
     case STABLE_OCL:
-        stable_clinteg_integrate(&(dist->cli), a, b, epsabs, epsrel, limit, result, abserr, dist->beta_, dist->k1, dist->xxipow);
+        stable_clinteg_integrate(&(dist->cli), a, b, epsabs, epsrel, limit, result, abserr, dist);
         break;
     }
 }

@@ -1,10 +1,12 @@
-#include "opencl_integ.h"
+#include "stable_api.h"
 #include "opencl_common.h"
 
 #include <limits.h>
 #include <stdio.h>
 
+#ifndef max
 #define max(a,b) (a < b ? b : a)
+#endif
 
 static int _stable_set_results(struct stable_clinteg *cli);
 
@@ -46,23 +48,36 @@ int stable_clinteg_init(struct stable_clinteg *cli)
     return 0;
 }
 
-double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, double epsabs, double epsrel, unsigned short limit,
-                                double *result, double *abserr, double beta_, double k1, double xxipow)
+double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, double epsabs, double epsrel, unsigned short limit,
+                   double *result, double *abserr, struct StableDistStruct* dist)
 {
     cl_int err = 0;
     size_t work_threads, workgroup_size;
     struct stable_info h_args;
 
-    h_args.beta_ = beta_;
-    h_args.k1 = k1;
-    h_args.xxipow = xxipow;
+
+    // TODO: Create a "StableParams" structure that holds all of this parameters
+    //      and use that instead of embedding all of them in the general StableDist
+    //      structure, so I can avoid all this useless copying.
+    h_args.beta_ = dist->beta_;
+    h_args.k1 = dist->k1;
+    h_args.xxipow = dist->xxipow;
     h_args.ibegin = a;
     h_args.iend = b;
+    h_args.theta0_ = dist->theta0_;
+    h_args.alfa = dist->alfa;
+    h_args.alfainvalfa1 = dist->alfainvalfa1;
+
     h_args.subinterval_length = (b - a) / (double) cli->subdivisions;
     h_args.half_subint_length = h_args.subinterval_length / 2;
     h_args.threads_per_interval = cli->points_rule / 2 + 1 + 1; // Extra thread for sum.
     h_args.gauss_points = (cli->points_rule / 2 + 1) / 2;
     h_args.kronrod_points = cli->points_rule / 2;
+
+    if(dist->ZONE == ALFA_1)
+        h_args.integrand = PDF_ALPHA_EQ1;
+    else
+        h_args.integrand = PDF_ALPHA_NEQ1;
 
     fprintf(stderr, "[Stable-OpenCL] Integration begin - interval (%.3lf, %.3lf), %d subdivisions, %e subinterval length, %u threads per interval.\n", 
         a, b, cli->subdivisions, h_args.subinterval_length, h_args.threads_per_interval);

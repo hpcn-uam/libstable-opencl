@@ -148,7 +148,7 @@ int stable_setparams(StableDist *dist,
   switch (zona)
     {
       case STABLE_B1:
-        dist->beta = (dist->beta > 0) ? 1.0 : -1.0;
+        dist->beta = (dist->beta > 0) ? 1.0 : -1.0; // Avoid rounding errors maybe?
       case STABLE:
         dist->alfainvalfa1 = alfa/(alfa-1.0);
         dist->xi = -beta*tan(0.5*alfa*M_PI);

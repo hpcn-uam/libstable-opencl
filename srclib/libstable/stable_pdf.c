@@ -96,7 +96,9 @@ double stable_pdf_g2(double theta, void *args)
     integ_eval++;
 #endif
 
-    g = V + dist->xxipow;
+    g = V + dist->xxipow; // This g seems to be the same returned by stable_g_aux2.
+    
+
     //g>6.55 -> exp(g-exp(g)) < 2.1E-301
     if (g > 6.55 || g < -700) return 0.0;
     //Taylor: x·exp(-x) ~ x·(1-x) cuando x ~ 0
@@ -381,7 +383,7 @@ torno al maximo y el resto*/
 
 double
 stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
-                       double(*integ_aux)(double, void *), double *err)
+                       double(*integ_aux)(double, void *), double *err) /* WTF is integ_aux */
 {
     /* Este caso se da en:
            x >> xi con alfa > 1
@@ -766,8 +768,7 @@ double stable_pdf_point_STABLE(StableDist *dist, const double x, double *err)
 /*   PDF point en general                                                     */
 /******************************************************************************/
 
-double
-stable_pdf_point(StableDist *dist, const double x, double *err)
+double stable_pdf_point(StableDist *dist, const double x, double *err)
 {
     double temp;
 
