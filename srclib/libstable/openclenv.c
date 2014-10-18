@@ -101,7 +101,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    env->queue = clCreateCommandQueue(env->context, env->device, 0, &err);
+    env->queue = clCreateCommandQueue(env->context, env->device, CL_QUEUE_PROFILING_ENABLE, &err);
     if (!env->queue)
     {
         err_msg = "clCreateCommandQueue";
