@@ -55,7 +55,7 @@ error:
 int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *kernname)
 {
     char *err_msg = NULL;
-    int err = 0, log_err;
+    int err = 0, log_error;
     char dev_name[128];
     size_t pathlen = strlen(bitcode_path);
     char *build_log;
@@ -73,13 +73,13 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    printf("[Stable-OpenCL] Available platforms (OPENCL_FORCE_CPU = %d): %d\n", OPENCL_FORCE_CPU, platform_num);
+    stablecl_log(log_message, "[Stable-OpenCL] Available platforms (OPENCL_FORCE_CPU = %d): %d\n", OPENCL_FORCE_CPU, platform_num);
     for(i = 0; i < platform_num; i++)
     {
         clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
         clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, 500, version, NULL);
         clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, 500, vendor, NULL);
-        printf("[Stable-OpenCL] %d: %s. Version %s. Vendor %s\n", i, name, version, vendor);
+        stablecl_log(log_message, "[Stable-OpenCL] %d: %s. Version %s. Vendor %s\n", i, name, version, vendor);
     }
 
     err = clGetDeviceIDs(platforms[0], OPENCL_FORCE_CPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU, 1, &(env->device), NULL);
@@ -92,7 +92,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
 
     clGetDeviceInfo(env->device, CL_DEVICE_NAME, 128 * sizeof(char), dev_name, NULL);
 
-    printf("[Stable-OpenCL] Device obtained: %s\n", dev_name);
+    stablecl_log(log_message, "[Stable-OpenCL] Device obtained: %s\n", dev_name);
 
     env->context = clCreateContext(0, 1, &env->device, NULL, NULL, &err);
     if (!env->context)
@@ -133,14 +133,14 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    printf("[Stable-OpenCL] Building program...\n");
+    stablecl_log(log_message, "[Stable-OpenCL] Building program...\n");
     err = clBuildProgram(env->program, 1, &env->device, NULL, NULL, NULL);
 
-    log_err = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &build_log_size);
+    log_error = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &build_log_size);
 
-    if (log_err)
+    if (log_error)
     {
-        printf("[Stable-OpenCL] Error retrieving build log size.\n");
+        stablecl_log(log_err, "[Stable-OpenCL] Error retrieving build log size.\n");
     }
     else
     {
@@ -148,16 +148,16 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
 
         if (!build_log)
         {
-            printf("[Stable-OpenCL] Couldn't allocate enough memory for build log.\n");
+            stablecl_log(log_err, "[Stable-OpenCL] Couldn't allocate enough memory for build log.\n");
         }
         else
         {
-            log_err = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, build_log_size, build_log, &build_log_size);
+            log_error = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, build_log_size, build_log, &build_log_size);
 
-            if (log_err)
-                printf("[Stable-OpenCL] Couldn't get build log: %s\n", opencl_strerr(log_err));
+            if (log_error)
+                stablecl_log(log_err, "[Stable-OpenCL] Couldn't get build log: %s\n", opencl_strerr(log_err));
             else
-                printf("[Stable-OpenCL] Build log (size %zu):\n%s\n", build_log_size, build_log);
+                stablecl_log(err ? log_err : log_message, "[Stable-OpenCL] Build log (size %zu):\n%s\n", build_log_size, build_log);
         }
     }
 
@@ -177,7 +177,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
 
 error:
     if (err && err_msg)
-        fprintf(stderr, "[Stable-OpenCL] Init failed with error %d at %s: %s\n", err, err_msg, opencl_strerr(err));
+        stablecl_log(log_err, "[Stable-OpenCL] Init failed with error %d at %s: %s\n", err, err_msg, opencl_strerr(err));
 
     return err;
 }
@@ -248,6 +248,18 @@ const char *opencl_strerr(cl_int err)
     case CL_INVALID_MIP_LEVEL:                  return "Invalid mip-map level";
     default: return "Unknown";
     }
+}
+
+void stablecl_log(log_level level, const char* string, ...)
+{
+    va_list ap;
+
+    if(level < STABLE_MIN_LOG)
+        return;
+
+    va_start(ap, string);
+    vfprintf(stderr, string, ap);
+    va_end(ap);
 }
 
 
