@@ -1,5 +1,6 @@
 #include "stable_api.h"
 #include "opencl_common.h"
+#include "benchmarking.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -56,7 +57,7 @@ double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
     cl_int err = 0;
     size_t work_threads, workgroup_size;
     struct stable_info h_args;
-
+    double bc_start, bc_end;
 
     // TODO: Create a "StableParams" structure that holds all of this parameters
     //      and use that instead of embedding all of them in the general StableDist
@@ -84,12 +85,14 @@ double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
     stablecl_log(log_message, "[Stable-OpenCL] Integration begin - interval (%.3lf, %.3lf), %d subdivisions, %e subinterval length, %u threads per interval.\n", 
         a, b, cli->subdivisions, h_args.subinterval_length, h_args.threads_per_interval);
 
+    BENCHMARK_BEGIN;
     cl_mem gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
                                 sizeof(cl_precision) * cli->subdivisions, NULL, &err);
     cl_mem kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
                                 sizeof(cl_precision) * cli->subdivisions, NULL, &err);
     cl_mem args = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, sizeof(struct stable_info)
                                  , &h_args, &err);
+    BENCHMARK_END(1, "buffer creation");
 
     if (!gauss || !kronrod || !args)
     {
@@ -98,6 +101,7 @@ double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
         goto cleanup;
     }
 
+    BENCHMARK_BEGIN;
     int argc = 0;
     err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &gauss);
     err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &kronrod);
@@ -116,6 +120,7 @@ double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
 
     err = clEnqueueNDRangeKernel(cli->env.queue, cli->env.kernel,
                                  1, NULL, &work_threads, &workgroup_size, 0, NULL, NULL);
+    BENCHMARK_END(1, "set args and enqueue kernel");
 
     if (err)
     {
@@ -123,6 +128,7 @@ double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
         goto cleanup;
     }
 
+    BENCHMARK_BEGIN;
     err |= clEnqueueReadBuffer(cli->env.queue, gauss, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
                                cli->h_gauss, 0, NULL, NULL);
     err |= clEnqueueReadBuffer(cli->env.queue, kronrod, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
@@ -133,6 +139,7 @@ double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
         stablecl_log(log_err, "[Stable-OpenCl] Error reading results from the GPU: %d\n", err);
         goto cleanup;
     }
+    BENCHMARK_END(1, "read buffers");
 
     _stable_set_results(cli);
 
@@ -140,10 +147,12 @@ double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
     *abserr = cli->abs_error;
 
 cleanup:
+    BENCHMARK_BEGIN;
     if (gauss) clReleaseMemObject(gauss);
     if (kronrod) clReleaseMemObject(kronrod);
 
     stablecl_log(log_message, "[Stable-OpenCl] Integration end.\n");
+    BENCHMARK_END(1, "final cleanup");
 
     return err;
 }
@@ -151,8 +160,10 @@ cleanup:
 static int _stable_set_results(struct stable_clinteg *cli)
 {
     double gauss_sum = 0, kronrod_sum = 0;
+    double bc_end, bc_start;
     unsigned int i;
 
+    BENCHMARK_BEGIN;
     for (i = 0; i < cli->subdivisions; i++)
     {
         stablecl_log(log_message, "[Stable-OpenCl] Interval %d: G %.3e K %.3e\n", i, cli->h_gauss[i], cli->h_kronrod[i]);
@@ -160,7 +171,7 @@ static int _stable_set_results(struct stable_clinteg *cli)
         kronrod_sum += (double) cli->h_kronrod[i];
         cli->subinterval_errors[i] = cli->h_gauss[i] - cli->h_kronrod[i];
     }
-
+    BENCHMARK_END(cli->subdivisions, "compute final sums");
 
     cli->result = kronrod_sum;
     cli->abs_error = kronrod_sum - gauss_sum;

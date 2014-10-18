@@ -29,20 +29,8 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include "stable_api.h"
+#include "benchmarking.h"
 
-static double get_ms_time()
-{
-    struct timeval t;
-    gettimeofday(&t, NULL);
-
-    return (double) t.tv_sec * 1000 + (double) t.tv_usec / 1000;
-}
-
-#define BENCHMARK_BEGIN bc_start = get_ms_time()
-#define BENCHMARK_END(iters, name) do { \
-    bc_end = get_ms_time(); \
-    fprintf(stdout, "%s: %f ms total, %f ms per item (%d items)\n", name, (bc_end - bc_start), (bc_end - bc_start) / iters, iters); \
-} while(0)
 
 int main (void)
 {
@@ -52,7 +40,7 @@ int main (void)
     double x = 10;
     double pdf = 0, gpu_pdf = 0;
     int i;
-    int max_tries = 100;
+    int max_tries = 1;
 
     StableDist *dist = stable_create(alfa, beta, sigma, mu, param);
 
