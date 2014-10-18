@@ -364,16 +364,22 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
   gsl_rng_env_setup(); //leemos las variables de entorno
   dist->gslworkspace = gsl_integration_workspace_alloc(IT_MAX);
   dist->gslrand = gsl_rng_alloc (gsl_rng_default);
-
-  #ifdef USE_GPU
-  if(stable_clinteg_init(&dist->cli) != 0) 
-    return NULL;
-  #endif
+  dist->gpu_enabled = 0;
 
   //Allow the distribution to use THREADS threads.
   stable_set_THREADS(THREADS);
 
   return dist;
+}
+
+short stable_activate_gpu(StableDist* dist)
+{
+  short error = stable_clinteg_init(&dist->cli);
+
+  if(!error)
+    dist->gpu_enabled = 1;
+
+  return error;
 }
 
 StableDist * stable_copy(StableDist *src_dist)

@@ -2,7 +2,7 @@
 #define OPENCL_COMMON_H
 
 #define GK_POINTS 61
-#define GK_SUBDIVISIONS 4
+#define GK_SUBDIVISIONS 5000
 
 #define PDF_ALPHA_EQ1 1
 #define PDF_ALPHA_NEQ1 2

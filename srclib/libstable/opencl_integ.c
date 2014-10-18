@@ -165,7 +165,7 @@ static int _stable_set_results(struct stable_clinteg *cli)
     cli->result = kronrod_sum;
     cli->abs_error = kronrod_sum - gauss_sum;
 
-    stablecl_log(log_warning, "[Stable-OpenCl] Results set: gauss_sum = %.3g, kronrod_sum = %.3g, abserr = %.3g\n", gauss_sum, kronrod_sum, cli->abs_error);
+    stablecl_log(log_message, "[Stable-OpenCl] Results set: gauss_sum = %.3g, kronrod_sum = %.3g, abserr = %.3g\n", gauss_sum, kronrod_sum, cli->abs_error);
     return 0;
 }
 

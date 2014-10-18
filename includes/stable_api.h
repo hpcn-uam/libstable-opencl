@@ -173,6 +173,7 @@ struct StableDistStruct
     gsl_rng * gslrand;
 
     struct stable_clinteg cli;
+    short gpu_enabled;
   };
 
 typedef struct StableDistStruct StableDist;
@@ -224,6 +225,8 @@ FILE * stable_set_FLOG(char * filename);
 
 StableDist *stable_create(double alfa, double beta, double sigma, double mu,
                           int parametrization);
+
+short stable_activate_gpu(StableDist* dist);
 
 StableDist *stable_copy(StableDist *src_dist);
 
