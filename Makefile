@@ -68,7 +68,7 @@ include Makefile.$(shell uname)
 .PRECIOUS: %.o %.d %.g 
 .PHONY: benchmark clean pack doxydoc docclean benchmark-run configs $(TARGETS) depend
 
-all: example
+all: $(TARGETS)
 libs: $(LIBS)
 final: all docs pack
 
