@@ -22,6 +22,8 @@ static int _stable_can_overflow(struct stable_clinteg *cli)
 
 int stable_clinteg_init(struct stable_clinteg *cli)
 {
+    int err;
+
     cli->points_rule = GK_POINTS;
     cli->subdivisions = GK_SUBDIVISIONS;
 
@@ -38,13 +40,34 @@ int stable_clinteg_init(struct stable_clinteg *cli)
         return -1;
     }
 
-    cli->h_gauss = (cl_precision *) calloc(cli->subdivisions, sizeof(cl_precision));
-    cli->h_kronrod = (cl_precision *) calloc(cli->subdivisions, sizeof(cl_precision));
     cli->subinterval_errors = (cl_precision *) calloc(cli->subdivisions, sizeof(cl_precision));
 
-    if (!cli->h_kronrod || !cli->h_gauss || !cli->subdivisions)
+    if (!cli->subdivisions)
     {
         perror("[Stable-OpenCl] Host memory allocation failed.");
+        return -1;
+    }
+
+    cli->gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                                  sizeof(cl_precision) * cli->subdivisions, NULL, &err);
+    cli->kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                                    sizeof(cl_precision) * cli->subdivisions, NULL, &err);
+    cli->args = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, 
+                                    sizeof(struct stable_info), NULL, &err);
+    
+    if(err)
+    {
+        stablecl_log(log_err, "[Stable-OpenCl] Buffer creation failed: %s\n", opencl_strerr(err));
+        return -1;
+    }
+
+    cli->h_gauss = clEnqueueMapBuffer(cli->env.queue, cli->gauss, CL_TRUE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
+    cli->h_kronrod = clEnqueueMapBuffer(cli->env.queue, cli->kronrod, CL_TRUE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
+    cli->h_args = clEnqueueMapBuffer(cli->env.queue, cli->args, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
+
+    if(err)
+    {
+        stablecl_log(log_err, "[Stable-OpenCl] Buffer mapping failed: %s\n", opencl_strerr(err));
         return -1;
     }
 
@@ -76,57 +99,42 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
 {
     cl_int err = 0;
     size_t work_threads, workgroup_size;
-    struct stable_info h_args;
     double bc_start, bc_end;
     cl_event event;
 
     // TODO: Create a "StableParams" structure that holds all of this parameters
     //      and use that instead of embedding all of them in the general StableDist
     //      structure, so I can avoid all this useless copying.
-    h_args.beta_ = dist->beta_;
-    h_args.k1 = dist->k1;
-    h_args.xxipow = dist->xxipow;
-    h_args.ibegin = a;
-    h_args.iend = b;
-    h_args.theta0_ = dist->theta0_;
-    h_args.alfa = dist->alfa;
-    h_args.alfainvalfa1 = dist->alfainvalfa1;
+    cli->h_args->beta_ = dist->beta_;
+    cli->h_args->k1 = dist->k1;
+    cli->h_args->xxipow = dist->xxipow;
+    cli->h_args->ibegin = a;
+    cli->h_args->iend = b;
+    cli->h_args->theta0_ = dist->theta0_;
+    cli->h_args->alfa = dist->alfa;
+    cli->h_args->alfainvalfa1 = dist->alfainvalfa1;
 
-    h_args.subinterval_length = (b - a) / (double) cli->subdivisions;
-    h_args.half_subint_length = h_args.subinterval_length / 2;
-    h_args.threads_per_interval = cli->points_rule / 2 + 1 + 1; // Extra thread for sum.
-    h_args.gauss_points = (cli->points_rule / 2 + 1) / 2;
-    h_args.kronrod_points = cli->points_rule / 2;
+    cli->h_args->subinterval_length = (b - a) / (double) cli->subdivisions;
+    cli->h_args->half_subint_length = cli->h_args->subinterval_length / 2;
+    cli->h_args->threads_per_interval = cli->points_rule / 2 + 1 + 1; // Extra thread for sum.
+    cli->h_args->gauss_points = (cli->points_rule / 2 + 1) / 2;
+    cli->h_args->kronrod_points = cli->points_rule / 2;
 
     if (dist->ZONE == ALFA_1)
-        h_args.integrand = PDF_ALPHA_EQ1;
+        cli->h_args->integrand = PDF_ALPHA_EQ1;
     else
-        h_args.integrand = PDF_ALPHA_NEQ1;
+        cli->h_args->integrand = PDF_ALPHA_NEQ1;
 
     stablecl_log(log_message, "[Stable-OpenCL] Integration begin - interval (%.3lf, %.3lf), %d subdivisions, %e subinterval length, %u threads per interval.\n",
-                 a, b, cli->subdivisions, h_args.subinterval_length, h_args.threads_per_interval);
+                 a, b, cli->subdivisions, cli->h_args->subinterval_length, cli->h_args->threads_per_interval);
 
-    BENCHMARK_BEGIN;
-    cl_mem gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                  sizeof(cl_precision) * cli->subdivisions, NULL, &err);
-    cl_mem kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                    sizeof(cl_precision) * cli->subdivisions, NULL, &err);
-    cl_mem args = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, sizeof(struct stable_info)
-                                 , &h_args, &err);
-    BENCHMARK_END(1, "buffer creation");
-
-    if (!gauss || !kronrod || !args)
-    {
-        stablecl_log(log_err, "[Stable-OpenCl] Buffer creation failed with code %d: %s\n", err, opencl_strerr(err));
-        stablecl_log(log_err, "[Stable-OpenCl] Pointers gauss, kronrod, args: %p, %p, %p\n", gauss, kronrod, args);
-        goto cleanup;
-    }
+    err = clEnqueueWriteBuffer(cli->env.queue, cli->args, CL_FALSE, 0, sizeof(struct stable_info), cli->h_args, 0, NULL, NULL);
 
     BENCHMARK_BEGIN;
     int argc = 0;
-    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &gauss);
-    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &kronrod);
-    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &args);
+    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->gauss);
+    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->kronrod);
+    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->args);
 
     if (err)
     {
@@ -135,7 +143,7 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
     }
 
     workgroup_size = 64; // Minimum accepted number, it seems.
-    work_threads = max(h_args.threads_per_interval, workgroup_size) * cli->subdivisions; // We already checked for overflow.
+    work_threads = max(cli->h_args->threads_per_interval, workgroup_size) * cli->subdivisions; // We already checked for overflow.
 
     stablecl_log(log_message, "[Stable-OpenCl] Enqueing kernel - %zu work threads, %zu workgroup size (%d points per interval)\n", work_threads, workgroup_size, cli->points_rule);
 
@@ -150,9 +158,9 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
     }
 
     BENCHMARK_BEGIN;
-    err |= clEnqueueReadBuffer(cli->env.queue, gauss, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
+    err |= clEnqueueReadBuffer(cli->env.queue, cli->gauss, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
                                cli->h_gauss, 0, NULL, NULL);
-    err |= clEnqueueReadBuffer(cli->env.queue, kronrod, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
+    err |= clEnqueueReadBuffer(cli->env.queue, cli->kronrod, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
                                cli->h_kronrod, 0, NULL, NULL);
 
     if (err)
@@ -170,12 +178,7 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
     *abserr = cli->abs_error;
 
 cleanup:
-    BENCHMARK_BEGIN;
-    if (gauss) clReleaseMemObject(gauss);
-    if (kronrod) clReleaseMemObject(kronrod);
-
     stablecl_log(log_message, "[Stable-OpenCl] Integration end.\n");
-    BENCHMARK_END(1, "final cleanup");
 
     return err;
 }
@@ -209,6 +212,9 @@ void stable_clinteg_teardown(struct stable_clinteg *cli)
     clReleaseProgram(cli->env.program);
     clReleaseCommandQueue(cli->env.queue);
     clReleaseContext(cli->env.context);
+    clReleaseMemObject(cli->gauss);
+    clReleaseMemObject(cli->kronrod);
+    clReleaseMemObject(cli->args);
 }
 
 

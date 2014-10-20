@@ -17,7 +17,11 @@ struct stable_clinteg {
 
 	cl_precision* h_gauss;
 	cl_precision* h_kronrod;
+	struct stable_info* h_args;
 	cl_precision* subinterval_errors;
+	cl_mem gauss;
+	cl_mem kronrod;
+	cl_mem args;
 	double result;
 	double abs_error;
 };
