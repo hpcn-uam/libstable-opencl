@@ -25,29 +25,30 @@ static void _measure_performance(StableDist *cpu_dist, StableDist *gpu_dist, dou
 
     gpu_duration = (gpu_end - gpu_start) / NUMTESTS;
     cpu_duration = (cpu_end - cpu_start) / NUMTESTS;
+    cpu_pdf /= NUMTESTS;
+    gpu_pdf /= NUMTESTS;
 
-    printf("%.2f\t%.2f\t%3.5f\t%3.5f\n", alfa, beta, cpu_duration, gpu_duration);
+    printf("%.2f\t%.2f\t%3.5f\t%3.5f\t%3.3g\t%3.5f\n", alfa, beta, cpu_duration, gpu_duration, fabs(gpu_pdf - cpu_pdf) / cpu_pdf, gpu_duration - cpu_duration);
+
 }
 
 int main (void)
 {
     double alfas[] = { 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75 };
-    double betas[] = { 0.0, 0.25, 0.5, 0.75, 1.0 };
-    double ev_points[] = { 1, 0, -1, 10, 1000, -1000 };
+    double betas[] = { 0.0, 0.25, 0.5, 0.75, 1.0, -0.25, -0.5, -0.75, -1.0 };
+    double ev_points[] = { -1, 0, 1, -2, 2, 3, 4, 5, 6, 10, 100, 1000, -1000 };
     double sigma = 1.0, mu = 0.0;
     StableDist *cpu_dist, *gpu_dist;
     int ai, bi, evi;
 
     printf("=== GPU/CPU performance tests for libstable ===\n");
-    stable_set_relTOL(1.2e-14);
 
     for (ai = 0; ai < sizeof alfas / sizeof(double); ai++)
     {
         for (bi = 0; bi < sizeof betas / sizeof(double); bi++)
-        {   
+        {
             cpu_dist = stable_create(alfas[ai], betas[bi], sigma, mu, 0);
             gpu_dist = stable_create(alfas[ai], betas[bi], sigma, mu, 0);
-
 
             stable_activate_gpu(gpu_dist);
 
