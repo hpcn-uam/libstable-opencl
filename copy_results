@@ -1,0 +1,8 @@
+#!/bin/bash
+
+scp azufre:~/libstable/gpu_perf_results ./gpu_perf.results 
+
+echo "Parsing results..."
+cat gpu_perf.results | awk '{print $1,$2,$4}' > gpu.results
+cat gpu_perf.results | awk '{print $1,$2,$3}' > cpu.results
+echo "Done"
