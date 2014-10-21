@@ -29,8 +29,26 @@ function remote_make()
 	echob ${tgreen}$name is compiling.
 }
 
+function remote_exec()
+{
+	path=$1
+	cmd=$2
+
+	out=$(ssh -t $host "cd $path; $cmd" 2>&1)
+	retval=$?
+
+	if [ $retval -ne 0 ]; then
+		echob ${tred}Execution failed.
+		exit 1
+	fi
+
+	echob ${tgreen}Command \"$cmd\" executed.
+}
+
 echob "Syncing files..."
 rsync -avzPt --exclude=.git --exclude=data --exclude=results ./ $host:/home/gjulian/libstable || (echo ${tred}Sync failed.${tnorm} && exit 1)
 echob "Synced. Remoting to compile..."
 
 remote_make /home/gjulian/libstable Library
+remote_exec /home/gjulian/libstable "bin/debug/gpu_performance | tail -n +2 > gpu_perf_results"
+./copy_results
