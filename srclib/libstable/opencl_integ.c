@@ -61,8 +61,8 @@ int stable_clinteg_init(struct stable_clinteg *cli)
         return -1;
     }
 
-    cli->h_gauss = clEnqueueMapBuffer(cli->env.queue, cli->gauss, CL_TRUE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
-    cli->h_kronrod = clEnqueueMapBuffer(cli->env.queue, cli->kronrod, CL_TRUE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
+    cli->h_gauss = clEnqueueMapBuffer(cli->env.queue, cli->gauss, CL_FALSE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
+    cli->h_kronrod = clEnqueueMapBuffer(cli->env.queue, cli->kronrod, CL_FALSE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
     cli->h_args = clEnqueueMapBuffer(cli->env.queue, cli->args, CL_TRUE, CL_MAP_WRITE, 0, sizeof(struct stable_info), 0, NULL, NULL, &err);
 
     if(err)
@@ -160,7 +160,7 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
     }
 
     BENCHMARK_BEGIN;
-    err |= clEnqueueReadBuffer(cli->env.queue, cli->gauss, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
+    err |= clEnqueueReadBuffer(cli->env.queue, cli->gauss, CL_FALSE, 0, sizeof(cl_precision) * cli->subdivisions,
                                cli->h_gauss, 0, NULL, NULL);
     err |= clEnqueueReadBuffer(cli->env.queue, cli->kronrod, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
                                cli->h_kronrod, 0, NULL, NULL);
@@ -172,7 +172,9 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
     }
     BENCHMARK_END(1, "read buffers");
 
+    BENCHMARK_BEGIN;
     _stable_get_profileinfo(event);
+    BENCHMARK_END(1, "profile info");
 
     _stable_set_results(cli);
 
