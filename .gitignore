@@ -11,3 +11,5 @@ cg_annotated.*
 data_*.txt
 errlog.txt
 results/*
+
+*.results
