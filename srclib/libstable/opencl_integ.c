@@ -214,13 +214,15 @@ static int _stable_set_results(struct stable_clinteg *cli)
 
 void stable_clinteg_teardown(struct stable_clinteg *cli)
 {
-    clReleaseKernel(cli->env.kernel);
-    clReleaseProgram(cli->env.program);
-    clReleaseCommandQueue(cli->env.queue);
-    clReleaseContext(cli->env.context);
+    clEnqueueUnmapMemObject(cli->env.queue, cli->gauss, cli->h_gauss, 0, NULL, NULL);
+    clEnqueueUnmapMemObject(cli->env.queue, cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
+    clEnqueueUnmapMemObject(cli->env.queue, cli->args, cli->h_args, 0, NULL, NULL);
+
     clReleaseMemObject(cli->gauss);
     clReleaseMemObject(cli->kronrod);
     clReleaseMemObject(cli->args);
+
+    opencl_teardown(&cli->env);
 }
 
 
