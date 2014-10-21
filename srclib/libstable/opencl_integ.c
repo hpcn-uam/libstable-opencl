@@ -78,6 +78,7 @@ int stable_clinteg_init(struct stable_clinteg *cli)
 
 static void _stable_get_profileinfo(cl_event event)
 {
+#ifdef BENCHMARK
     cl_ulong queued, submitted, started, finished;
     clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED,
                             sizeof(queued), &queued, NULL);
@@ -94,6 +95,7 @@ static void _stable_get_profileinfo(cl_event event)
 
     printf("OpenCL Profile: %3.3g ms submit, %3.3g ms start, %3.3g ms finish.\n", submit, start, finish);
     printf("\tKernel exec time: %3.3g.\n", finish - start);
+#endif
 }
 
 double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, double epsabs, double epsrel, unsigned short limit,
