@@ -1,8 +1,39 @@
 #!/bin/bash
 
+tbold=$(tput bold)
+treset=$(tput sgr0)
+tred=$(tput setaf 1)
+tgreen=$(tput setaf 2)
+tyellow=$(tput setaf 3)
+host=gjulian@azufre.ii.uam.es
+
+function echob()
+{
+	echo ${tbold}$@${treset}
+}
+
+function remote_exec()
+{
+	path=$1
+	cmd=$2
+
+	out=$(ssh $host "cd $path; $cmd" 2>&1)
+	retval=$?
+
+	if [ $retval -ne 0 ]; then
+		echob ${tred}Execution failed.
+		exit 1
+	fi
+
+	echob ${tgreen}Command \"$cmd\" executed.
+}
+
+remote_exec /home/gjulian/libstable "bin/release/gpu_performance | tail -n +2 > gpu_perf_results"
 scp azufre:~/libstable/gpu_perf_results ./gpu_perf.results 
 
 echo "Parsing results..."
 cat gpu_perf.results | awk '{print $1,$2,$4}' > gpu.results
 cat gpu_perf.results | awk '{print $1,$2,$3}' > cpu.results
+cat gpu_perf.results | awk '{print $1,$2,$5}' > diffs.results
+cat gpu_perf.results | awk '{print $1,$2,$6}' > perf.results
 echo "Done"
