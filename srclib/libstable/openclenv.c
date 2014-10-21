@@ -53,6 +53,25 @@ error:
     return NULL;
 }
 
+
+static void _opencl_platform_info(cl_platform_id* platforms, cl_uint platform_num)
+{
+    #if STABLE_MIN_LOG > 0
+    int i;
+    char version[500], name[500], vendor[500], extensions[500];
+    
+    stablecl_log(log_message, "[Stable-OpenCL] Available platforms (OPENCL_FORCE_CPU = %d): %d\n", OPENCL_FORCE_CPU, platform_num);
+    for(i = 0; i < platform_num; i++)
+    {
+        clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
+        clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, 500, version, NULL);
+        clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, 500, vendor, NULL);
+        clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, 500, extensions, NULL);
+        stablecl_log(log_message, "[Stable-OpenCL] %d: %s, OpenCL version %s, vendor %s. Available extensions: %s\n", i, name, version, vendor, extensions);
+    }
+    #endif
+}
+
 int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *kernname)
 {
     char *err_msg = NULL;
@@ -63,8 +82,6 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
     size_t build_log_size;
     cl_platform_id platforms[MAX_OPENCL_PLATFORMS];
     cl_uint platform_num;
-    int i;
-    char version[500], name[500], vendor[500];
 
     err = clGetPlatformIDs(MAX_OPENCL_PLATFORMS, platforms, &platform_num);
 
@@ -74,14 +91,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    stablecl_log(log_message, "[Stable-OpenCL] Available platforms (OPENCL_FORCE_CPU = %d): %d\n", OPENCL_FORCE_CPU, platform_num);
-    for(i = 0; i < platform_num; i++)
-    {
-        clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
-        clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, 500, version, NULL);
-        clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, 500, vendor, NULL);
-        stablecl_log(log_message, "[Stable-OpenCL] %d: %s. Version %s. Vendor %s\n", i, name, version, vendor);
-    }
+    _opencl_platform_info(platforms, platform_num);
 
     err = clGetDeviceIDs(platforms[0], OPENCL_FORCE_CPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU, 1, &(env->device), NULL);
 

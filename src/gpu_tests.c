@@ -42,6 +42,8 @@ int main (void)
     int i;
     int max_tries = 1;
 
+    printf("=== GPU tests for libstable:\n");
+
     StableDist *dist = stable_create(alfa, beta, sigma, mu, param);
 
     if (!dist)
@@ -57,11 +59,12 @@ int main (void)
 
     pdf /= max_tries;
 
-    printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e\n",
+    printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e\n\n",
            x, alfa, beta, sigma, mu, pdf);
     
-
+    BENCHMARK_BEGIN;
     stable_activate_gpu(dist);
+    BENCHMARK_END(1, "stable_activate_gpu");
 
     BENCHMARK_BEGIN;
     for(i = 0; i < max_tries; i++)

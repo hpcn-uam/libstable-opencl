@@ -63,11 +63,13 @@ int stable_clinteg_init(struct stable_clinteg *cli)
 
     cli->h_gauss = clEnqueueMapBuffer(cli->env.queue, cli->gauss, CL_TRUE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
     cli->h_kronrod = clEnqueueMapBuffer(cli->env.queue, cli->kronrod, CL_TRUE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
-    cli->h_args = clEnqueueMapBuffer(cli->env.queue, cli->args, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
+    cli->h_args = clEnqueueMapBuffer(cli->env.queue, cli->args, CL_TRUE, CL_MAP_WRITE, 0, sizeof(struct stable_info), 0, NULL, NULL, &err);
 
     if(err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Buffer mapping failed: %s\n", opencl_strerr(err));
+        stablecl_log(log_err, "[Stable-OpenCl] Buffer mapping failed: %s. "
+            "Host pointers (gauss, kronrod, args): (%p, %p, %p)\n", 
+            opencl_strerr(err), cli->h_gauss, cli->h_kronrod, cli->h_args);
         return -1;
     }
 

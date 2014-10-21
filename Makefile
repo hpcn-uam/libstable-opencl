@@ -1,7 +1,7 @@
 CC = gcc
 CLC = openclc
 CLC_ARCH = gpu_32
-CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC -DSTABLE_MIN_LOG=1 
+CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC -DSTABLE_MIN_LOG=1
 CLFLAGS = -emit-llvm -c -arch $(CLC_ARCH)
 DEBUG_CFLAGS = -O -ggdb -ftrapv -DBENCHMARK
 RELEASE_CFLAGS = -O3 -march=native -ffast-math
