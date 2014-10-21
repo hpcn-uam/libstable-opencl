@@ -13,3 +13,5 @@ errlog.txt
 results/*
 
 *.results
+*.png
+*.pdf
