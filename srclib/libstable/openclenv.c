@@ -1,4 +1,5 @@
 #include "openclenv.h"
+#include <stdarg.h>
 
 #ifndef OPENCL_FORCE_CPU
 #define OPENCL_FORCE_CPU 0
