@@ -18,6 +18,18 @@ struct openclenv
     cl_kernel        kernel;
 };
 
+struct opencl_profile
+{
+	double queued;
+	double submitted;
+	double started;
+	double finished;
+	double submit_acum;
+	double start_acum;
+	double finish_acum;
+	double exec_time;
+};
+
 
 typedef enum {
     log_message, log_warning, log_err
@@ -31,6 +43,6 @@ int opencl_initenv(struct openclenv* env, const char* bitcode_path, const char* 
 int opencl_teardown(struct openclenv* env);
 const char* opencl_strerr(cl_int err);
 void stablecl_log(log_level level, const char* string, ...);
-
+void stablecl_profileinfo(struct opencl_profile* prof, cl_event event);
 #endif
 

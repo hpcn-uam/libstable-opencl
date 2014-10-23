@@ -28,7 +28,11 @@ static void _measure_performance(StableDist *cpu_dist, StableDist *gpu_dist, dou
     cpu_pdf /= NUMTESTS;
     gpu_pdf /= NUMTESTS;
 
-    printf("%.2f\t%.2f\t%3.5f\t%3.5f\t%3.3g\t%3.5f\n", alfa, beta, cpu_duration, gpu_duration, fabs(gpu_pdf - cpu_pdf) / cpu_pdf, gpu_duration - cpu_duration);
+    printf("%.2f\t%.2f\t%3.5f\t%3.5f\t%3.3g\t%3.5f\t%3.5f\n", 
+        alfa, beta, cpu_duration, gpu_duration, 
+        fabs(gpu_pdf - cpu_pdf) / cpu_pdf, gpu_duration - cpu_duration,
+        gpu_dist->cli.profiling.exec_time);
+
 
 }
 
@@ -43,17 +47,22 @@ int main (void)
 
     printf("=== GPU/CPU performance tests for libstable ===\n");
 
+    stable_set_relTOL(1.2e-16);
+
     for (ai = 0; ai < sizeof alfas / sizeof(double); ai++)
     {
         for (bi = 0; bi < sizeof betas / sizeof(double); bi++)
         {
             cpu_dist = stable_create(alfas[ai], betas[bi], sigma, mu, 0);
             gpu_dist = stable_create(alfas[ai], betas[bi], sigma, mu, 0);
+            
+            gpu_dist->cli.profile_enabled = 1;
 
-            stable_activate_gpu(gpu_dist);
-
-            for (evi = 0; evi < sizeof ev_points / sizeof(double); evi++)
-                _measure_performance(cpu_dist, gpu_dist, ev_points[evi], alfas[ai], betas[bi]);
+            if(stable_activate_gpu(gpu_dist))
+                fprintf(stderr, "Couldn't activate GPU :(\n");
+            else
+                for (evi = 0; evi < sizeof ev_points / sizeof(double); evi++)
+                    _measure_performance(cpu_dist, gpu_dist, ev_points[evi], alfas[ai], betas[bi]);
 
             stable_free(cpu_dist);
             stable_free(gpu_dist);

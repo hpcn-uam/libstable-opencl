@@ -24,6 +24,9 @@ struct stable_clinteg {
 	cl_mem args;
 	double result;
 	double abs_error;
+
+	struct opencl_profile profiling;
+	short profile_enabled;
 };
 
 

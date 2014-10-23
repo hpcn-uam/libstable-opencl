@@ -27,6 +27,10 @@ int stable_clinteg_init(struct stable_clinteg *cli)
     cli->points_rule = GK_POINTS;
     cli->subdivisions = GK_SUBDIVISIONS;
 
+#ifdef BENCHMARK
+    cli->profile_enabled = 1;
+#endif
+
     if (_stable_can_overflow(cli))
     {
         stablecl_log(log_warning, "[Stable-OpenCl] Warning: possible overflow in work dimension (%d x %d).\n"
@@ -49,13 +53,13 @@ int stable_clinteg_init(struct stable_clinteg *cli)
     }
 
     cli->gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                  sizeof(cl_precision) * cli->subdivisions, NULL, &err);
+                                sizeof(cl_precision) * cli->subdivisions, NULL, &err);
     cli->kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                    sizeof(cl_precision) * cli->subdivisions, NULL, &err);
-    cli->args = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, 
-                                    sizeof(struct stable_info), NULL, &err);
-    
-    if(err)
+                                  sizeof(cl_precision) * cli->subdivisions, NULL, &err);
+    cli->args = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                               sizeof(struct stable_info), NULL, &err);
+
+    if (err)
     {
         stablecl_log(log_err, "[Stable-OpenCl] Buffer creation failed: %s\n", opencl_strerr(err));
         return -1;
@@ -65,37 +69,26 @@ int stable_clinteg_init(struct stable_clinteg *cli)
     cli->h_kronrod = clEnqueueMapBuffer(cli->env.queue, cli->kronrod, CL_FALSE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
     cli->h_args = clEnqueueMapBuffer(cli->env.queue, cli->args, CL_TRUE, CL_MAP_WRITE, 0, sizeof(struct stable_info), 0, NULL, NULL, &err);
 
-    if(err)
+    if (err)
     {
         stablecl_log(log_err, "[Stable-OpenCl] Buffer mapping failed: %s. "
-            "Host pointers (gauss, kronrod, args): (%p, %p, %p)\n", 
-            opencl_strerr(err), cli->h_gauss, cli->h_kronrod, cli->h_args);
+                     "Host pointers (gauss, kronrod, args): (%p, %p, %p)\n",
+                     opencl_strerr(err), cli->h_gauss, cli->h_kronrod, cli->h_args);
         return -1;
     }
 
     return 0;
 }
 
-static void _stable_get_profileinfo(cl_event event)
+void stable_retrieve_profileinfo(struct stable_clinteg *cli, cl_event event)
 {
-#ifdef BENCHMARK
-    cl_ulong queued, submitted, started, finished;
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED,
-                            sizeof(queued), &queued, NULL);
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_SUBMIT,
-                            sizeof(submitted), &submitted, NULL);
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START,
-                            sizeof(started), &started, NULL);
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END,
-                            sizeof(finished), &finished, NULL);
+    stablecl_profileinfo(&cli->profiling, event);
+}
 
-    double submit = ((double)submitted - queued) / 1000000;
-    double start = ((double)started - queued) / 1000000;
-    double finish = ((double)finished - queued) / 1000000;
-
-    printf("OpenCL Profile: %3.3g ms submit, %3.3g ms start, %3.3g ms finish.\n", submit, start, finish);
-    printf("\tKernel exec time: %3.3g.\n", finish - start);
-#endif
+static void _stable_print_profileinfo(struct opencl_profile *prof)
+{
+    printf("OpenCL Profile: %3.3g ms submit, %3.3g ms start, %3.3g ms finish.\n", prof->submit_acum, prof->start_acum, prof->finish_acum);
+    printf("\tKernel exec time: %3.3g.\n", prof->exec_time);
 }
 
 double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, double epsabs, double epsrel, unsigned short limit,
@@ -174,9 +167,14 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
     }
     BENCHMARK_END(1, "read buffers");
 
+    if (cli->profile_enabled)
+        stable_retrieve_profileinfo(cli, event);
+
+#ifdef BENCHMARK
     BENCHMARK_BEGIN;
-    _stable_get_profileinfo(event);
+    _stable_print_profileinfo(&cli->profiling);
     BENCHMARK_END(1, "profile info");
+#endif
 
     _stable_set_results(cli);
 
