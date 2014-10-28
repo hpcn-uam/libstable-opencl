@@ -275,7 +275,7 @@ void stablecl_log(log_level level, const char* string, ...)
 
 void stablecl_profileinfo(struct opencl_profile* prof, cl_event event)
 {
-     clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED,
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED,
                             sizeof(double), &prof->queued, NULL);
     clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_SUBMIT,
                             sizeof(double), &prof->submitted, NULL);
