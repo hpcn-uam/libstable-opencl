@@ -47,7 +47,10 @@ int main (void)
     cpu_dist = stable_create(0.5, 0.0, 1, 0, 0);
 
     if (stable_activate_gpu(gpu_dist))
+    {
         fprintf(stderr, "Couldn't activate GPU :(\n");
+        return 1;
+    }
 
     gpu_dist->cli.profile_enabled = 1;
     printf("=== GPU/CPU performance tests for libstable ===\n");
