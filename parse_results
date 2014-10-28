@@ -1,0 +1,7 @@
+#!/bin/bash
+echo "Parsing results..."
+cat gpu_perf.results | awk '{print $1,$2,$4}' > gpu.results
+cat gpu_perf.results | awk '{print $1,$2,$3}' > cpu.results
+cat gpu_perf.results | awk '{print $1,$2,$5}' > diffs.results
+cat gpu_perf.results | awk '{print $1,$2,$6}' > perf.results
+echo "Done"

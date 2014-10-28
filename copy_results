@@ -31,9 +31,4 @@ function remote_exec()
 remote_exec /home/gjulian/libstable "bin/release/gpu_performance | tail -n +2 > gpu_perf_results"
 scp azufre:~/libstable/gpu_perf_results ./gpu_perf.results 
 
-echo "Parsing results..."
-cat gpu_perf.results | awk '{print $1,$2,$4}' > gpu.results
-cat gpu_perf.results | awk '{print $1,$2,$3}' > cpu.results
-cat gpu_perf.results | awk '{print $1,$2,$5}' > diffs.results
-cat gpu_perf.results | awk '{print $1,$2,$6}' > perf.results
-echo "Done"
+./parse_results
