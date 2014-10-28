@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
         reltol[] = {1.2e-14, 1e-12, 1e-10, 1e-8, 1e-6},
 		abstol = 1e-50,
         t_total = 0, tpdf;
-        
+
     double *pdf, *err, * x;
 
     FILE *ftiempos, *finteg, *flog;
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
     StableDist *dist;
     void (*func)(StableDist *, const double *, const int, double *, double *);
 
-    if (argc != 3)
+    if (argc < 3)
     {
         printf("Uso: stable_performance FUNC THREADS\n     FUNC=1: PDF\n     FUNC=2: CDF\n     FUNC=0: Ambas\n");
         exit(1);
@@ -112,6 +112,9 @@ int main(int argc, char *argv[])
         printf("Error en la creacion de la distribucion");
         exit(EXIT_FAILURE);
     }
+
+    if(argc == 4)
+        stable_activate_gpu(dist);
 
     finteg = stable_set_FINTEG("data_integrando.txt");
     flog = stable_set_FLOG("errlog.txt");
