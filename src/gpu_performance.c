@@ -4,7 +4,7 @@
 #include "stable_api.h"
 #include "benchmarking.h"
 
-#define NUMTESTS 40
+#define NUMTESTS 50
 
 static void _measure_performance(StableDist *cpu_dist, StableDist *gpu_dist, double x, double alfa, double beta)
 {
@@ -56,6 +56,7 @@ int main (void)
     printf("=== GPU/CPU performance tests for libstable ===\n");
 
     stable_set_relTOL(1.2e-20);
+    stable_set_absTOL(1e-10);
 
     for (ai = 0; ai < sizeof alfas / sizeof(double); ai++)
     {
