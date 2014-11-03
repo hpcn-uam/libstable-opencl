@@ -171,15 +171,13 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 			fval2 = stable_pdf_alpha_neq1(center + abscissa, stable);
 		}
 
-		fsum = fval1 + fval2;
-
-		if(subinterval_index == kronrod_eval_points - 1)
-			fsum /= 2;
+		if(subinterval_index < kronrod_eval_points - 1)
+			fval1 += fval2;
 
 		if(subinterval_index % 2 == 1)
-			gauss_sum[subinterval_index / 2] = wg[subinterval_index / 2] * fsum;
+			gauss_sum[subinterval_index / 2] = wg[subinterval_index / 2] * fval1;
 
-		kronrod_sum[subinterval_index] = wgk[subinterval_index] * fsum; 
+		kronrod_sum[subinterval_index] = wgk[subinterval_index] * fval1; 
 	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
