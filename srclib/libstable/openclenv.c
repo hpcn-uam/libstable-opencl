@@ -56,7 +56,7 @@ error:
 
 static void _opencl_platform_info(cl_platform_id* platforms, cl_uint platform_num)
 {
-    #if STABLE_MIN_LOG > 0
+    #if STABLE_MIN_LOG <= 0
     int i;
     char version[500], name[500], vendor[500], extensions[500];
     
