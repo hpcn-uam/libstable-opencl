@@ -34,7 +34,6 @@
 
 int main (void)
 {
-    double bc_start, bc_end;
     double alfa = 1.25, beta = 0.5, sigma = 1.0, mu = 0.0;
     int param = 0;
     double x = 10;
@@ -52,25 +51,19 @@ int main (void)
         return 1;
     }
 
-    BENCHMARK_BEGIN;
     for(i = 0; i < max_tries; i++)
         pdf += stable_pdf_point(dist, x, NULL);
-    BENCHMARK_END(max_tries, "PDF CPU");
 
     pdf /= max_tries;
 
     printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e\n\n",
            x, alfa, beta, sigma, mu, pdf);
     
-    BENCHMARK_BEGIN;
     stable_activate_gpu(dist);
-    BENCHMARK_END(1, "stable_activate_gpu");
-
-    BENCHMARK_BEGIN;
+   
     for(i = 0; i < max_tries; i++)
         gpu_pdf += stable_pdf_point(dist, x, NULL);
-    BENCHMARK_END(max_tries, "PDF GPU");
-
+   
     gpu_pdf /= max_tries;
 
     printf("GPU PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e\n",

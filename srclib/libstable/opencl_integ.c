@@ -96,7 +96,6 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
 {
     cl_int err = 0;
     size_t work_threads, workgroup_size;
-    double bc_start, bc_end;
     cl_event event;
 
     // TODO: Create a "StableParams" structure that holds all of this parameters
@@ -127,26 +126,29 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
 
     err = clEnqueueWriteBuffer(cli->env.queue, cli->args, CL_FALSE, 0, sizeof(struct stable_info), cli->h_args, 0, NULL, NULL);
 
-    BENCHMARK_BEGIN;
+    bench_begin(cli->profiling.argset, cli->profile_enabled);
     int argc = 0;
     err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->gauss);
     err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->kronrod);
     err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->args);
+    bench_end(cli->profiling.argset, cli->profile_enabled);
 
     if (err)
     {
         stablecl_log(log_err, "[Stable-OpenCl] Couldn't set kernel arguments: error %d\n", err);
         goto cleanup;
     }
+   
 
     workgroup_size = 64; // Minimum accepted number, it seems.
     work_threads = max(cli->h_args->threads_per_interval, workgroup_size) * cli->subdivisions; // We already checked for overflow.
 
     stablecl_log(log_message, "[Stable-OpenCl] Enqueing kernel - %zu work threads, %zu workgroup size (%d points per interval)\n", work_threads, workgroup_size, cli->points_rule);
 
+    bench_begin(cli->profiling.enqueue, cli->profile_enabled);
     err = clEnqueueNDRangeKernel(cli->env.queue, cli->env.kernel,
                                  1, NULL, &work_threads, &workgroup_size, 0, NULL, &event);
-    BENCHMARK_END(1, "set args and enqueue kernel");
+    bench_end(cli->profiling.enqueue, cli->profile_enabled);
 
     if (err)
     {
@@ -154,29 +156,26 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
         goto cleanup;
     }
 
-    BENCHMARK_BEGIN;
+    bench_begin(cli->profiling.buffer_read, cli->profile_enabled);
     err |= clEnqueueReadBuffer(cli->env.queue, cli->gauss, CL_FALSE, 0, sizeof(cl_precision) * cli->subdivisions,
                                cli->h_gauss, 0, NULL, NULL);
     err |= clEnqueueReadBuffer(cli->env.queue, cli->kronrod, CL_TRUE, 0, sizeof(cl_precision) * cli->subdivisions,
                                cli->h_kronrod, 0, NULL, NULL);
+    bench_end(cli->profiling.buffer_read, cli->profile_enabled);
 
     if (err)
     {
         stablecl_log(log_err, "[Stable-OpenCl] Error reading results from the GPU: %d\n", err);
         goto cleanup;
     }
-    BENCHMARK_END(1, "read buffers");
-
+   
     if (cli->profile_enabled)
         stable_retrieve_profileinfo(cli, event);
 
-#ifdef BENCHMARK
-    BENCHMARK_BEGIN;
-    _stable_print_profileinfo(&cli->profiling);
-    BENCHMARK_END(1, "profile info");
-#endif
 
+    bench_begin(cli->profiling.set_results, cli->profile_enabled);
     _stable_set_results(cli);
+    bench_end(cli->profiling.set_results, cli->profile_enabled);
 
     *result = cli->result;
     *abserr = cli->abs_error;
@@ -190,10 +189,8 @@ cleanup:
 static int _stable_set_results(struct stable_clinteg *cli)
 {
     double gauss_sum = 0, kronrod_sum = 0;
-    double bc_end, bc_start;
     unsigned int i;
 
-    BENCHMARK_BEGIN;
     for (i = 0; i < cli->subdivisions; i++)
     {
         stablecl_log(log_message, "[Stable-OpenCl] Interval %d: G %.3e K %.3e\n", i, cli->h_gauss[i], cli->h_kronrod[i]);
@@ -201,7 +198,6 @@ static int _stable_set_results(struct stable_clinteg *cli)
         kronrod_sum += (double) cli->h_kronrod[i];
         cli->subinterval_errors[i] = cli->h_gauss[i] - cli->h_kronrod[i];
     }
-    BENCHMARK_END(cli->subdivisions, "compute final sums");
 
     cli->result = kronrod_sum;
     cli->abs_error = kronrod_sum - gauss_sum;

@@ -28,6 +28,10 @@ struct opencl_profile
 	double start_acum;
 	double finish_acum;
 	double exec_time;
+	double argset;
+	double enqueue;
+	double buffer_read;
+	double set_results;
 };
 
 

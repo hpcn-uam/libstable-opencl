@@ -12,7 +12,9 @@ static void _measure_performance(StableDist *gpu_dist, double x, double alfa, do
     double gpu_pdf = 0;
     double gpu_start, gpu_end;
     double gpu_duration;
-    double submits = 0, starts = 0, ends = 0, exec = 0;
+    struct opencl_profile profile;
+
+    bzero(&profile, sizeof(struct opencl_profile));
 
     gpu_dist->cli.profile_enabled = 0;
 
@@ -26,21 +28,31 @@ static void _measure_performance(StableDist *gpu_dist, double x, double alfa, do
     for (i = 0; i < NUMTESTS; i++)
     {
         gpu_pdf += stable_pdf_point(gpu_dist, x, NULL);
-        submits += gpu_dist->cli.profiling.submit_acum;
-        starts += gpu_dist->cli.profiling.start_acum;
-        ends += gpu_dist->cli.profiling.finish_acum;
-        exec += gpu_dist->cli.profiling.exec_time;
+        profile.submit_acum += gpu_dist->cli.profiling.submit_acum;
+        profile.start_acum += gpu_dist->cli.profiling.start_acum;
+        profile.finish_acum += gpu_dist->cli.profiling.finish_acum;
+        profile.exec_time += gpu_dist->cli.profiling.exec_time;
+        profile.argset += gpu_dist->cli.profiling.argset;
+        profile.enqueue += gpu_dist->cli.profiling.enqueue;
+        profile.buffer_read += gpu_dist->cli.profiling.buffer_read;
+        profile.set_results += gpu_dist->cli.profiling.set_results;
     }
 
     gpu_duration = (gpu_end - gpu_start) / NUMTESTS;
-    submits /= NUMTESTS;
-    starts /= NUMTESTS;
-    ends /= NUMTESTS;
-    exec /= NUMTESTS;
+    profile.submit_acum /= NUMTESTS;
+    profile.start_acum /= NUMTESTS;
+    profile.finish_acum /= NUMTESTS;
+    profile.exec_time /= NUMTESTS;
+    profile.argset /= NUMTESTS;
+    profile.enqueue /= NUMTESTS;
+    profile.buffer_read /= NUMTESTS;
+    profile.set_results /= NUMTESTS;
     gpu_pdf /= NUMTESTS * 2;
 
-    printf("\r%.3f\t%.3f\t%.3f\t%.3g\t%.3g\t%.3g\t%.3g\n", alfa, beta, gpu_duration, submits, starts, ends, exec);
-}
+    printf("\r%.3f %.3f\t| %.3f | %.5f %.5f %.5f %.5f | %.5f %.5f %.5f %.5f\n", alfa, beta, gpu_duration,
+          profile.submit_acum, profile.start_acum, profile.finish_acum, profile.exec_time,
+           profile.argset, profile.enqueue, profile.buffer_read, profile.set_results);
+ }
 
 int main (void)
 {
@@ -64,6 +76,8 @@ int main (void)
     stable_set_relTOL(1.2e-20);
     stable_set_absTOL(1e-10);
 
+    printf("α     β\t\t| time  | submit  start   finish  total   | argset  enqueue bufread setres\n");
+
     for (ai = 0; ai < sizeof alfas / sizeof(double); ai++)
     {
         for (bi = 0; bi < sizeof betas / sizeof(double); bi++)
@@ -75,6 +89,7 @@ int main (void)
 
         }
     }
+    printf("α     β\t\t| time  | submit  start   finish  total   | argset  enqueue bufread setres\n");
 
     stable_free(gpu_dist);
 
