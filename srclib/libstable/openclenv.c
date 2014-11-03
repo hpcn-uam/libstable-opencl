@@ -275,19 +275,24 @@ void stablecl_log(log_level level, const char* string, ...)
 
 void stablecl_profileinfo(struct opencl_profile* prof, cl_event event)
 {
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED,
-                            sizeof(double), &prof->queued, NULL);
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_SUBMIT,
-                            sizeof(double), &prof->submitted, NULL);
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START,
-                            sizeof(double), &prof->started, NULL);
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END,
-                            sizeof(double), &prof->finished, NULL);
+    int retval = 0;
 
-    prof->submit_acum = ((double)prof->submitted - prof->queued) / 1000000;
-    prof->start_acum = ((double)prof->started - prof->queued) / 1000000;
-    prof->finish_acum = ((double)prof->finished - prof->queued) / 1000000;
-    prof->exec_time = prof->finish_acum - prof->start_acum;
+    retval |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED,
+                            sizeof(cl_ulong), &prof->queued, NULL);
+    retval |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_SUBMIT,
+                            sizeof(cl_ulong), &prof->submitted, NULL);
+    retval |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START,
+                            sizeof(cl_ulong), &prof->started, NULL);
+    retval |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END,
+                            sizeof(cl_ulong), &prof->finished, NULL);
+
+    if(retval != CL_SUCCESS)
+        fprintf(stderr, "[Stable-OpenCL] clGetEventProfilingInfo error %d: %s\n", retval, opencl_strerr(retval));
+
+    prof->submit_acum = (double)(prof->submitted - prof->queued) / 1000000;
+    prof->start_acum = (double)(prof->started - prof->queued) / 1000000;
+    prof->finish_acum = (double)(prof->finished - prof->queued) / 1000000;
+    prof->exec_time = (double)(prof->finished - prof->started) / 1000000;
 }
 
 

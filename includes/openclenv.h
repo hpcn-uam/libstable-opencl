@@ -20,10 +20,10 @@ struct openclenv
 
 struct opencl_profile
 {
-	double queued;
-	double submitted;
-	double started;
-	double finished;
+	cl_ulong queued;
+	cl_ulong submitted;
+	cl_ulong started;
+	cl_ulong finished;
 	double submit_acum;
 	double start_acum;
 	double finish_acum;
