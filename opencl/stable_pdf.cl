@@ -224,18 +224,20 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
     if(subinterval_index == kronrod_eval_points)
     {
       int i;
+      double loc_gauss = 0, loc_kronrod = 0;
+
       for(i = 0; i < 15; i++)
       {
-        gauss[interval] += gauss_sum[i];
-        kronrod[interval] += kronrod_sum[i];
+        loc_gauss += gauss_sum[i];
+        loc_kronrod += kronrod_sum[i];
       }
 
       for(; i < 31; i++)
       {
-        kronrod[interval] += kronrod_sum[i];
+        loc_kronrod += kronrod_sum[i];
       }
 
-      gauss[interval] *= stable->half_subint_length;
-      kronrod[interval] *= stable->half_subint_length;
+      gauss[interval] = loc_gauss * stable->half_subint_length;
+      kronrod[interval] = loc_kronrod * stable->half_subint_length;
     }
 }
