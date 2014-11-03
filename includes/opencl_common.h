@@ -9,8 +9,10 @@
 
 #if defined(__APPLE__) || !defined(cl_khr_fp64) || !defined(cl_amd_fp64)
 #define cl_precision float
+#define cl_precision2 float2
 #else
 #define cl_precision double
+#define cl_precision2 double2
 #endif
 
 

@@ -52,23 +52,39 @@ constant cl_precision xgk[31] =   /* abscissae of the 61-point kronrod rule */
 /* xgk[1], xgk[3], ... abscissae of the 30-point gauss rule. 
 xgk[0], xgk[2], ... abscissae to optimally extend the 30-point gauss rule */
 
-constant cl_precision wg[15] =    /* weights of the 30-point gauss rule */
+constant cl_precision wg[31] =    /* weights of the 30-point gauss rule */
 {
+	0.0,
 	0.007968192496166605615465883474674,
+	0.0,
 	0.018466468311090959142302131912047,
+	0.0,
 	0.028784707883323369349719179611292,
+	0.0,
 	0.038799192569627049596801936446348,
+	0.0,
 	0.048402672830594052902938140422808,
+	0.0,
 	0.057493156217619066481721689402056,
+	0.0,
 	0.065974229882180495128128515115962,
+	0.0,
 	0.073755974737705206268243850022191,
+	0.0,
 	0.080755895229420215354694938460530,
+	0.0,
 	0.086899787201082979802387530715126,
+	0.0,
 	0.092122522237786128717632707087619,
+	0.0,
 	0.096368737174644259639468626351810,
+	0.0,
 	0.099593420586795267062780282103569,
+	0.0,
 	0.101762389748405504596428952168554,
-	0.102852652893558840341285636705415
+	0.0,
+	0.102852652893558840341285636705415,
+	0.0
 };
 
 constant cl_precision wgk[31] =   /* weights of the 61-point kronrod rule */
@@ -105,6 +121,44 @@ constant cl_precision wgk[31] =   /* weights of the 61-point kronrod rule */
 	0.051426128537459025933862879215781,
 	0.051494729429451567558340433647099
 };
+
+constant cl_precision2 weights[31] =
+{
+	(cl_precision2)(0.001389013698677007624551591226760, 0.0),
+	(cl_precision2)(0.003890461127099884051267201844516, 0.007968192496166605615465883474674),
+	(cl_precision2)(0.006630703915931292173319826369750, 0.0),
+	(cl_precision2)(0.009273279659517763428441146892024, 0.018466468311090959142302131912047),
+	(cl_precision2)(0.011823015253496341742232898853251, 0.0),
+	(cl_precision2)(0.014369729507045804812451432443580, 0.028784707883323369349719179611292),
+	(cl_precision2)(0.016920889189053272627572289420322, 0.0),
+	(cl_precision2)(0.019414141193942381173408951050128, 0.038799192569627049596801936446348),
+	(cl_precision2)(0.021828035821609192297167485738339, 0.0),
+	(cl_precision2)(0.024191162078080601365686370725232, 0.048402672830594052902938140422808),
+	(cl_precision2)(0.026509954882333101610601709335075, 0.0),
+	(cl_precision2)(0.028754048765041292843978785354334, 0.057493156217619066481721689402056),
+	(cl_precision2)(0.030907257562387762472884252943092, 0.0),
+	(cl_precision2)(0.032981447057483726031814191016854, 0.065974229882180495128128515115962),
+	(cl_precision2)(0.034979338028060024137499670731468, 0.0),
+	(cl_precision2)(0.036882364651821229223911065617136, 0.073755974737705206268243850022191),
+	(cl_precision2)(0.038678945624727592950348651532281, 0.0),
+	(cl_precision2)(0.040374538951535959111995279752468, 0.080755895229420215354694938460530),
+	(cl_precision2)(0.041969810215164246147147541285970, 0.0),
+	(cl_precision2)(0.043452539701356069316831728117073, 0.086899787201082979802387530715126),
+	(cl_precision2)(0.044814800133162663192355551616723, 0.0),
+	(cl_precision2)(0.046059238271006988116271735559374, 0.092122522237786128717632707087619),
+	(cl_precision2)(0.047185546569299153945261478181099, 0.0),
+	(cl_precision2)(0.048185861757087129140779492298305, 0.096368737174644259639468626351810),
+	(cl_precision2)(0.049055434555029778887528165367238, 0.0),
+	(cl_precision2)(0.049795683427074206357811569379942, 0.099593420586795267062780282103569),
+	(cl_precision2)(0.050405921402782346840893085653585, 0.0),
+	(cl_precision2)(0.050881795898749606492297473049805, 0.101762389748405504596428952168554),
+	(cl_precision2)(0.051221547849258772170656282604944, 0.0),
+	(cl_precision2)(0.051426128537459025933862879215781, 0.102852652893558840341285636705415),
+	(cl_precision2)(0.051494729429451567558340433647099, 0.0)
+};
+
+#define anyf(a) any((int2) a)
+#define vec(b) (cl_precision2)((b), (b))
 
 cl_precision stable_pdf_alpha_neq1(cl_precision theta, constant struct stable_info *args)
 {
@@ -153,31 +207,77 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 	const int kronrod_eval_points = GK_POINTS / 2 + 1;
 	local cl_precision gauss_sum[GK_POINTS / 2 + 1];
 	local cl_precision kronrod_sum[GK_POINTS / 2 + 1];
+	local cl_precision2 sums[GK_POINTS / 2 + 1];
+
 
 	if(subinterval_index < kronrod_eval_points)
 	{
 		const cl_precision center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
 		const cl_precision abscissa = stable->half_subint_length * xgk[subinterval_index]; // Translated integrand evaluation
 		cl_precision fval1, fval2, fsum;
+		cl_precision2 val, res;
+		cl_precision2 g, cos_theta, aux, V;
+		cl_precision2 w = weights[subinterval_index];
 
 		if(stable->integrand == PDF_ALPHA_EQ1) 
 		{
-			fval1 = stable_pdf_alpha_eq1(center - abscissa, stable);
-			fval2 = stable_pdf_alpha_eq1(center + abscissa, stable);
+			cl_precision2 V, aux;
+
+			aux = (stable->beta_ * val + (cl_precision2)(M_PI_2, M_PI_2)) / cos(val);
+			V = sin(val) * aux / stable->beta_ + log(aux) + stable->k1;
+
+			res = V + stable->xxipow;
+
+			if(anyf(isnan(res))) 
+			{
+				res = (cl_precision2)(0,0);
+				goto calcend;
+			}
+
+			res = exp(res);
+
+			if (any(res < vec(1.522e-8)))
+			{
+				res = (vec(1.0) - res) * res;
+				goto calcend;
+			}
+
+			res = exp(-res) * res;
+
+			if (anyf(isnan(res) || res < vec(0))) 
+				res = vec(0);
 		}
 		else
 		{
-			fval1 = stable_pdf_alpha_neq1(center - abscissa, stable);
-			fval2 = stable_pdf_alpha_neq1(center + abscissa, stable);
+			cl_precision2 cos_theta, aux, V;
+			val = (cl_precision2)(center - abscissa, center + abscissa);
+
+			cos_theta = cos(val);
+			aux = (stable->theta0_ + val) * stable->alfa;
+			V = log(cos_theta / sin(aux)) * stable->alfainvalfa1 +
+				+ log(cos(aux - val) / cos_theta) + stable->k1;
+
+			res = V + stable->xxipow;
+			
+			if (any(res > vec(6.55) || res < vec(-700)))
+			{
+				res = (cl_precision2)(0,0);
+				goto calcend;
+			}
+			else 
+				res = exp(res);
+			
+			res = exp(-res) * res;
+
+			if (anyf(isnan(res) || isinf(res) || res < vec(0)))
+				res = (cl_precision2) (0,0);
 		}
 
+calcend: // Sorry.
 		if(subinterval_index < kronrod_eval_points - 1)
-			fval1 += fval2;
+			res.x += res.y;
 
-		if(subinterval_index % 2 == 1)
-			gauss_sum[subinterval_index / 2] = wg[subinterval_index / 2] * fval1;
-
-		kronrod_sum[subinterval_index] = wgk[subinterval_index] * fval1; 
+		sums[subinterval_index] = w * res.x;
 	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
@@ -185,17 +285,14 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 	for(int offset = kronrod_eval_points / 2; offset > 0; offset >>= 1) 
 	{
 	    if (subinterval_index < offset) 
-	    {
-      		kronrod_sum[subinterval_index] += kronrod_sum[subinterval_index + offset];
-      		gauss_sum[subinterval_index] += gauss_sum[subinterval_index + offset];
-      	}
+	  		sums[subinterval_index] += sums[subinterval_index + offset];
       		
 	    barrier(CLK_LOCAL_MEM_FENCE);
 	}
 
 	if(subinterval_index == kronrod_eval_points)
 	{
-		gauss[interval] = gauss_sum[0] * stable->half_subint_length;
-		kronrod[interval] = kronrod_sum[0] * stable->half_subint_length;
+		gauss[interval] = sums[0].y * stable->half_subint_length;
+		kronrod[interval] = sums[1].x * stable->half_subint_length;
 	}
 }

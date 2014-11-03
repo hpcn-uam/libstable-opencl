@@ -56,8 +56,8 @@ static void _measure_performance(StableDist *gpu_dist, double x, double alfa, do
 
 int main (void)
 {
-    double alfas[] = { 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75 };
-    double betas[] = { 0.0, 0.25, 0.5, 0.75, 1.0, -0.25, -0.5, -0.75, -1.0 };
+    double alfas[] = { 0.25 };//, 0.5, 0.75, 1, 1.25, 1.5, 1.75 };
+    double betas[] = { 0.0, 0.25 };//, 0.5, 0.75, 1.0, -0.25, -0.5, -0.75, -1.0 };
     double ev_points[] = { -1, 0, 1, -2, 2, 3, 4, 5, 6, 10, 100, 1000, -1000 };
     double sigma = 1.0, mu = 0.0;
     StableDist *gpu_dist;
@@ -90,6 +90,9 @@ int main (void)
         }
     }
     printf("α     β\t\t| time  | submit  start   finish  total   | argset  enqueue bufread setres\n");
+
+    gpu_dist->gpu_enabled = 0;
+    _measure_performance(gpu_dist, ev_points[evi - 1], alfas[ai - 1], betas[bi - 1]);
 
     stable_free(gpu_dist);
 
