@@ -151,7 +151,7 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 
 	const int gauss_eval_points = GK_POINTS / 4;
 	const int kronrod_eval_points = GK_POINTS / 2 + 1;
-	local cl_precision gauss_sum[GK_POINTS / 4];
+	local cl_precision gauss_sum[GK_POINTS / 2 + 1];
 	local cl_precision kronrod_sum[GK_POINTS / 2 + 1];
 
 	if(subinterval_index < kronrod_eval_points)
@@ -184,23 +184,20 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
+	for(int offset = kronrod_eval_points / 2; offset > 0; offset >>= 1) 
+	{
+	    if (subinterval_index < offset) 
+	    {
+      		kronrod_sum[subinterval_index] += kronrod_sum[subinterval_index + offset];
+      		gauss_sum[subinterval_index] += gauss_sum[subinterval_index + offset];
+      	}
+      		
+	    barrier(CLK_LOCAL_MEM_FENCE);
+	}
+
 	if(subinterval_index == kronrod_eval_points)
 	{
-		int i;
-		double loc_gauss = 0, loc_kronrod = 0;
-
-		for(i = 0; i < 15; i++)
-		{
-			loc_gauss += gauss_sum[i];
-			loc_kronrod += kronrod_sum[i];
-		}
-
-		for(; i < 31; i++)
-		{
-			loc_kronrod += kronrod_sum[i];
-		}
-
-		gauss[interval] = loc_gauss * stable->half_subint_length;
-		kronrod[interval] = loc_kronrod * stable->half_subint_length;
+		gauss[interval] = gauss_sum[0] * stable->half_subint_length;
+		kronrod[interval] = kronrod_sum[0] * stable->half_subint_length;
 	}
 }
