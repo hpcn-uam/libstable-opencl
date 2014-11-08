@@ -138,7 +138,7 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
         stablecl_log(log_err, "[Stable-OpenCl] Couldn't set kernel arguments: error %d\n", err);
         goto cleanup;
     }
-   
+
 
     workgroup_size = 64; // Minimum accepted number, it seems.
     work_threads = max(cli->h_args->threads_per_interval, workgroup_size) * cli->subdivisions; // We already checked for overflow.
@@ -168,10 +168,9 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
         stablecl_log(log_err, "[Stable-OpenCl] Error reading results from the GPU: %d\n", err);
         goto cleanup;
     }
-   
+
     if (cli->profile_enabled)
         stable_retrieve_profileinfo(cli, event);
-
 
     bench_begin(cli->profiling.set_results, cli->profile_enabled);
     _stable_set_results(cli);

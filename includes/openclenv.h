@@ -32,6 +32,8 @@ struct opencl_profile
 	double enqueue;
 	double buffer_read;
 	double set_results;
+	double total;
+	double profile_total;
 };
 
 
