@@ -31,9 +31,9 @@ char* _read_file(const char* filename, size_t* contents_len)
         goto error;
 
     contents = calloc(*contents_len + 1, sizeof(char));
-    
+
     if(!contents)
-        goto error;    
+        goto error;
 
     read = fread(contents, *contents_len, 1, f);
 
@@ -59,7 +59,8 @@ static void _opencl_platform_info(cl_platform_id* platforms, cl_uint platform_nu
     #if STABLE_MIN_LOG <= 0
     int i;
     char version[500], name[500], vendor[500], extensions[500];
-    
+    cl_uint float_vecwidth, double_vecwidth;
+
     stablecl_log(log_message, "[Stable-OpenCL] Available platforms (OPENCL_FORCE_CPU = %d): %d\n", OPENCL_FORCE_CPU, platform_num);
     for(i = 0; i < platform_num; i++)
     {
@@ -67,7 +68,10 @@ static void _opencl_platform_info(cl_platform_id* platforms, cl_uint platform_nu
         clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, 500, version, NULL);
         clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, 500, vendor, NULL);
         clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, 500, extensions, NULL);
+        clGetPlatformInfo(platforms[i], CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &double_vecwidth, NULL);
+        clGetPlatformInfo(platforms[i], CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT, sizeof(cl_uint), &float_vecwidth, NULL);
         stablecl_log(log_message, "[Stable-OpenCL] %d: %s, OpenCL version %s, vendor %s. Available extensions: %s\n", i, name, version, vendor, extensions);
+        stablecl_log(log_message, "[Stable-OpenCL] Preferred vector widths: double %zu, float %zu.\n", double_vecwidth, float_vecwidth);
     }
     #endif
 }
