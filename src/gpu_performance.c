@@ -85,18 +85,29 @@ static void _measure_cpu_performance(StableDist *dist, double x, double alfa, do
     printf("\r%.3f %.3f\t| %.3f |\n", alfa, beta, (gpu_end - gpu_start) / NUMTESTS);
  }
 
-int main (void)
+int main (int argc, char** argv)
 {
     double alfas[] = { 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75 };
     double betas[] = { 0.0, 0.25, 0.5, 0.75, 1.0, -0.25, -0.5, -0.75, -1.0 };
     double ev_points[] = { -1, 0, 1, -2, 2, 3, 4, 5, 6, 10, 100, 1000, -1000 };
     double sigma = 1.0, mu = 0.0;
-    long test_num = (sizeof alfas / sizeof(double)) * (sizeof betas / sizeof(double)) * (sizeof ev_points / sizeof(double)) * NUMTESTS;
+    size_t alfas_len = sizeof alfas / sizeof(double);
+    size_t betas_len = sizeof betas / sizeof(double);
+    size_t evpoints_len = sizeof ev_points / sizeof(double);
+    long test_num;
     StableDist *dist;
     int ai, bi, evi;
     double cpu_total;
     struct opencl_profile profile;
     double ms_per_point;
+
+    if(argc > 1)
+    {
+        alfas_len = 1;
+        betas_len = 1;
+    }
+
+    test_num = alfas_len * betas_len * evpoints_len * NUMTESTS;
 
     dist = stable_create(0.5, 0.0, 1, 0, 0);
     bzero(&profile, sizeof profile);
@@ -107,13 +118,13 @@ int main (void)
 
     fprintf(stderr, "α     β\t\t| time  |\n");
 
-    for (ai = 0; ai < sizeof alfas / sizeof(double); ai++)
+    for (ai = 0; ai < alfas_len; ai++)
     {
-        for (bi = 0; bi < sizeof betas / sizeof(double); bi++)
+        for (bi = 0; bi < betas_len; bi++)
         {
             stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
 
-            for (evi = 0; evi < sizeof ev_points / sizeof(double); evi++)
+            for (evi = 0; evi < evpoints_len; evi++)
                 _measure_cpu_performance(dist, ev_points[evi], alfas[ai], betas[bi], &profile);
         }
     }
@@ -129,13 +140,13 @@ int main (void)
 
     fprintf(stderr, "α     β\t\t| time  | submit  start   finish  total   | argset  enqueue bufread setres\n");
 
-    for (ai = 0; ai < sizeof alfas / sizeof(double); ai++)
+    for (ai = 0; ai < alfas_len; ai++)
     {
-        for (bi = 0; bi < sizeof betas / sizeof(double); bi++)
+        for (bi = 0; bi < betas_len; bi++)
         {
             stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
 
-            for (evi = 0; evi < sizeof ev_points / sizeof(double); evi++)
+            for (evi = 0; evi < evpoints_len; evi++)
                 _measure_gpu_performance(dist, ev_points[evi], alfas[ai], betas[bi], &profile);
 
         }
