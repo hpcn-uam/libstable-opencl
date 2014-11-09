@@ -151,7 +151,7 @@ int main (void)
     printf("Kernel time\t| %.5f\t| %.2f\n", profile.exec_time / test_num, 100 * profile.exec_time / profile.profile_total);
     printf("Buffer reading\t| %.5f\t| %.2f\n", profile.buffer_read / test_num, 100 * profile.buffer_read / profile.profile_total);
     printf("Argset\t\t| %.5f\t| %.2f\n", profile.argset / test_num, 100 * profile.argset / profile.profile_total);
-    printf("Mem transfer?\t| %.5f\t| %.2f\n", (profile.start_acum - profile.submit_acum) / test_num, 100 * (profile.start_acum - profile.submit_acum) / profile.profile_total);
+    printf("H->D transfer\t| %.5f\t| %.2f\n", (profile.start_acum) / test_num, 100 * (profile.start_acum) / profile.profile_total);
     stable_free(dist);
 
     return 0;
