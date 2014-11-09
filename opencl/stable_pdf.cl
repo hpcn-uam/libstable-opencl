@@ -218,6 +218,7 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 		cl_precision2 val, res;
 		cl_precision2 g, cos_theta, aux, V;
 		cl_precision2 w = weights[subinterval_index];
+		val = (cl_precision2)(center - abscissa, center + abscissa);
 
 		if(stable->integrand == PDF_ALPHA_EQ1)
 		{
@@ -226,52 +227,27 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 			aux = (stable->beta_ * val + (cl_precision2)(M_PI_2, M_PI_2)) / cos(val);
 			V = sin(val) * aux / stable->beta_ + log(aux) + stable->k1;
 
-			res = V + stable->xxipow;
-
-			if(anyf(isnan(res)))
-			{
-				res = (cl_precision2)(0,0);
-				goto calcend;
-			}
-
-			res = exp(res);
-
-			if (any(res < vec(1.522e-8)))
-			{
-				res = (vec(1.0) - res) * res;
-				goto calcend;
-			}
-
+			res = exp(V + stable->xxipow);
 			res = exp(-res) * res;
-
-			if (anyf(isnan(res) || res < vec(0)))
-				res = vec(0);
 		}
 		else
 		{
 			cl_precision2 cos_theta, aux, V;
-			val = (cl_precision2)(center - abscissa, center + abscissa);
 
 			cos_theta = cos(val);
 			aux = (stable->theta0_ + val) * stable->alfa;
 			V = log(cos_theta / sin(aux)) * stable->alfainvalfa1 +
 				+ log(cos(aux - val) / cos_theta) + stable->k1;
 
-			res = V + stable->xxipow;
-
-			if (any(res > vec(6.55) || res < vec(-700)))
-			{
-				res = (cl_precision2)(0,0);
-				goto calcend;
-			}
-			else
-				res = exp(res);
-
+			res = exp(V + stable->xxipow);
 			res = exp(-res) * res;
-
-			if (anyf(isnan(res) || isinf(res) || res < vec(0)))
-				res = (cl_precision2) (0,0);
 		}
+
+		if(!isnormal(res.x))
+			res.x = 0;
+
+		if(!isnormal(res.y))
+			res.y = 0;
 
 calcend: // Sorry.
 		if(subinterval_index < kronrod_eval_points - 1)
