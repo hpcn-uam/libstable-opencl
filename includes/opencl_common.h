@@ -26,7 +26,7 @@ struct stable_info {
     cl_precision subinterval_length;
     cl_precision half_subint_length;
     cl_precision theta0_;
-    cl_precision alfa; 
+    cl_precision alfa;
     cl_precision alfainvalfa1;
     unsigned int threads_per_interval;
     unsigned int gauss_points;

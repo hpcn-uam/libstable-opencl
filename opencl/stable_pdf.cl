@@ -214,9 +214,8 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 		const cl_precision center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
 		const cl_precision abscissa = stable->half_subint_length * xgk[subinterval_index]; // Translated integrand evaluation
 
-		cl_precision fval1, fval2, fsum;
 		cl_precision2 val, res;
-		cl_precision2 g, cos_theta, aux, V;
+		cl_precision2 cos_theta, aux, V;
 		cl_precision2 w = weights[subinterval_index];
 		val = (cl_precision2)(center - abscissa, center + abscissa);
 
@@ -235,6 +234,7 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 			cl_precision2 cos_theta, aux, V;
 
 			cos_theta = cos(val);
+
 			aux = (stable->theta0_ + val) * stable->alfa;
 			V = log(cos_theta / sin(aux)) * stable->alfainvalfa1 +
 				+ log(cos(aux - val) / cos_theta) + stable->k1;
@@ -243,13 +243,13 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 			res = exp(-res) * res;
 		}
 
+calcend: // Sorry.
 		if(!isnormal(res.x))
 			res.x = 0;
 
 		if(!isnormal(res.y))
 			res.y = 0;
 
-calcend: // Sorry.
 		if(subinterval_index < kronrod_eval_points - 1)
 			res.x += res.y;
 
