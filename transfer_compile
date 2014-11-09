@@ -7,6 +7,10 @@ tgreen=$(tput setaf 2)
 tyellow=$(tput setaf 3)
 host=gjulian@azufre.ii.uam.es
 
+if [ ! -z "$1" ]; then
+	host=gjulian@$1.ii.uam.es
+fi
+
 function echob()
 {
 	echo ${tbold}$@${treset}
@@ -29,6 +33,7 @@ function remote_make()
 	echob ${tgreen}$name is compiling.
 }
 
+echo "Target: $host"
 echob "Syncing files..."
 rsync -avzPt --exclude=.git --exclude=data --exclude=results ./ $host:/home/gjulian/libstable || (echo ${tred}Sync failed.${tnorm} && exit 1)
 echob "Synced. Remoting to compile..."
