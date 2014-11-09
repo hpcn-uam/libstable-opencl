@@ -7,7 +7,7 @@
 #endif
 
 #ifndef M_PI_2
-#define M_PI_2     1.57079632679489661923132169164      // Pi/2 
+#define M_PI_2     1.57079632679489661923132169164      // Pi/2
 #endif
 
 #include "includes/opencl_common.h"
@@ -49,7 +49,7 @@ constant cl_precision xgk[31] =   /* abscissae of the 61-point kronrod rule */
 	0.000000000000000000000000000000000
 };
 
-/* xgk[1], xgk[3], ... abscissae of the 30-point gauss rule. 
+/* xgk[1], xgk[3], ... abscissae of the 30-point gauss rule.
 xgk[0], xgk[2], ... abscissae to optimally extend the 30-point gauss rule */
 
 constant cl_precision wg[31] =    /* weights of the 30-point gauss rule */
@@ -182,7 +182,7 @@ cl_precision stable_pdf_alpha_neq1(cl_precision theta, constant struct stable_in
 }
 
 cl_precision stable_pdf_alpha_eq1(cl_precision theta, constant struct stable_info* stable)
-{ 
+{
 	cl_precision g, V, aux;
 
 	aux = (stable->beta_ * theta + M_PI_2) / cos(theta);
@@ -209,17 +209,17 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 	local cl_precision kronrod_sum[GK_POINTS / 2 + 1];
 	local cl_precision2 sums[GK_POINTS / 2 + 1];
 
-
 	if(subinterval_index < kronrod_eval_points)
 	{
 		const cl_precision center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
 		const cl_precision abscissa = stable->half_subint_length * xgk[subinterval_index]; // Translated integrand evaluation
+
 		cl_precision fval1, fval2, fsum;
 		cl_precision2 val, res;
 		cl_precision2 g, cos_theta, aux, V;
 		cl_precision2 w = weights[subinterval_index];
 
-		if(stable->integrand == PDF_ALPHA_EQ1) 
+		if(stable->integrand == PDF_ALPHA_EQ1)
 		{
 			cl_precision2 V, aux;
 
@@ -228,7 +228,7 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 
 			res = V + stable->xxipow;
 
-			if(anyf(isnan(res))) 
+			if(anyf(isnan(res)))
 			{
 				res = (cl_precision2)(0,0);
 				goto calcend;
@@ -244,7 +244,7 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 
 			res = exp(-res) * res;
 
-			if (anyf(isnan(res) || res < vec(0))) 
+			if (anyf(isnan(res) || res < vec(0)))
 				res = vec(0);
 		}
 		else
@@ -258,15 +258,15 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 				+ log(cos(aux - val) / cos_theta) + stable->k1;
 
 			res = V + stable->xxipow;
-			
+
 			if (any(res > vec(6.55) || res < vec(-700)))
 			{
 				res = (cl_precision2)(0,0);
 				goto calcend;
 			}
-			else 
+			else
 				res = exp(res);
-			
+
 			res = exp(-res) * res;
 
 			if (anyf(isnan(res) || isinf(res) || res < vec(0)))
@@ -282,11 +282,11 @@ calcend: // Sorry.
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	for(int offset = kronrod_eval_points / 2; offset > 0; offset >>= 1) 
+	for(int offset = kronrod_eval_points / 2; offset > 0; offset >>= 1)
 	{
-	    if (subinterval_index < offset) 
+	    if (subinterval_index < offset)
 	  		sums[subinterval_index] += sums[subinterval_index + offset];
-      		
+
 	    barrier(CLK_LOCAL_MEM_FENCE);
 	}
 
