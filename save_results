@@ -3,12 +3,22 @@
 basedir=results
 version_state=$(git describe --tags --always)
 
-echo "Codebase state: $version_state"
 
 result_dir=$basedir/$version_state
 
 mkdir -p $result_dir
 
-mv -v stable_performance_* $result_dir
-mv -v stable_precision_* $result_dir
-mv -v data_integrando.txt errlog.txt $result_dir
+compiler=$(cat Makefile | head -n 1 | awk '{print $3}')
+
+echo "Codebase state: $version_state"
+echo "Compiler used: $compiler"
+echo "Host: $(hostname)"
+
+echo "Building..."
+make clean &> /dev/null
+make -j 4 release &> /dev/null
+
+echo "Running gpu_performance..."
+result_file=$result_dir/gpu_performance_$(hostname)_${compiler}_$(date +%Y-%m-%d_%H%M%S)
+bin/release/gpu_performance &> $result_file
+echo "Done. Written on $result_file"
