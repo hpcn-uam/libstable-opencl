@@ -5,7 +5,7 @@ CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC
 CLFLAGS = -emit-llvm -c -arch $(CLC_ARCH)
 DEBUG_CFLAGS = -O -ggdb -ftrapv -DSTABLE_MIN_LOG=0
 BENCHMARK_CFLAGS =  $(RELEASE_CFLAGS) -DBENCHMARK
-RELEASE_CFLAGS = -O3 -march=native -ffast-math -DSTABLE_MIN_LOG=1
+RELEASE_CFLAGS = -O3 -march=native -DSTABLE_MIN_LOG=1
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -pg -static-libgcc
 E_LIBS = $(shell pkg-config --libs gsl) -pthread
 
@@ -25,7 +25,7 @@ CLDIR = opencl
 TARGETS = example fittest stable_array \
 			stable_test stable_performance stable_precision \
 			gpu_tests gpu_performance
-INCLUDES = -I./includes/ 
+INCLUDES = -I./includes/
 
 INCS := $(wildcard $(INCDIR)/*.h)
 SRCS := $(wildcard $(SRCDIR)/*.c)
@@ -67,7 +67,7 @@ include Makefile.$(shell uname)
 
 ### End Makefile plugins
 
-.PRECIOUS: %.o %.d %.g 
+.PRECIOUS: %.o %.d %.g
 .PHONY: benchmark clean pack doxydoc docclean benchmark-run configs $(TARGETS) depend
 
 all: $(CONFS)
@@ -83,12 +83,12 @@ flags.dat: Makefile
 
 scan: clean
 	@scan-build make debug
-	
+
 $(OBJS): | $(OBJDIR)
 
 ## Dependencies
 
-depend: $(OBJDIR)/.deps $(LIB_DEPS) 
+depend: $(OBJDIR)/.deps $(LIB_DEPS)
 
 $(OBJDIR)/.deps: $(SRCS) Makefile | $(OBJDIR)
 	@-rm -f $(OBJDIR)/.deps
@@ -146,7 +146,7 @@ $(OBJDIR): Makefile
 		mkdir -p $(OBJDIR)/$$c/$(SRCDIR); \
 		mkdir -p $(OBJDIR)/$$c/$(LIBSRCDIR); \
 		mkdir -p $(OBJDIR)/$$c/$(TESTDIR); \
-	done 
+	done
 
 $(PCAP_DIR):
 	@mkdir -p $@
@@ -162,14 +162,14 @@ $(LIBDIR): Makefile
 	@mkdir -p $(LIB_OUTDIRS)
 	@mkdir -p $(LIB_OBJDIRS)
 
-## Cleaning 
+## Cleaning
 
 clean: codeclean resultclean
 	@echo "$(FMT_BOLD)Directory clean.$(FMT_NORM)"
 
 codeclean:
 	@echo "$(FMT_BOLD)Cleaning build folders...$(FMT_NORM)"
-	@-rm -rf $(OBJDIR) $(BINDIR) $(LIBDIR)	
+	@-rm -rf $(OBJDIR) $(BINDIR) $(LIBDIR)
 
 resultclean:
 	@echo "$(FMT_BOLD)Removing result...$(FMT_NORM)"
@@ -183,7 +183,7 @@ $(LIBDIR)/%.a: | $(LIBDIR)
 
 $(LIBDIR)/%.so: | $(LIBDIR)
 	@echo "$(FMT_BOLD)Building library $(notdir $@)... $(FMT_NORM)"
-	@$(CC) $(CFLAGS) -shared $^ $(E_LIBS) -o $@ 
+	@$(CC) $(CFLAGS) -shared $^ $(E_LIBS) -o $@
 
 ## Compilation
 
@@ -198,10 +198,10 @@ $(OBJDIR)/%.bc: $(CLDIR)/%.cl Makefile
 
 ## Executable
 
-$(BINDIR)/%: | $(BINDIR) depend configs 
+$(BINDIR)/%: | $(BINDIR) depend configs
 	@echo "$(FMT_BOLD)Building final target: $* $(FMT_NORM)"
-	@$(CC) $(CFLAGS) $(INCLUDES) $^ $(E_LIBS) -o $@ 
-	
+	@$(CC) $(CFLAGS) $(INCLUDES) $^ $(E_LIBS) -o $@
+
 ## Packing
 
 pack: $(DOC_PDFS) codeclean
