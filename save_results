@@ -2,23 +2,33 @@
 
 basedir=results
 version_state=$(git describe --tags --always)
-
+remote=$1
 
 result_dir=$basedir/$version_state
 
-mkdir -p $result_dir
+function run()
+{
+	if [ -z $remote ]; then
+		$@
+	else
+		ssh $remote "cd libstable; $@"
+	fi
+}
 
-compiler=$(cat Makefile | head -n 1 | awk '{print $3}')
+host=$(run hostname)
+compiler=$(run cat Makefile | head -n 1 | awk '{print $3}')
 
 echo "Codebase state: $version_state"
 echo "Compiler used: $compiler"
-echo "Host: $(hostname)"
+echo "Host: ${host}"
 
 echo "Building..."
-make clean &> /dev/null
-make -j 4 release &> /dev/null
+
+run mkdir -p $result_dir
+run make clean &> /dev/null
+run make -j 4 release &> /dev/null
 
 echo "Running gpu_performance..."
-result_file=$result_dir/gpu_performance_$(hostname)_${compiler}_$(date +%Y-%m-%d_%H%M%S)
-bin/release/gpu_performance &> $result_file
+result_file=$result_dir/gpu_performance_${host}_${compiler}_$(date +%Y-%m-%d_%H%M%S)
+run bin/release/gpu_performance &> $result_file
 echo "Done. Written on $result_file"
