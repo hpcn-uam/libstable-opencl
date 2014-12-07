@@ -112,11 +112,15 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
 
     cli->h_args->subinterval_length = (b - a) / (double) cli->subdivisions;
     cli->h_args->half_subint_length = cli->h_args->subinterval_length / 2;
-    cli->h_args->threads_per_interval = cli->points_rule / 2 + 1 + 1; // Extra thread for sum.
+    cli->h_args->threads_per_interval = cli->points_rule / 2 + 1; // Extra thread for sum.
     cli->h_args->gauss_points = (cli->points_rule / 2 + 1) / 2;
     cli->h_args->kronrod_points = cli->points_rule / 2;
 
-    if (dist->ZONE == ALFA_1)
+    if(dist->ZONE == GPU_TEST_INTEGRAND)
+        cli->h_args->integrand = GPU_TEST_INTEGRAND;
+    else if(dist->ZONE == GPU_TEST_INTEGRAND_SIMPLE)
+        cli->h_args->integrand = GPU_TEST_INTEGRAND_SIMPLE;
+    else if(dist->ZONE == ALFA_1)
         cli->h_args->integrand = PDF_ALPHA_EQ1;
     else
         cli->h_args->integrand = PDF_ALPHA_NEQ1;

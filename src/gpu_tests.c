@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include "stable_api.h"
 #include "benchmarking.h"
+#include "opencl_integ.h"
 
 
 int main (void)
@@ -37,7 +38,9 @@ int main (void)
     double alfa = 1.25, beta = 0.5, sigma = 1.0, mu = 0.0;
     int param = 0;
     double x = 10;
-    double pdf = 0, gpu_pdf = 0;
+    double pdf = 0, gpu_pdf = 0, dummy = 0;
+    double dummy_expect = 45373;
+    double err;
     int i;
     int max_tries = 1;
 
@@ -58,18 +61,33 @@ int main (void)
 
     printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e\n\n",
            x, alfa, beta, sigma, mu, pdf);
-    
+
     stable_activate_gpu(dist);
-   
+
     for(i = 0; i < max_tries; i++)
         gpu_pdf += stable_pdf_point(dist, x, NULL);
-   
+
     gpu_pdf /= max_tries;
 
     printf("GPU PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e\n",
            x, alfa, beta, sigma, mu, gpu_pdf);
 
     printf("GPU / CPU difference: %3.3g\n", fabs(gpu_pdf - pdf));
+
+    printf("Testing now dummy integrand...\n");
+    dist->ZONE = GPU_TEST_INTEGRAND_SIMPLE;
+    stable_clinteg_integrate(&dist->cli, 0, 2, 0, 0, 0, &dummy, &err, dist);
+
+    printf("Difference between GPU dummy result (%lf) and expected result (%d): %lf\n",
+         dummy, 2, 2 - dummy);
+
+
+    printf("Testing now test integrand...\n");
+    dist->ZONE = GPU_TEST_INTEGRAND;
+    stable_clinteg_integrate(&dist->cli, -5, 5, 0, 0, 0, &dummy, &err, dist);
+
+    printf("Difference between GPU test result (%lf) and expected result (%lf): %lf\n",
+         dummy, dummy_expect, dummy_expect - dummy);
 
     stable_free(dist);
     return 0;

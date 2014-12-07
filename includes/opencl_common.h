@@ -1,11 +1,13 @@
 #ifndef OPENCL_COMMON_H
 #define OPENCL_COMMON_H
 
-#define GK_POINTS 61
-#define GK_SUBDIVISIONS 80
+#define GK_POINTS 127
+#define GK_SUBDIVISIONS 1
 
 #define PDF_ALPHA_EQ1 1
 #define PDF_ALPHA_NEQ1 2
+#define GPU_TEST_INTEGRAND 100
+#define GPU_TEST_INTEGRAND_SIMPLE 101
 
 #if defined(__APPLE__) || !defined(cl_khr_fp64) || !defined(cl_amd_fp64)
 #define cl_precision float
