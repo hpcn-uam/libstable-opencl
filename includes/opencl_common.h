@@ -1,8 +1,17 @@
 #ifndef OPENCL_COMMON_H
 #define OPENCL_COMMON_H
 
+#define GK_USE_127_POINTS
+
+#ifdef GK_USE_127_POINTS
 #define GK_POINTS 127
-#define GK_SUBDIVISIONS 100
+#endif
+
+#ifdef GK_USE_61_POINTS
+#define GK_POINTS 61
+#endif
+
+#define GK_SUBDIVISIONS 82
 
 #define PDF_ALPHA_EQ1 1
 #define PDF_ALPHA_NEQ1 2
