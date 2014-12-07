@@ -39,7 +39,7 @@ int main (void)
     int param = 0;
     double x = 10;
     double pdf = 0, gpu_pdf = 0, dummy = 0;
-    double dummy_expect = 45373;
+    double dummy_expect = 135492.0634920634920634920634920634920635;
     double err;
     int i;
     int max_tries = 1;
@@ -62,7 +62,11 @@ int main (void)
     printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e\n\n",
            x, alfa, beta, sigma, mu, pdf);
 
-    stable_activate_gpu(dist);
+    if(stable_activate_gpu(dist))
+    {
+        fprintf(stderr, "Couldn't initialize GPU.\n");
+        return 1;
+    }
 
     for(i = 0; i < max_tries; i++)
         gpu_pdf += stable_pdf_point(dist, x, NULL);

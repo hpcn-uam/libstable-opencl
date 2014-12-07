@@ -97,7 +97,7 @@ kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod,
 		}
 		else if(stable->integrand == GPU_TEST_INTEGRAND)
 		{
-			res = (val + 4) * (val - 3) * (val + 0) * (0.5 * val + 1) * (val + 4) * (val - 3) * (val + 0) * (0.5 * val + 1);
+			res = (val + 4) * (val - 3) * (val + 0) * (val + 1) * (val + 4) * (val - 3) * (val + 0) * (val + 1);
 		}
 		else if(stable->integrand == GPU_TEST_INTEGRAND_SIMPLE)
 		{
