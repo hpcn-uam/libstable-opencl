@@ -62,7 +62,7 @@ static void _measure_gpu_performance(StableDist *gpu_dist, double x, double alfa
     current_prof_info.buffer_read /= NUMTESTS;
     current_prof_info.set_results /= NUMTESTS;
 
-    fprintf(stderr, "%.3f %.3f\t| %.3f | %.5f %.5f %.5f %.5f | %.5f %.5f %.5f %.5f\n", alfa, beta, current_prof_info.total,
+    fprintf(stdout, "%.3f %.3f\t| %.3f | %.5f %.5f %.5f %.5f | %.5f %.5f %.5f %.5f\n", alfa, beta, current_prof_info.total,
           current_prof_info.submit_acum, current_prof_info.start_acum, current_prof_info.finish_acum, current_prof_info.exec_time,
            current_prof_info.argset, current_prof_info.enqueue, current_prof_info.buffer_read, current_prof_info.set_results);
 }
@@ -82,7 +82,7 @@ static void _measure_cpu_performance(StableDist *dist, double x, double alfa, do
 
     general_profile->total += gpu_end - gpu_start;
 
-    printf("\r%.3f %.3f\t| %.3f |\n", alfa, beta, (gpu_end - gpu_start) / NUMTESTS);
+    printf("%.3f %.3f\t| %.3f |\n", alfa, beta, (gpu_end - gpu_start) / NUMTESTS);
  }
 
 int main (int argc, char** argv)
@@ -116,7 +116,7 @@ int main (int argc, char** argv)
     stable_set_relTOL(1.2e-20);
     stable_set_absTOL(1e-10);
 
-    fprintf(stderr, "α     β\t\t| time  |\n");
+    fprintf(stdout, "α     β\t\t| time  |\n");
 
     for (ai = 0; ai < alfas_len; ai++)
     {
@@ -129,6 +129,8 @@ int main (int argc, char** argv)
         }
     }
 
+    fflush(stdout);
+
     if (stable_activate_gpu(dist))
     {
         fprintf(stderr, "Couldn't activate GPU :(\n");
@@ -138,7 +140,7 @@ int main (int argc, char** argv)
     cpu_total = profile.total;
     bzero(&profile, sizeof profile);
 
-    fprintf(stderr, "α     β\t\t| time  | submit  start   finish  total   | argset  enqueue bufread setres\n");
+    fprintf(stdout, "α     β\t\t| time  | submit  start   finish  total   | argset  enqueue bufread setres\n");
 
     for (ai = 0; ai < alfas_len; ai++)
     {
@@ -152,7 +154,10 @@ int main (int argc, char** argv)
         }
     }
 
-    fprintf(stderr, "α     β\t\t| time  | submit  start   finish  total   | argset  enqueue bufread setres\n");
+
+    fflush(stdout);
+
+    fprintf(stdout, "α     β\t\t| time  | submit  start   finish  total   | argset  enqueue bufread setres\n");
     ms_per_point = profile.total / test_num;
     printf("\nTest finished: %ld total points.\n", test_num);
     printf("GPU: %10.2f pps, %.5f ms per point.\n", 1000 * test_num / profile.total, ms_per_point);
