@@ -25,6 +25,7 @@ echo "Host: ${host}"
 echo "Building..."
 
 run mkdir -p $result_dir
+mkdir -p $result_dir
 run make clean &> /dev/null
 run make -j 4 release &> /dev/null
 
