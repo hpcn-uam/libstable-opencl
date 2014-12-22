@@ -11,7 +11,7 @@
 #define GK_POINTS 61
 #endif
 
-#define GK_SUBDIVISIONS 200
+#define GK_SUBDIVISIONS 20
 
 #define PDF_ALPHA_EQ1 1
 #define PDF_ALPHA_NEQ1 2
