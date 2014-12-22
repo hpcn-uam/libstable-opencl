@@ -110,8 +110,8 @@ double stable_clinteg_integrate(struct stable_clinteg *cli, double a, double b, 
     cli->h_args->alfa = dist->alfa;
     cli->h_args->alfainvalfa1 = dist->alfainvalfa1;
 
-    cli->h_args->subinterval_length = (b - a) / (double) cli->subdivisions;
-    cli->h_args->half_subint_length = cli->h_args->subinterval_length / 2;
+    cli->h_args->subinterval_length = (cl_precision) ((b - a) / (double) cli->subdivisions);
+    cli->h_args->half_subint_length = (cl_precision) cli->h_args->subinterval_length / 2;
     cli->h_args->threads_per_interval = cli->points_rule / 2 + 1; // Extra thread for sum.
     cli->h_args->gauss_points = (cli->points_rule / 2 + 1) / 2;
     cli->h_args->kronrod_points = cli->points_rule / 2;
@@ -196,10 +196,10 @@ static int _stable_set_results(struct stable_clinteg *cli)
 
     for (i = 0; i < cli->subdivisions; i++)
     {
-        stablecl_log(log_message, "[Stable-OpenCl] Interval %d: G %.3e K %.3e\n", i, cli->h_gauss[i], cli->h_kronrod[i]);
+        stablecl_log(log_message, "[Stable-OpenCl] Interval %d: G %.3e K %.3e\n", i, (double) cli->h_gauss[i], (double) cli->h_kronrod[i]);
         gauss_sum += (double) cli->h_gauss[i];
         kronrod_sum += (double) cli->h_kronrod[i];
-        cli->subinterval_errors[i] = cli->h_gauss[i] - cli->h_kronrod[i];
+        cli->subinterval_errors[i] = (double) cli->h_gauss[i] - (double) cli->h_kronrod[i];
     }
 
     cli->result = kronrod_sum;

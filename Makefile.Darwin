@@ -1,2 +1,3 @@
 E_LIBS += -framework OpenCL -L/opt/local/lib/
 INCLUDES += -I/System/Library/Frameworks/OpenCL.framework/Headers -I/opt/local/include/
+CFLAGS += -DFLOAT_GPU_UNIT

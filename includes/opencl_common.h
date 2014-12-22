@@ -11,19 +11,21 @@
 #define GK_POINTS 61
 #endif
 
-#define GK_SUBDIVISIONS 82
+#define GK_SUBDIVISIONS 200
 
 #define PDF_ALPHA_EQ1 1
 #define PDF_ALPHA_NEQ1 2
 #define GPU_TEST_INTEGRAND 100
 #define GPU_TEST_INTEGRAND_SIMPLE 101
 
-#if defined(__APPLE__) || !defined(cl_khr_fp64) || !defined(cl_amd_fp64)
+#if defined(FLOAT_GPU_UNIT) || (defined(__OPENCL_VERSION__) && !defined(cl_khr_fp64) && !defined(cl_amd_fp64))
 #define cl_precision float
 #define cl_precision2 float2
+#define cl_precision_type "float"
 #else
 #define cl_precision double
 #define cl_precision2 double2
+#define cl_precision_type "double"
 #endif
 
 
