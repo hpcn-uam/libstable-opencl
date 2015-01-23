@@ -108,7 +108,7 @@ cl_precision2 eval_gk_pair(constant struct stable_info* stable, size_t subinterv
 	return w * res.x;
 }
 
-kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod, constant struct stable_info* stable)
+kernel void stable_pdf_integ(global cl_precision* gauss, global cl_precision* kronrod, constant struct stable_info* stable)
 {
 	size_t subinterval_index = get_local_id(0);
 	size_t interval = get_group_id(0);
