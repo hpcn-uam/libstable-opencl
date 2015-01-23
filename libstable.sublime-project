@@ -6,7 +6,7 @@
 			"folder_exclude_patterns": ["bin", "obj", "pcap", "doc"]
 		}
 	],
-	"settings": 
+	"settings":
 	{
 		"sublimeclang_options":
     	[
@@ -16,7 +16,6 @@
     		"-Wall",
     		"-pedantic",
     		"-std=c99",
-    		"-DDEBUG",
     		"-D_GNU_SOURCE"
        	]
 	}
