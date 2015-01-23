@@ -12,6 +12,7 @@
 #endif
 
 #define GK_SUBDIVISIONS 20
+#define KRONROD_EVAL_POINTS (GK_POINTS / 2 + 1)
 
 #define PDF_ALPHA_EQ1 1
 #define PDF_ALPHA_NEQ1 2

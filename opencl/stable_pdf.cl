@@ -55,71 +55,74 @@ cl_precision stable_pdf_alpha_eq1(cl_precision theta, constant struct stable_inf
 	return g;
 }
 
+cl_precision2 eval_gk_pair(constant struct stable_info* stable, size_t subinterval_index, size_t interval)
+{
+	const cl_precision center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
+	const cl_precision abscissa = stable->half_subint_length * gk_absc[subinterval_index]; // Translated integrand evaluation
+
+	cl_precision2 val, res;
+	cl_precision2 w = gk_weights[subinterval_index];
+	val = (cl_precision2)(center - abscissa, center + abscissa);
+
+	if(stable->integrand == PDF_ALPHA_EQ1)
+	{
+		cl_precision2 V, aux;
+
+		aux = (stable->beta_ * val + (cl_precision2)(M_PI_2, M_PI_2)) / cos(val);
+		V = sin(val) * aux / stable->beta_ + log(aux) + stable->k1;
+
+		res = exp(V + stable->xxipow);
+		res = exp(-res) * res;
+	}
+	else if(stable->integrand == PDF_ALPHA_NEQ1)
+	{
+		cl_precision2 cos_theta, aux, V;
+
+		cos_theta = cos(val);
+
+		aux = (stable->theta0_ + val) * stable->alfa;
+		V = log(cos_theta / sin(aux)) * stable->alfainvalfa1 +
+			+ log(cos(aux - val) / cos_theta) + stable->k1;
+
+		res = exp(V + stable->xxipow);
+		res = exp(-res) * res;
+	}
+	else if(stable->integrand == GPU_TEST_INTEGRAND)
+	{
+		res = (val + 4) * (val - 3) * (val + 0) * (val + 1) * (val + 4) * (val - 3) * (val + 0) * (val + 1);
+	}
+	else if(stable->integrand == GPU_TEST_INTEGRAND_SIMPLE)
+	{
+		res = val;
+	}
+
+	if(!isnormal(res.x))
+		res.x = 0;
+
+	if(!isnormal(res.y))
+		res.y = 0;
+
+	if(subinterval_index < KRONROD_EVAL_POINTS - 1)
+		res.x += res.y;
+
+	return w * res.x;
+}
+
 kernel void stable_pdf(global cl_precision* gauss, global cl_precision* kronrod, constant struct stable_info* stable)
 {
 	size_t subinterval_index = get_local_id(0);
 	size_t interval = get_group_id(0);
 
-	const int kronrod_eval_points = GK_POINTS / 2 + 1;
 	local cl_precision2 sums[GK_POINTS / 2 + 1];
 
-	if(subinterval_index < kronrod_eval_points)
+	if(subinterval_index < KRONROD_EVAL_POINTS)
 	{
-		const cl_precision center = stable->ibegin + stable->subinterval_length * interval + stable->half_subint_length;
-		const cl_precision abscissa = stable->half_subint_length * gk_absc[subinterval_index]; // Translated integrand evaluation
-
-		cl_precision2 val, res;
-		cl_precision2 w = gk_weights[subinterval_index];
-		val = (cl_precision2)(center - abscissa, center + abscissa);
-
-		if(stable->integrand == PDF_ALPHA_EQ1)
-		{
-			cl_precision2 V, aux;
-
-			aux = (stable->beta_ * val + (cl_precision2)(M_PI_2, M_PI_2)) / cos(val);
-			V = sin(val) * aux / stable->beta_ + log(aux) + stable->k1;
-
-			res = exp(V + stable->xxipow);
-			res = exp(-res) * res;
-		}
-		else if(stable->integrand == PDF_ALPHA_NEQ1)
-		{
-			cl_precision2 cos_theta, aux, V;
-
-			cos_theta = cos(val);
-
-			aux = (stable->theta0_ + val) * stable->alfa;
-			V = log(cos_theta / sin(aux)) * stable->alfainvalfa1 +
-				+ log(cos(aux - val) / cos_theta) + stable->k1;
-
-			res = exp(V + stable->xxipow);
-			res = exp(-res) * res;
-		}
-		else if(stable->integrand == GPU_TEST_INTEGRAND)
-		{
-			res = (val + 4) * (val - 3) * (val + 0) * (val + 1) * (val + 4) * (val - 3) * (val + 0) * (val + 1);
-		}
-		else if(stable->integrand == GPU_TEST_INTEGRAND_SIMPLE)
-		{
-			res = val;
-		}
-
-calcend: // Sorry.
-		if(!isnormal(res.x))
-			res.x = 0;
-
-		if(!isnormal(res.y))
-			res.y = 0;
-
-		if(subinterval_index < kronrod_eval_points - 1)
-			res.x += res.y;
-
-		sums[subinterval_index] = w * res.x;
+		sums[subinterval_index] = eval_gk_pair(stable, subinterval_index, interval);
 	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	for(size_t offset = kronrod_eval_points / 2; offset > 0; offset >>= 1)
+	for(size_t offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
 	{
 	    if (subinterval_index < offset)
 	  		sums[subinterval_index] += sums[subinterval_index + offset];
