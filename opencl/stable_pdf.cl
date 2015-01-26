@@ -135,6 +135,7 @@ kernel void stable_pdf_integ(global cl_precision* gauss, global cl_precision* kr
 {
 	size_t subinterval_index = get_local_id(0);
 	size_t interval = get_group_id(0);
+	size_t subinterval_count = get_local_size(0);
 	size_t interval_count = get_local_size(1);
 
 	local cl_precision2 sums[GK_POINTS / 2 + 1];
@@ -160,7 +161,7 @@ kernel void stable_pdf_integ(global cl_precision* gauss, global cl_precision* kr
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
 
-	for(size_t offset = interval_count / 2; offset > 0; offset >>= 1)
+	for(size_t offset = subinterval_count / 2; offset > 0; offset >>= 1)
 	{
 	    if (interval < offset)
 	    {
