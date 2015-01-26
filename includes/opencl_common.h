@@ -40,8 +40,16 @@ struct stable_info {
     cl_precision subinterval_length;
     cl_precision half_subint_length;
     cl_precision theta0_;
+    cl_precision theta0;
     cl_precision alfa;
     cl_precision alfainvalfa1;
+    cl_precision mu_0;
+    cl_precision sigma;
+    cl_precision xi;
+    cl_precision xxi_th;
+    cl_precision S;
+    cl_precision c2_part;
+    cl_precision THETA_TH;
     unsigned int threads_per_interval;
     unsigned int gauss_points;
     unsigned int kronrod_points;
