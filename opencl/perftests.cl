@@ -82,8 +82,6 @@ kernel void array_sum_twostage_loop(global cl_precision* array)
 	}
 }
 
-
-
 kernel void array_sum_twostage_reduction(global cl_precision* array)
 {
 	size_t local_wg_index = get_local_id(0);
@@ -113,5 +111,86 @@ kernel void array_sum_twostage_reduction(global cl_precision* array)
 
 	    barrier(CLK_GLOBAL_MEM_FENCE);
 	}
+}
 
+kernel void array_sum_twostage_two_wgs(global cl_precision* array)
+{
+	size_t local_wg_index = get_local_id(0);
+	size_t group_index = get_group_id(0);
+	size_t array_size = get_global_size(0);
+	size_t global_index = get_global_id(0);
+	size_t wg_size = get_local_size(0);
+	size_t local_offset;
+	size_t group_count = get_num_groups(0);
+	size_t actual_group_count = 2;
+	cl_precision sum;
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	if(group_index < actual_group_count)
+	{
+		for(size_t chunk_index = group_index; chunk_index < group_count; chunk_index += actual_group_count)
+		{
+			local_offset = chunk_index * wg_size;
+
+			for(size_t offset = wg_size / 2; offset > 0; offset >>= 1)
+			{
+			    if (local_wg_index < offset)
+			    	array[local_offset + local_wg_index] += array[local_offset + local_wg_index + offset];
+
+			    barrier(CLK_LOCAL_MEM_FENCE);
+			}
+
+			if(local_wg_index == 0)
+				array[group_index] += array[local_offset];
+
+			barrier(CLK_LOCAL_MEM_FENCE);
+		}
+
+		barrier(CLK_GLOBAL_MEM_FENCE);
+
+		if(group_index == 0)
+			array[0] += array[1];
+	}
+}
+
+kernel void array_sum_twostage_half_wgs(global cl_precision* array)
+{
+	size_t local_wg_index = get_local_id(0);
+	size_t group_index = get_group_id(0);
+	size_t array_size = get_global_size(0);
+	size_t global_index = get_global_id(0);
+	size_t wg_size = get_local_size(0);
+	size_t local_offset;
+	size_t group_count = get_num_groups(0);
+	size_t actual_group_count = group_count / 2;
+	cl_precision sum;
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	if(group_index < actual_group_count)
+	{
+		for(size_t chunk_index = group_index; chunk_index < group_count; chunk_index += actual_group_count)
+		{
+			local_offset = chunk_index * wg_size;
+
+			for(size_t offset = wg_size / 2; offset > 0; offset >>= 1)
+			{
+			    if (local_wg_index < offset)
+			    	array[local_offset + local_wg_index] += array[local_offset + local_wg_index + offset];
+
+			    barrier(CLK_LOCAL_MEM_FENCE);
+			}
+
+			if(local_wg_index == 0)
+				array[group_index] += array[local_offset];
+
+			barrier(CLK_LOCAL_MEM_FENCE);
+		}
+
+		barrier(CLK_GLOBAL_MEM_FENCE);
+
+		if(group_index == 0)
+			array[0] += array[1];
+	}
 }
