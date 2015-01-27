@@ -141,16 +141,16 @@ kernel void array_sum_twostage_two_wgs(global cl_precision* array)
 			    barrier(CLK_LOCAL_MEM_FENCE);
 			}
 
-			if(local_wg_index == 0)
-				array[group_index] += array[local_offset];
+			if(local_wg_index == 0 && chunk_index != group_index)
+				array[group_index * wg_size] += array[local_offset];
 
 			barrier(CLK_LOCAL_MEM_FENCE);
 		}
 
 		barrier(CLK_GLOBAL_MEM_FENCE);
 
-		if(group_index == 0)
-			array[0] += array[1];
+		if(group_index == 0 && local_wg_index == 0)
+			array[0] += array[wg_size];
 	}
 }
 

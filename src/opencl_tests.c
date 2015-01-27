@@ -53,7 +53,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
     stablecl_finish_all(ocl);
     stablecl_profileinfo(profiling, event);
 
-    if(fabs(array[0] - sum) > 0.01)
+    if(fabs(array[0] - sum) > 1)
         stablecl_log(log_err, "[Stable-OpenCl] Error: expected result is %.3lf, actual was %.3lf\n", sum, array[0]);
 
 cleanup:
@@ -121,8 +121,8 @@ int main(int argc, char const *argv[])
     test_kernel("opencl/perftests.cl", "array_sum_reduction");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_loop");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_reduction");
-    test_kernel("opencl/perftests.cl", "array_sum_twostage_two_wgs");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_half_wgs");
+    test_kernel("opencl/perftests.cl", "array_sum_twostage_two_wgs");
 
 	return 0;
 }
