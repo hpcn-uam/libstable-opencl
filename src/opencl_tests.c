@@ -15,7 +15,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 	cl_mem array_ocl;
 	cl_int err;
 	cl_event event;
-    cl_precision sum;
+    cl_precision sum = 0;
 
  	array = (cl_precision *) calloc(size, sizeof(cl_precision));
 
