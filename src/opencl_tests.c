@@ -27,7 +27,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 
     for(size_t i = 0; i < size; i++)
     {
-        array[i] = 10 * ((long) rand() / (long) RAND_MAX);
+        array[i] = rand();
         sum += array[i];
     }
 
@@ -53,8 +53,8 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
     stablecl_finish_all(ocl);
     stablecl_profileinfo(profiling, event);
 
-    if(fabs(array[0] - sum) > 1)
-        stablecl_log(log_err, "[Stable-OpenCl] Error: expected result is %.3lf, actual was %.3lf\n", sum, array[0]);
+    if(array[0] != sum)
+        stablecl_log(log_err, "[Stable-OpenCl] Error: expected result is %ld, actual was %ld.\n", sum, array[0]);
 
 cleanup:
     if(array_ocl)
