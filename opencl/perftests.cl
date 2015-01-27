@@ -8,7 +8,7 @@
 
 #include "includes/opencl_common.h"
 
-kernel void array_sum_loop(global cl_precision* array)
+kernel void array_sum_loop(global long* array)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -17,7 +17,7 @@ kernel void array_sum_loop(global cl_precision* array)
 
 	if(global_index == 0)
 	{
-		cl_precision sum = 0;
+		long sum = 0;
 
 		for(int i = 0; i < array_size; i++)
 		{
@@ -30,7 +30,7 @@ kernel void array_sum_loop(global cl_precision* array)
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-kernel void array_sum_reduction(global cl_precision* array)
+kernel void array_sum_reduction(global long* array)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -48,7 +48,7 @@ kernel void array_sum_reduction(global cl_precision* array)
 	}
 }
 
-kernel void array_sum_twostage_loop(global cl_precision* array)
+kernel void array_sum_twostage_loop(global long* array)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -72,7 +72,7 @@ kernel void array_sum_twostage_loop(global cl_precision* array)
 
 	if(global_index == 0)
 	{
-		cl_precision sum = 0;
+		long sum = 0;
 		for(size_t i = 0; i < array_size; i += wg_size)
 		{
 			sum += array[i];
@@ -82,7 +82,7 @@ kernel void array_sum_twostage_loop(global cl_precision* array)
 	}
 }
 
-kernel void array_sum_twostage_reduction(global cl_precision* array)
+kernel void array_sum_twostage_reduction(global long* array)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -113,7 +113,7 @@ kernel void array_sum_twostage_reduction(global cl_precision* array)
 	}
 }
 
-kernel void array_sum_twostage_two_wgs(global cl_precision* array)
+kernel void array_sum_twostage_two_wgs(global long* array)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -123,7 +123,7 @@ kernel void array_sum_twostage_two_wgs(global cl_precision* array)
 	size_t local_offset;
 	size_t group_count = get_num_groups(0);
 	size_t actual_group_count = 2;
-	cl_precision sum;
+	long sum;
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -154,7 +154,7 @@ kernel void array_sum_twostage_two_wgs(global cl_precision* array)
 	}
 }
 
-kernel void array_sum_twostage_half_wgs(global cl_precision* array)
+kernel void array_sum_twostage_half_wgs(global long* array)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -164,7 +164,7 @@ kernel void array_sum_twostage_half_wgs(global cl_precision* array)
 	size_t local_offset;
 	size_t group_count = get_num_groups(0);
 	size_t actual_group_count = group_count / 2;
-	cl_precision sum;
+	long sum;
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 

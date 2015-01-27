@@ -11,13 +11,13 @@
 short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 	const size_t* global_work_size, const size_t* local_work_size, struct opencl_profile* profiling)
 {
-	cl_precision* array;
+	long* array;
 	cl_mem array_ocl;
 	cl_int err;
 	cl_event event;
-    cl_precision sum = 0;
+    long sum = 0;
 
- 	array = (cl_precision *) calloc(size, sizeof(cl_precision));
+ 	array = (long *) calloc(size, sizeof(long));
 
     if (!array)
     {
@@ -27,12 +27,12 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 
     for(size_t i = 0; i < size; i++)
     {
-        array[i] = 10 * ((cl_precision) rand() / (cl_precision) RAND_MAX);
+        array[i] = 10 * ((long) rand() / (long) RAND_MAX);
         sum += array[i];
     }
 
     array_ocl = clCreateBuffer(ocl->context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
-                sizeof(cl_precision) * size, array, &err);
+                sizeof(long) * size, array, &err);
     if (err)
     {
         stablecl_log(log_err, "[Stable-OpenCl] Buffer creation failed: %s\n", opencl_strerr(err));
@@ -75,7 +75,7 @@ short test_kernel(const char* file, const char* kernel_name)
 	FILE* profile_f;
 	size_t workgroup_sizes[] = { 64, 128, 256, 512 };
 	size_t array_size;
-	size_t array_size_tests = 20;
+	size_t array_size_tests = 22;
     double bw;
     size_t array_bytes;
 	int wg_i, as_i;
@@ -100,7 +100,7 @@ short test_kernel(const char* file, const char* kernel_name)
             array_size = max(array_size, workgroup_sizes[wg_i]);
             test_instance(&ocl, array_size, 1, &array_size, workgroup_sizes + wg_i, &profiling);
 
-            array_bytes = array_size * sizeof(cl_precision);
+            array_bytes = array_size * sizeof(long);
             bw = array_bytes / profiling.exec_time;
             fprintf(profile_f, "%zu\t%zu\t%.3lf\t%.3lf\n", array_size, workgroup_sizes[wg_i],
                 profiling.exec_time, 8 * bw / (1024 * 1024 * 1024));
