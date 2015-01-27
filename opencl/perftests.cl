@@ -263,3 +263,48 @@ kernel void array_sum_2stage_lc(global testtype* array, local volatile testtype*
 	    barrier(CLK_GLOBAL_MEM_FENCE);
 	}
 }
+
+
+kernel void array_sum_twostage_loop_lc(global testtype* array, local testtype* sdata)
+{
+	size_t local_wg_index = get_local_id(0);
+	size_t group_index = get_group_id(0);
+	size_t array_size = get_global_size(0);
+	size_t global_index = get_global_id(0);
+	size_t wg_size = get_local_size(0);
+	size_t local_offset = group_index * wg_size;
+	size_t group_count = get_num_groups(0);
+size_t offset;
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Unroll and to local
+	offset = wg_size / 2;
+
+	if (local_wg_index < offset)
+    	sdata[local_wg_index] = array[local_offset + local_wg_index + offset] + array[local_offset + local_wg_index];
+
+    offset >>= 1;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+	for(; offset > 0; offset >>= 1)
+	{
+	    if (local_wg_index < offset)
+	    	sdata[local_wg_index] += sdata[local_wg_index + offset];
+
+	    barrier(CLK_LOCAL_MEM_FENCE);
+	}
+
+	barrier(CLK_GLOBAL_MEM_FENCE);
+
+	if(global_index == 0)
+	{
+		testtype sum = 0;
+		for(size_t i = 0; i < array_size; i += wg_size)
+		{
+			sum += array[i];
+		}
+
+		array[0] = sum;
+	}
+}

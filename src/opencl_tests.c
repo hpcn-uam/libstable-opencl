@@ -121,6 +121,7 @@ int main(int argc, char const *argv[])
     // test_kernel("opencl/perftests.cl", "array_sum_loop");
     test_kernel("opencl/perftests.cl", "array_sum_reduction");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_loop");
+    test_kernel("opencl/perftests.cl", "array_sum_twostage_loop_lc");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_reduction");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_half_wgs");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_two_wgs");
