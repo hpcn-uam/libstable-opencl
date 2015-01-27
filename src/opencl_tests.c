@@ -5,19 +5,19 @@
 
 #include "openclenv.h"
 #include "opencl_common.h"
-
+#define testtype int
 #define max(a,b) ((a) < (b) ? (b) : (a))
 
 short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 	const size_t* global_work_size, const size_t* local_work_size, struct opencl_profile* profiling)
 {
-	long* array;
+	testtype* array;
 	cl_mem array_ocl;
 	cl_int err;
 	cl_event event;
-    long sum = 0;
+    testtype sum = 0;
 
- 	array = (long *) calloc(size, sizeof(long));
+ 	array = (testtype *) calloc(size, sizeof(testtype));
 
     if (!array)
     {
@@ -32,7 +32,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
     }
 
     array_ocl = clCreateBuffer(ocl->context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
-                sizeof(long) * size, array, &err);
+                sizeof(testtype) * size, array, &err);
     if (err)
     {
         stablecl_log(log_err, "[Stable-OpenCl] Buffer creation failed: %s\n", opencl_strerr(err));
@@ -41,7 +41,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 
     int argc = 0;
     err |= clSetKernelArg(ocl->kernel, argc++, sizeof(cl_mem), &array_ocl);
-    err |= clSetKernelArg(ocl->kernel, argc++, sizeof(long) * (*local_work_size), NULL);
+    err |= clSetKernelArg(ocl->kernel, argc++, sizeof(testtype) * (*local_work_size), NULL);
     err = clEnqueueNDRangeKernel(ocl->queue, ocl->kernel,
                                 dim, NULL, global_work_size, local_work_size, 0, NULL, &event);
 
@@ -101,7 +101,7 @@ short test_kernel(const char* file, const char* kernel_name)
             array_size = max(array_size, workgroup_sizes[wg_i]);
             test_instance(&ocl, array_size, 1, &array_size, workgroup_sizes + wg_i, &profiling);
 
-            array_bytes = array_size * sizeof(long);
+            array_bytes = array_size * sizeof(testtype);
             bw = array_bytes / profiling.exec_time;
             fprintf(profile_f, "%zu\t%zu\t%.3lf\t%.3lf\n", array_size, workgroup_sizes[wg_i],
                 profiling.exec_time, 8 * bw / (1024 * 1024 * 1024));
@@ -124,6 +124,7 @@ int main(int argc, char const *argv[])
     test_kernel("opencl/perftests.cl", "array_sum_twostage_reduction");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_half_wgs");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_two_wgs");
+    test_kernel("opencl/perftests.cl", "array_sum_2stage_lc");
 
 	return 0;
 }

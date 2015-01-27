@@ -7,8 +7,9 @@
 #endif
 
 #include "includes/opencl_common.h"
+#define testtype int
 
-kernel void array_sum_loop(global long* array, local long* scratch)
+kernel void array_sum_loop(global testtype* array, local testtype* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -17,7 +18,7 @@ kernel void array_sum_loop(global long* array, local long* scratch)
 
 	if(global_index == 0)
 	{
-		long sum = 0;
+		testtype sum = 0;
 
 		for(int i = 0; i < array_size; i++)
 		{
@@ -30,7 +31,7 @@ kernel void array_sum_loop(global long* array, local long* scratch)
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-kernel void array_sum_reduction(global long* array, local long* scratch)
+kernel void array_sum_reduction(global testtype* array, local testtype* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -48,7 +49,7 @@ kernel void array_sum_reduction(global long* array, local long* scratch)
 	}
 }
 
-kernel void array_sum_twostage_loop(global long* array, local long* scratch)
+kernel void array_sum_twostage_loop(global testtype* array, local testtype* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -72,7 +73,7 @@ kernel void array_sum_twostage_loop(global long* array, local long* scratch)
 
 	if(global_index == 0)
 	{
-		long sum = 0;
+		testtype sum = 0;
 		for(size_t i = 0; i < array_size; i += wg_size)
 		{
 			sum += array[i];
@@ -82,7 +83,7 @@ kernel void array_sum_twostage_loop(global long* array, local long* scratch)
 	}
 }
 
-kernel void array_sum_twostage_reduction(global long* array, local long* scratch)
+kernel void array_sum_twostage_reduction(global testtype* array, local testtype* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -113,7 +114,7 @@ kernel void array_sum_twostage_reduction(global long* array, local long* scratch
 	}
 }
 
-kernel void array_sum_twostage_two_wgs(global long* array, local long* scratch)
+kernel void array_sum_twostage_two_wgs(global testtype* array, local testtype* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -123,7 +124,7 @@ kernel void array_sum_twostage_two_wgs(global long* array, local long* scratch)
 	size_t local_offset;
 	size_t group_count = get_num_groups(0);
 	size_t actual_group_count = 2;
-	long sum;
+	testtype sum;
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -154,7 +155,7 @@ kernel void array_sum_twostage_two_wgs(global long* array, local long* scratch)
 	}
 }
 
-kernel void array_sum_twostage_half_wgs(global long* array, local long* scratch)
+kernel void array_sum_twostage_half_wgs(global testtype* array, local testtype* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -165,7 +166,7 @@ kernel void array_sum_twostage_half_wgs(global long* array, local long* scratch)
 	size_t group_count = get_num_groups(0);
 	size_t actual_group_count = group_count / 2;
 	size_t final_reduction_needed_groups = actual_group_count / wg_size;
-	long sum;
+	testtype sum;
 
 	if(actual_group_count % wg_size != 0)
 		final_reduction_needed_groups += 1;
@@ -219,5 +220,46 @@ kernel void array_sum_twostage_half_wgs(global long* array, local long* scratch)
 			final_reduction_needed_groups = 0;
 
 		barrier(CLK_GLOBAL_MEM_FENCE);
+	}
+}
+
+kernel void array_sum_2stage_lc(global testtype* array, local volatile testtype* sdata)
+{
+    size_t local_wg_index = get_local_id(0);
+	size_t group_index = get_group_id(0);
+	size_t array_size = get_global_size(0);
+	size_t global_index = get_global_id(0);
+	size_t wg_size = get_local_size(0);
+	size_t local_offset = group_index * wg_size;
+	size_t group_count = get_num_groups(0);
+	size_t offset;
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Unroll and to local
+	offset = wg_size / 2;
+
+	if (local_wg_index < offset)
+    	sdata[local_wg_index] = array[local_offset + local_wg_index + offset] + array[local_offset + local_wg_index];
+
+    offset >>= 1;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+	for(; offset > 0; offset >>= 1)
+	{
+	    if (local_wg_index < offset)
+	    	sdata[local_wg_index] += sdata[local_wg_index + offset];
+
+	    barrier(CLK_LOCAL_MEM_FENCE);
+	}
+
+	barrier(CLK_GLOBAL_MEM_FENCE);
+
+	for(offset = group_count / 2; offset > 0; offset >>= 1)
+	{
+	    if (local_wg_index == 0 && group_index < offset)
+	    	array[group_index] += array[group_index + offset];
+
+	    barrier(CLK_GLOBAL_MEM_FENCE);
 	}
 }
