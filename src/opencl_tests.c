@@ -68,6 +68,8 @@ short test_kernel(const char* file, const char* kernel_name)
 	size_t workgroup_sizes[] = { 64, 128, 256, 512 };
 	size_t array_size;
 	size_t array_size_tests = 20;
+    double bw;
+    size_t array_bytes;
 	int wg_i, as_i;
 
 	snprintf(profile_fname, 100, "%s.dat", kernel_name);
@@ -88,6 +90,11 @@ short test_kernel(const char* file, const char* kernel_name)
             array_size = max(array_size, workgroup_sizes[wg_i]);
             stablecl_log(log_message, "[Stable-OpenCl] Array size: %zu. WG size: %zu\n", array_size, *(workgroup_sizes + wg_i));
     		test_instance(&ocl, array_size, 1, &array_size, workgroup_sizes + wg_i, &profiling);
+
+            array_bytes = array_size * sizeof(cl_precision);
+            bw = array_bytes / profiling.exec_time;
+            fprintf(profile_f, "%zu\t%zu\t%.3lf\t%.3lf\n", array_size, workgroup_sizes[wg_i],
+                profiling.exec_time, 8 * bw / (1024 * 1024 * 1024));
     	}
     }
 
