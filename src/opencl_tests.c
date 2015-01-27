@@ -27,7 +27,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 
     for(size_t i = 0; i < size; i++)
     {
-        array[i] = rand();
+        array[i] = rand() & 0xFF;
         sum += array[i];
     }
 
