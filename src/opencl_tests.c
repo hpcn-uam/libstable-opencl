@@ -75,7 +75,7 @@ short test_kernel(const char* file, const char* kernel_name)
 	FILE* profile_f;
 	size_t workgroup_sizes[] = { 64, 128, 256, 512 };
 	size_t array_size;
-	size_t array_size_tests = 22;
+	size_t array_size_tests = 23;
     double bw;
     size_t array_bytes;
 	int wg_i, as_i;
@@ -117,7 +117,7 @@ int main(int argc, char const *argv[])
 {
 	srand(time(NULL));
 
-    test_kernel("opencl/perftests.cl", "array_sum_loop");
+    // test_kernel("opencl/perftests.cl", "array_sum_loop");
     test_kernel("opencl/perftests.cl", "array_sum_reduction");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_loop");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_reduction");
