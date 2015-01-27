@@ -8,7 +8,7 @@
 
 #include "includes/opencl_common.h"
 
-kernel void array_sum_loop(global long* array)
+kernel void array_sum_loop(global long* array, local long* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -30,7 +30,7 @@ kernel void array_sum_loop(global long* array)
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-kernel void array_sum_reduction(global long* array)
+kernel void array_sum_reduction(global long* array, local long* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -48,7 +48,7 @@ kernel void array_sum_reduction(global long* array)
 	}
 }
 
-kernel void array_sum_twostage_loop(global long* array)
+kernel void array_sum_twostage_loop(global long* array, local long* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -82,7 +82,7 @@ kernel void array_sum_twostage_loop(global long* array)
 	}
 }
 
-kernel void array_sum_twostage_reduction(global long* array)
+kernel void array_sum_twostage_reduction(global long* array, local long* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -113,7 +113,7 @@ kernel void array_sum_twostage_reduction(global long* array)
 	}
 }
 
-kernel void array_sum_twostage_two_wgs(global long* array)
+kernel void array_sum_twostage_two_wgs(global long* array, local long* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);
@@ -154,7 +154,7 @@ kernel void array_sum_twostage_two_wgs(global long* array)
 	}
 }
 
-kernel void array_sum_twostage_half_wgs(global long* array)
+kernel void array_sum_twostage_half_wgs(global long* array, local long* scratch)
 {
 	size_t local_wg_index = get_local_id(0);
 	size_t group_index = get_group_id(0);

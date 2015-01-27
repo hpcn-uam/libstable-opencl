@@ -41,6 +41,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 
     int argc = 0;
     err |= clSetKernelArg(ocl->kernel, argc++, sizeof(cl_mem), &array_ocl);
+    err |= clSetKernelArg(ocl->kernel, argc++, sizeof(long) * (*local_work_size), NULL);
     err = clEnqueueNDRangeKernel(ocl->queue, ocl->kernel,
                                 dim, NULL, global_work_size, local_work_size, 0, NULL, &event);
 
