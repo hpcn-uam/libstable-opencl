@@ -15,7 +15,7 @@ set dgrid3d 40,40 gauss 0.75
 list = system("echo $(ls *.dat)")
 splot for [f in list] f u 1:2:4 title f with lines
 
-set term wxt
+set term wxt size 1000,600
 replot
 
 pause -1
