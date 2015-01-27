@@ -109,6 +109,7 @@ int main(int argc, char const *argv[])
 	srand(time(NULL));
 
     test_kernel("opencl/perftests.cl", "array_sum_loop");
+    test_kernel("opencl/perftests.cl", "array_sum_reduction");
 
 	return 0;
 }
