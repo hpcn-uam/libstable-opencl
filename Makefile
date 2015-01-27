@@ -1,7 +1,7 @@
 CC = gcc
 CLC = openclc
 CLC_ARCH = gpu_32
-CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC 
+CFLAGS = -Wall -D_GNU_SOURCE -DHAVE_INLINE -fPIC
 CLFLAGS = -emit-llvm -c -arch $(CLC_ARCH)
 DEBUG_CFLAGS = -O -ggdb -ftrapv -DSTABLE_MIN_LOG=0
 BENCHMARK_CFLAGS =  $(RELEASE_CFLAGS) -DBENCHMARK
@@ -24,7 +24,7 @@ LIBSRCDIR = srclib
 CLDIR = opencl
 TARGETS = example fittest stable_array \
 			stable_test stable_performance stable_precision \
-			gpu_tests gpu_performance
+			gpu_tests gpu_performance opencl_tests
 INCLUDES = -I./includes/
 
 INCS := $(wildcard $(INCDIR)/*.h)

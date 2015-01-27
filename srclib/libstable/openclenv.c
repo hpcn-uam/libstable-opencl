@@ -277,6 +277,11 @@ void stablecl_log(log_level level, const char* string, ...)
     va_end(ap);
 }
 
+int stablecl_finish_all(struct openclenv* env)
+{
+    return clFinish(env->queue);
+}
+
 void stablecl_profileinfo(struct opencl_profile* prof, cl_event event)
 {
     int retval = 0;

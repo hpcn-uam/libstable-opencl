@@ -50,5 +50,6 @@ int opencl_teardown(struct openclenv* env);
 const char* opencl_strerr(cl_int err);
 void stablecl_log(log_level level, const char* string, ...);
 void stablecl_profileinfo(struct opencl_profile* prof, cl_event event);
+int stablecl_finish_all(struct openclenv* env);
 #endif
 
