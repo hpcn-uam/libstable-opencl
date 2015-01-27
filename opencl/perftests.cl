@@ -164,7 +164,11 @@ kernel void array_sum_twostage_half_wgs(global long* array)
 	size_t local_offset;
 	size_t group_count = get_num_groups(0);
 	size_t actual_group_count = group_count / 2;
+	size_t final_reduction_needed_groups = actual_group_count / wg_size;
 	long sum;
+
+	if(actual_group_count % wg_size != 0)
+		final_reduction_needed_groups += 1;
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -187,10 +191,40 @@ kernel void array_sum_twostage_half_wgs(global long* array)
 
 			barrier(CLK_LOCAL_MEM_FENCE);
 		}
+	}
+
+	barrier(CLK_GLOBAL_MEM_FENCE);
+
+	if(global_index == 0)
+		printf("%d\n", final_reduction_needed_groups);
+
+	while(final_reduction_needed_groups > 0)
+	{
+		if(global_index == 0)
+			printf("%d\n", final_reduction_needed_groups);
+
+
+		if(group_index < final_reduction_needed_groups)
+		{
+			size_t actual_reduction_size = wg_size;
+
+			if(group_index == final_reduction_needed_groups - 1)
+				actual_reduction_size = actual_reduction_size - final_reduction_needed_groups * wg_size;
+
+			for(size_t offset = wg_size / 2; offset > 0; offset >>= 1)
+			{
+				if(local_wg_index < offset && local_wg_index + offset < actual_reduction_size)
+					array[local_wg_index] += array[(local_wg_index + group_index) * wg_size];
+
+				barrier(CLK_LOCAL_MEM_FENCE);
+			}
+		}
+
+		if(final_reduction_needed_groups > 1)
+			final_reduction_needed_groups /= wg_size;
+		else
+			final_reduction_needed_groups = 0;
 
 		barrier(CLK_GLOBAL_MEM_FENCE);
-
-		if(group_index == 0)
-			array[0] += array[1];
 	}
 }
