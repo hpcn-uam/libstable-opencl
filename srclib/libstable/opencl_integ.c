@@ -194,13 +194,15 @@ static int _stable_set_results(struct stable_clinteg *cli)
     double gauss_sum = 0, kronrod_sum = 0;
     unsigned int i;
 
-    /* for (i = 0; i < cli->subdivisions; i++)
+    /*
+    for (i = 0; i < cli->subdivisions; i++)
     {
         stablecl_log(log_message, "[Stable-OpenCl] Interval %d: G %.3e K %.3e\n", i, (double) cli->h_gauss[i], (double) cli->h_kronrod[i]);
         gauss_sum += (double) cli->h_gauss[i];
         kronrod_sum += (double) cli->h_kronrod[i];
         cli->subinterval_errors[i] = (double) cli->h_gauss[i] - (double) cli->h_kronrod[i];
-    } */
+    }
+    */
 
     gauss_sum = (double) cli->h_gauss[0];
     kronrod_sum = (double) cli->h_kronrod[0];
