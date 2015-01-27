@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <libgen.h>
+#include <math.h>
 
 #include "openclenv.h"
 #include "opencl_common.h"
@@ -14,6 +15,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 	cl_mem array_ocl;
 	cl_int err;
 	cl_event event;
+    cl_precision sum;
 
  	array = (cl_precision *) calloc(size, sizeof(cl_precision));
 
@@ -24,7 +26,10 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
     }
 
     for(size_t i = 0; i < size; i++)
-    	array[i] = 10 * ((cl_precision) rand() / (cl_precision) RAND_MAX);
+    {
+        array[i] = 10 * ((cl_precision) rand() / (cl_precision) RAND_MAX);
+        sum += array[i];
+    }
 
     array_ocl = clCreateBuffer(ocl->context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
                 sizeof(cl_precision) * size, array, &err);
@@ -47,6 +52,9 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 
     stablecl_finish_all(ocl);
     stablecl_profileinfo(profiling, event);
+
+    if(fabs(array[0] - sum) > 0.01)
+        stablecl_log(log_err, "[Stable-OpenCl] Error: expected result is %.3lf, actual was %.3lf\n", sum, array[0]);
 
 cleanup:
     if(array_ocl)
@@ -82,14 +90,15 @@ short test_kernel(const char* file, const char* kernel_name)
         return -1;
     }
 
+    stablecl_log(log_message, "[Stable-OpenCl] Testing kernel %s\n", kernel_name);
+
     for(wg_i = 0; wg_i < sizeof workgroup_sizes / sizeof(size_t); wg_i++)
     {
     	for(as_i = 6; as_i < array_size_tests; as_i++)
     	{
     		array_size = 1 << as_i;
             array_size = max(array_size, workgroup_sizes[wg_i]);
-            stablecl_log(log_message, "[Stable-OpenCl] Array size: %zu. WG size: %zu\n", array_size, *(workgroup_sizes + wg_i));
-    		test_instance(&ocl, array_size, 1, &array_size, workgroup_sizes + wg_i, &profiling);
+            test_instance(&ocl, array_size, 1, &array_size, workgroup_sizes + wg_i, &profiling);
 
             array_bytes = array_size * sizeof(cl_precision);
             bw = array_bytes / profiling.exec_time;
@@ -112,6 +121,8 @@ int main(int argc, char const *argv[])
     test_kernel("opencl/perftests.cl", "array_sum_reduction");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_loop");
     test_kernel("opencl/perftests.cl", "array_sum_twostage_reduction");
+    test_kernel("opencl/perftests.cl", "array_sum_twostage_two_wgs");
+    test_kernel("opencl/perftests.cl", "array_sum_twostage_half_wgs");
 
 	return 0;
 }
