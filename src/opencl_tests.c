@@ -110,6 +110,8 @@ int main(int argc, char const *argv[])
 
     test_kernel("opencl/perftests.cl", "array_sum_loop");
     test_kernel("opencl/perftests.cl", "array_sum_reduction");
+    test_kernel("opencl/perftests.cl", "array_sum_twostage_loop");
+    test_kernel("opencl/perftests.cl", "array_sum_twostage_reduction");
 
 	return 0;
 }
