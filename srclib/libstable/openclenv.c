@@ -167,14 +167,12 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         }
         else
         {
-/*
             log_error = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, build_log_size, build_log, &build_log_size);
 
             if (log_error)
                 stablecl_log(log_err, "[Stable-OpenCL] Couldn't get build log: %s\n", opencl_strerr(log_err));
-            else
-                stablecl_log(err ? log_err : log_message, "[Stable-OpenCL] Build log (size %zu):\n%s\n", build_log_size, build_log);
-*/
+            else if(err)
+                stablecl_log(log_err, "[Stable-OpenCL] Build log (size %zu):\n%s\n", build_log_size, build_log);
         }
     }
 
