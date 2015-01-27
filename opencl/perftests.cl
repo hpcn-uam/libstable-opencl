@@ -195,15 +195,8 @@ kernel void array_sum_twostage_half_wgs(global long* array)
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
 
-	if(global_index == 0)
-		printf("%d\n", final_reduction_needed_groups);
-
 	while(final_reduction_needed_groups > 0)
 	{
-		if(global_index == 0)
-			printf("%d\n", final_reduction_needed_groups);
-
-
 		if(group_index < final_reduction_needed_groups)
 		{
 			size_t actual_reduction_size = wg_size;
