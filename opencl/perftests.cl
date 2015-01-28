@@ -295,6 +295,9 @@ size_t offset;
 	    barrier(CLK_LOCAL_MEM_FENCE);
 	}
 
+	if(local_wg_index == 0)
+		array[group_index] = sdata[0];
+
 	barrier(CLK_GLOBAL_MEM_FENCE);
 
 	if(global_index == 0)
