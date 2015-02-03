@@ -31,15 +31,15 @@
 
 
 struct stable_info {
-    cl_precision theta;
+    cl_precision theta0_;
     cl_precision beta_;
-    cl_precision k1;
     cl_precision xxipow;
     cl_precision ibegin;
     cl_precision iend;
+    cl_precision theta;
+    cl_precision k1;
     cl_precision subinterval_length;
     cl_precision half_subint_length;
-    cl_precision theta0_;
     cl_precision theta0;
     cl_precision alfa;
     cl_precision alfainvalfa1;
@@ -50,10 +50,19 @@ struct stable_info {
     cl_precision S;
     cl_precision c2_part;
     cl_precision THETA_TH;
+    cl_precision beta;
     unsigned int threads_per_interval;
     unsigned int gauss_points;
     unsigned int kronrod_points;
     unsigned int integrand;
+};
+
+struct stable_precalc {
+    cl_precision theta0_;
+    cl_precision beta_;
+    cl_precision xxipow;
+    cl_precision ibegin;
+    cl_precision iend;
 };
 
 #endif

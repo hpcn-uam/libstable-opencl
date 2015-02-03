@@ -74,7 +74,7 @@ short test_kernel(const char* file, const char* kernel_name)
 	size_t global_size;
 	char profile_fname[100];
 	FILE* profile_f;
-	size_t workgroup_sizes[] = { 64, 128, 256, 512 };
+	size_t workgroup_sizes[] = { 64, 128, 256, 512, 1024 };
 	size_t array_size;
 	size_t array_size_tests = 25;
     double bw;
