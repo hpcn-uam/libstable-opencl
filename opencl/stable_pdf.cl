@@ -166,16 +166,31 @@ void _stable_pdf_integ(global cl_precision* gauss, global cl_precision* kronrod,
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
 
-	if(gk_point == 0 && subinterval_index == 0)
+	if(subinterval_index == 0)
 	{
-		for(i = 0; i < subinterval_count; i++)
+		size_t offset = subinterval_count / 2;
+
+		if(gk_point < offset)
 		{
-			gauss_sum += gauss[i];
-			kronrod_sum += kronrod[i];
+			sums[gk_point].x = gauss[gk_point + offset] + gauss[gk_point];
+			sums[gk_point].y = kronrod[gk_point + offset] + kronrod[gk_point];
 		}
 
-		gauss[0] = gauss_sum;
-		kronrod[0] = kronrod_sum;
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		for(offset = offset >> 1; offset > 0; offset >>= 1)
+		{
+			if(gk_point < offset)
+				sums[gk_point] += sums[gk_point + offset];
+
+			barrier(CLK_LOCAL_MEM_FENCE);
+		}
+
+		if(gk_point == 0)
+		{
+			gauss[0] = sums[0].x;
+			kronrod[0] = sums[0].y;
+		}
 	}
 }
 
