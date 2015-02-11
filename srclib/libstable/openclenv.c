@@ -53,16 +53,52 @@ error:
     return NULL;
 }
 
-
-static void _opencl_platform_info(cl_platform_id* platforms, cl_uint platform_num)
+static void _opencl_kernel_info(cl_kernel kernel)
 {
-    #if STABLE_MIN_LOG <= 0
+#if STABLE_MIN_LOG <= 0
+    int j;
+    size_t wg_sizes[3], max_dims;
+
+    clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_WORK_GROUP_SIZE, sizeof wg_sizes, wg_sizes, &max_dims);
+
+    max_dims = 3;
+    stablecl_log(log_message, "[Stable-OpenCL] Max dimensions for kernel: %zu.\n", max_dims);
+
+    for (j = 0; j < max_dims; j++)
+        stablecl_log(log_message, "[Stable-OpenCL] Max kernel workgroup size for dimension %zu: %zu\n", j, wg_sizes[j]);
+#endif
+}
+
+
+static void _opencl_device_info(cl_device_id device)
+{
+#if STABLE_MIN_LOG <= 0
+    char dev_name[128];
+    int j;
+    size_t wg_sizes[5], max_dims;
+
+    clGetDeviceInfo(device, CL_DEVICE_NAME, 128 * sizeof(char), dev_name, NULL);
+    clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof wg_sizes, wg_sizes, &max_dims);
+
+    stablecl_log(log_message, "[Stable-OpenCL] Device obtained: %s\n", dev_name);
+
+    max_dims /= sizeof(size_t);
+    stablecl_log(log_message, "[Stable-OpenCL] Max dimensions: %zu.\n", max_dims);
+
+    for (j = 0; j < max_dims; j++)
+        stablecl_log(log_message, "[Stable-OpenCL] Max workgroup size for dimension %zu: %zu\n", j, wg_sizes[j]);
+#endif
+}
+
+static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_num)
+{
+#if STABLE_MIN_LOG <= 0
     int i;
     char version[500], name[500], vendor[500], extensions[500];
     cl_uint float_vecwidth, double_vecwidth;
 
     stablecl_log(log_message, "[Stable-OpenCL] Available platforms (OPENCL_FORCE_CPU = %d): %d\n", OPENCL_FORCE_CPU, platform_num);
-    for(i = 0; i < platform_num; i++)
+    for (i = 0; i < platform_num; i++)
     {
         clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
         clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, 500, version, NULL);
@@ -70,17 +106,18 @@ static void _opencl_platform_info(cl_platform_id* platforms, cl_uint platform_nu
         clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, 500, extensions, NULL);
         clGetPlatformInfo(platforms[i], CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &double_vecwidth, NULL);
         clGetPlatformInfo(platforms[i], CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT, sizeof(cl_uint), &float_vecwidth, NULL);
+
         stablecl_log(log_message, "[Stable-OpenCL] %d: %s, OpenCL version %s, vendor %s. Available extensions: %s\n", i, name, version, vendor, extensions);
         stablecl_log(log_message, "[Stable-OpenCL] Preferred vector widths: double %zu, float %zu.\n", double_vecwidth, float_vecwidth);
+
     }
-    #endif
+#endif
 }
 
 int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *kernname)
 {
     char *err_msg = NULL;
     int err = 0, log_error;
-    char dev_name[128];
     size_t pathlen = strlen(bitcode_path);
     char *build_log;
     size_t build_log_size;
@@ -105,9 +142,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    clGetDeviceInfo(env->device, CL_DEVICE_NAME, 128 * sizeof(char), dev_name, NULL);
-
-    stablecl_log(log_message, "[Stable-OpenCL] Device obtained: %s\n", dev_name);
+    _opencl_device_info(env->device);
 
     env->context = clCreateContext(0, 1, &env->device, NULL, NULL, &err);
     if (!env->context)
@@ -189,6 +224,8 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         err_msg = "clCreateKernel";
         goto error;
     }
+
+    _opencl_kernel_info(env->kernel);
 
 error:
     if (err && err_msg)
