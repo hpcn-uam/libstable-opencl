@@ -13,31 +13,31 @@
 #include <string.h>
 #include <errno.h>
 
-char* _read_file(const char* filename, size_t* contents_len)
+char *_read_file(const char *filename, size_t *contents_len)
 {
-    FILE* f = fopen(filename, "r");
-    char* contents = NULL;
+    FILE *f = fopen(filename, "r");
+    char *contents = NULL;
     size_t read;
 
-    if(!f)
+    if (!f)
         goto error;
 
-    if(fseek(f, 0, SEEK_END))
+    if (fseek(f, 0, SEEK_END))
         goto error;
 
     *contents_len = ftell(f);
 
-    if(fseek(f, 0, SEEK_SET))
+    if (fseek(f, 0, SEEK_SET))
         goto error;
 
     contents = calloc(*contents_len + 1, sizeof(char));
 
-    if(!contents)
+    if (!contents)
         goto error;
 
     read = fread(contents, *contents_len, 1, f);
 
-    if(read < 1)
+    if (read < 1)
         goto error;
 
     fclose(f);
@@ -47,8 +47,8 @@ char* _read_file(const char* filename, size_t* contents_len)
     return contents;
 
 error:
-    if(contents) free(contents);
-    if(f) fclose(f);
+    if (contents) free(contents);
+    if (f) fclose(f);
 
     return NULL;
 }
@@ -126,7 +126,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
 
     err = clGetPlatformIDs(MAX_OPENCL_PLATFORMS, platforms, &platform_num);
 
-    if(err)
+    if (err)
     {
         err_msg = "clGetPlatformIDs";
         goto error;
@@ -162,16 +162,16 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
     env->program = clCreateProgramWithSource(env->context, 1, (const char **)&bitcode_path, &pathlen, &err);
 #else
     size_t code_length;
-    char* code_contents = _read_file(bitcode_path, &code_length);
+    char *code_contents = _read_file(bitcode_path, &code_length);
 
-    if(!code_contents)
+    if (!code_contents)
     {
         err_msg = strerror(errno);
         err = errno;
         goto error;
     }
 
-    env->program = clCreateProgramWithSource(env->context, 1 , (const char**)&code_contents, &code_length, &err);
+    env->program = clCreateProgramWithSource(env->context, 1 , (const char **)&code_contents, &code_length, &err);
 
     free(code_contents);
 #endif
@@ -206,7 +206,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
 
             if (log_error)
                 stablecl_log(log_err, "[Stable-OpenCL] Couldn't get build log: %s\n", opencl_strerr(log_err));
-            else if(err)
+            else if (err)
                 stablecl_log(log_err, "[Stable-OpenCL] Build log (size %zu):\n%s\n", build_log_size, build_log);
         }
     }
@@ -302,11 +302,11 @@ const char *opencl_strerr(cl_int err)
     }
 }
 
-void stablecl_log(log_level level, const char* string, ...)
+void stablecl_log(log_level level, const char *string, ...)
 {
     va_list ap;
 
-    if(level < STABLE_MIN_LOG)
+    if (level < STABLE_MIN_LOG)
         return;
 
     va_start(ap, string);
@@ -314,25 +314,25 @@ void stablecl_log(log_level level, const char* string, ...)
     va_end(ap);
 }
 
-int stablecl_finish_all(struct openclenv* env)
+int stablecl_finish_all(struct openclenv *env)
 {
     return clFinish(env->queue);
 }
 
-void stablecl_profileinfo(struct opencl_profile* prof, cl_event event)
+void stablecl_profileinfo(struct opencl_profile *prof, cl_event event)
 {
     int retval = 0;
 
     retval |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED,
-                            sizeof(cl_ulong), &prof->queued, NULL);
+                                      sizeof(cl_ulong), &prof->queued, NULL);
     retval |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_SUBMIT,
-                            sizeof(cl_ulong), &prof->submitted, NULL);
+                                      sizeof(cl_ulong), &prof->submitted, NULL);
     retval |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START,
-                            sizeof(cl_ulong), &prof->started, NULL);
+                                      sizeof(cl_ulong), &prof->started, NULL);
     retval |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END,
-                            sizeof(cl_ulong), &prof->finished, NULL);
+                                      sizeof(cl_ulong), &prof->finished, NULL);
 
-    if(retval != CL_SUCCESS)
+    if (retval != CL_SUCCESS)
         fprintf(stderr, "[Stable-OpenCL] clGetEventProfilingInfo error %d: %s\n", retval, opencl_strerr(retval));
 
     prof->submit_acum = (double)(prof->submitted - prof->queued) / 1000000;
