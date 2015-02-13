@@ -198,7 +198,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
         return;
     }
 
-    _stable_pdf_integ(stable, &precalc, sums[subinterval_index]);
+    _stable_pdf_integ(stable, &precalc, sums);
 
     if(gk_point == 0 && subinterval_index == 0)
     {
