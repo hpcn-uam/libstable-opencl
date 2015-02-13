@@ -136,22 +136,18 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	    barrier(CLK_LOCAL_MEM_FENCE);
 	}
 
-	if(gk_point == 0)
+
+	for(size_t offset = subinterval_count / 2; offset > 0; offset >>= 1)
 	{
-		sums[subinterval_index][0] *= stable->subinterval_length;
+		if(gk_point < offset)
+			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];
 
-		for(size_t offset = subinterval_count / 2; offset > 0; offset >>= 1)
-		{
-			if(gk_point < offset)
-				sums[subinterval_index][0] += sums[subinterval_index + offset][0];
-
-			barrier(CLK_LOCAL_MEM_FENCE);
-		}
+		barrier(CLK_LOCAL_MEM_FENCE);
 	}
 
     if(gk_point == 0 && subinterval_index == 0)
     {
-    	sums[0][0] = sums[0][0] * stable->c2_part / (xxi * stable->sigma);
+    	sums[0][0] *= stable->subinterval_length * stable->c2_part / (xxi * stable->sigma);
 
 		gauss[point_index] = sums[0][0].x;
 		kronrod[point_index] = sums[0][0].y;
