@@ -22,6 +22,7 @@ struct stable_clinteg {
 	cl_mem gauss;
 	cl_mem kronrod;
 	cl_mem args;
+	cl_mem points;
 	double result;
 	double abs_error;
 
@@ -31,9 +32,9 @@ struct stable_clinteg {
 
 
 int stable_clinteg_init(struct stable_clinteg* cli);
-double stable_clinteg_integrate(struct stable_clinteg* cli, double a, double b, 
-		double epsabs, double epsrel, unsigned short limit,
-    	double *result, double *abserr, struct StableDistStruct* dist);
+short stable_clinteg_points(struct stable_clinteg *cli,
+	double *x, double *pdf_results, double *errs, size_t num_points,
+	struct StableDistStruct *dist);
 void stable_clinteg_teardown(struct stable_clinteg* cli);
 
 

@@ -97,7 +97,7 @@ double stable_pdf_g2(double theta, void *args)
 #endif
 
     g = V + dist->xxipow; // This g seems to be the same returned by stable_g_aux2.
-    
+
 
     //g>6.55 -> exp(g-exp(g)) < 2.1E-301
     if (g > 6.55 || g < -700) return 0.0;
@@ -413,12 +413,6 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
     theta[0] = -dist->theta0_ + THETA_TH; warnz[0] = 0;
     theta[4] = M_PI_2 - THETA_TH;
 
-    if(dist->gpu_enabled)
-    {
-        stable_clinteg_integrate(&(dist->cli), theta[0], theta[4], -1, -1, -1, &pdf, err, dist);
-        return pdf;
-    }
-
     theta[2] = zbrent(integ_aux, (void *)dist, theta[0], theta[4],
                       0.0, 1e-6 * (theta[4] - theta[0]), &k);
 
@@ -521,7 +515,7 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
     i = 0;
     stable_integration(dist, integrando, theta[1], theta[2],
                        absTOL, relTOL, IT_MAX,
-                       &pdf_aux, &err_aux, 
+                       &pdf_aux, &err_aux,
                        integration_algorithms[i++]);
     pdf1 = fabs(pdf_aux);
     *err = err_aux * err_aux;
@@ -533,7 +527,7 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 
     stable_integration(dist, integrando, theta[2], theta[3],
                        max(pdf1 * relTOL, absTOL) * 0.25, relTOL, IT_MAX,
-                       &pdf_aux, &err_aux, 
+                       &pdf_aux, &err_aux,
                        integration_algorithms[i++]);
     pdf2 = fabs(pdf_aux);
     *err += err_aux * err_aux;
@@ -544,7 +538,7 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 
     stable_integration(dist, integrando, theta[3], theta[4],
                        max((pdf2 + pdf1)*relTOL, absTOL) * 0.25, relTOL, IT_MAX,
-                       &pdf_aux, &err_aux, 
+                       &pdf_aux, &err_aux,
                        integration_algorithms[i++]);
     pdf3 = fabs(pdf_aux);
     *err += err_aux * err_aux;
@@ -555,7 +549,7 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 
     stable_integration(dist, integrando, theta[0], theta[1],
                        max((pdf3 + pdf2 + pdf1)*relTOL, absTOL) * 0.25, relTOL, IT_MAX,
-                       &pdf_aux, &err_aux, 
+                       &pdf_aux, &err_aux,
                        integration_algorithms[i++]);
     *err += err_aux * err_aux;
 
@@ -718,8 +712,8 @@ double stable_pdf_point_STABLE(StableDist *dist, const double x, double *err)
 #endif
         return pdf / dist->sigma;
     }
-    
-    /* No tenemos la suerte de x ~ ξ, toca usar la otra expresión. */ 
+
+    /* No tenemos la suerte de x ~ ξ, toca usar la otra expresión. */
 
     if (xxi < 0) /* pdf(x<xi,a,b) = pdf(-x,a,-b)*/
     {
