@@ -112,42 +112,6 @@ cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_pr
 	return w * res.x;
 }
 
-void _stable_pdf_integ(constant struct stable_info* stable, struct stable_precalc* precalc, local cl_precision2** sums)
-{
-	size_t gk_point = get_local_id(0);
-	size_t subinterval_index = get_local_id(1);
-	size_t subinterval_count = get_local_size(0);
-	size_t interval_count = get_local_size(1);
-	size_t i;
-	cl_precision gauss_sum = 0, kronrod_sum = 0;
-
-	if(gk_point < KRONROD_EVAL_POINTS)
-		sums[subinterval_index][gk_point] = eval_gk_pair(stable, precalc, subinterval_index, gk_point);
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	for(size_t offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
-	{
-	    if (gk_point < offset)
-	  		sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
-
-	    barrier(CLK_LOCAL_MEM_FENCE);
-	}
-
-	if(gk_point == 0)
-	{
-		sums[subinterval_index][0] *= stable->subinterval_length;
-
-		for(size_t offset = subinterval_count / 2; offset > 0; offset >>= 1)
-		{
-			if(gk_point < offset)
-				sums[subinterval_index][0] += sums[subinterval_index + offset][0];
-
-			barrier(CLK_LOCAL_MEM_FENCE);
-		}
-	}
-}
-
 kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
 {
 	size_t gk_point = get_local_id(0);
@@ -198,7 +162,31 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
         return;
     }
 
-    _stable_pdf_integ(stable, &precalc, sums);
+	if(gk_point < KRONROD_EVAL_POINTS)
+		sums[subinterval_index][gk_point] = eval_gk_pair(stable, &precalc, subinterval_index, gk_point);
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	for(size_t offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
+	{
+	    if (gk_point < offset)
+	  		sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
+
+	    barrier(CLK_LOCAL_MEM_FENCE);
+	}
+
+	if(gk_point == 0)
+	{
+		sums[subinterval_index][0] *= stable->subinterval_length;
+
+		for(size_t offset = subinterval_count / 2; offset > 0; offset >>= 1)
+		{
+			if(gk_point < offset)
+				sums[subinterval_index][0] += sums[subinterval_index + offset][0];
+
+			barrier(CLK_LOCAL_MEM_FENCE);
+		}
+	}
 
     if(gk_point == 0 && subinterval_index == 0)
     {
