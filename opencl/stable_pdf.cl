@@ -17,47 +17,8 @@
 #include "includes/opencl_common.h"
 #include "includes/gk_points.h"
 
-cl_precision stable_pdf_g1(cl_precision theta, constant struct stable_info* stable);
-
 #define anyf(a) any((int2) a)
 #define vec(b) (cl_precision2)((b), (b))
-
-cl_precision stable_pdf_alpha_neq1(cl_precision theta, constant struct stable_info *args)
-{
-	cl_precision g, cos_theta, aux, V;
-
-	cos_theta = cos(theta);
-	aux = (args->theta0_ + theta) * args->alfa;
-	V = log(cos_theta / sin(aux)) * args->alfainvalfa1 +
-	+ log(cos(aux - theta) / cos_theta) + args->k1;
-
-	g = V + args->xxipow;
-	if (g > 6.55 || g < -700) return 0.0;
-	else  g = exp(g);
-	g = exp(-g) * g;
-	if (isnan(g) || isinf(g) || g < 0)
-	{
-		return 0.0;
-	}
-
-	return g;
-}
-
-cl_precision stable_pdf_alpha_eq1(cl_precision theta, constant struct stable_info* stable)
-{
-	cl_precision g, V, aux;
-
-	aux = (stable->beta_ * theta + M_PI_2) / cos(theta);
-	V = sin(theta) * aux / stable->beta_ + log(aux) + stable->k1;
-
-	g = V + stable->xxipow;
-	if(isnan(g)) return 0.0;
-	if ((g = exp(g)) < 1.522e-8 ) return (1.0 - g) * g;
-	g = exp(-g) * g;
-	if (isnan(g) || g < 0) return 0.0;
-
-	return g;
-}
 
 cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc, size_t subinterval_index, size_t gk_point)
 {
