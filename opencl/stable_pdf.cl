@@ -148,27 +148,6 @@ void _stable_pdf_integ(constant struct stable_info* stable, struct stable_precal
 	}
 }
 
-kernel void stable_pdf_integ(global cl_precision* gauss, global cl_precision* kronrod, constant struct stable_info* stable)
-{
-	struct stable_precalc precalc;
-	size_t gk_point = get_local_id(0);
-	local cl_precision2 sums[GK_POINTS / 2 + 1];
-
-	precalc.theta0_ = stable->theta0_;
-   	precalc.beta_ = stable->beta_;
-   	precalc.xxipow = stable->xxipow;
-   	precalc.ibegin = stable->ibegin;
-   	precalc.iend = stable->iend;
-
-	_stable_pdf_integ(stable, &precalc, sums);
-
-	if(gk_point == 0)
-	{
-		gauss[0] = sums[0].x;
-		kronrod[0] = sums[0].y;
-	}
-}
-
 kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
 {
 	size_t gk_point = get_local_id(0);
