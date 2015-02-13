@@ -167,7 +167,7 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
 
     bench_begin(cli->profiling.enqueue, cli->profile_enabled);
     err = clEnqueueNDRangeKernel(cli->env.queue, cli->env.kernel,
-                                 1, NULL, work_threads, workgroup_size, 0, NULL, &event);
+                                 2, NULL, work_threads, workgroup_size, 0, NULL, &event);
     bench_end(cli->profiling.enqueue, cli->profile_enabled);
 
     if (err)
