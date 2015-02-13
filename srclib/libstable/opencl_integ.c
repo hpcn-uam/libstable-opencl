@@ -41,12 +41,12 @@ static int _stable_create_points_array(struct stable_clinteg *cli, cl_precision 
     return err;
 }
 
-static int _stable_map_gk_buffers(struct stable_clinteg *cli)
+static int _stable_map_gk_buffers(struct stable_clinteg *cli, size_t points)
 {
     int err;
 
-    cli->h_gauss = clEnqueueMapBuffer(cli->env.queue, cli->gauss, CL_FALSE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
-    cli->h_kronrod = clEnqueueMapBuffer(cli->env.queue, cli->kronrod, CL_FALSE, CL_MAP_READ, 0, cli->subdivisions * sizeof(cl_precision), 0, NULL, NULL, &err);
+    cli->h_gauss = clEnqueueMapBuffer(cli->env.queue, cli->gauss, CL_TRUE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
+    cli->h_kronrod = clEnqueueMapBuffer(cli->env.queue, cli->kronrod, CL_TRUE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
 
     return err;
 }
@@ -177,7 +177,7 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
     }
 
     bench_begin(cli->profiling.buffer_read, cli->profile_enabled);
-    err = _stable_map_gk_buffers(cli);
+    err = _stable_map_gk_buffers(cli, num_points);
     bench_end(cli->profiling.buffer_read, cli->profile_enabled);
 
     if (err)
