@@ -151,7 +151,7 @@ void _stable_pdf_integ(constant struct stable_info* stable, struct stable_precal
 kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
 {
 	size_t gk_point = get_local_id(0);
-	size_t point_index = get_group_id(1);
+	size_t point_index = get_group_id(0);
 	size_t subinterval_index = get_local_id(1);
 	size_t points_count = get_num_groups(0);
 	size_t subinterval_count = get_local_size(1);
