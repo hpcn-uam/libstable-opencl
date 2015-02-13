@@ -112,7 +112,7 @@ cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_pr
 	return w * res.x;
 }
 
-void _stable_pdf_integ(constant struct stable_info* stable, struct stable_precalc* precalc, local cl_precision2* sums)
+void _stable_pdf_integ(constant struct stable_info* stable, struct stable_precalc* precalc, local cl_precision2** sums)
 {
 	size_t gk_point = get_local_id(0);
 	size_t subinterval_index = get_local_id(1);
@@ -160,8 +160,7 @@ kernel void stable_pdf_integ(global cl_precision* gauss, global cl_precision* kr
    	precalc.ibegin = stable->ibegin;
    	precalc.iend = stable->iend;
 
-	_stable_pdf_integ(¡
-		stable, &precalc, sums);
+	_stable_pdf_integ(stable, &precalc, sums);
 
 	if(gk_point == 0)
 	{
