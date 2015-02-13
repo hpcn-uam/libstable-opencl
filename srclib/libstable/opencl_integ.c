@@ -151,9 +151,10 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
 
     bench_begin(cli->profiling.argset, cli->profile_enabled);
     int argc = 0;
+    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->args);
+    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->points);
     err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->gauss);
     err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->kronrod);
-    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->args);
     bench_end(cli->profiling.argset, cli->profile_enabled);
 
     if (err)
