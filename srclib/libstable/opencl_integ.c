@@ -163,7 +163,7 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
         goto cleanup;
     }
 
-    stablecl_log(log_message, "[Stable-OpenCl] Enqueing kernel - %zu work threads, %zu workgroup size (%d points per interval)\n", work_threads, workgroup_size, cli->points_rule);
+    stablecl_log(log_message, "[Stable-OpenCl] Enqueing kernel - %zu × %zu work threads, %zu × %zu workgroup size\n", work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
 
     bench_begin(cli->profiling.enqueue, cli->profile_enabled);
     err = clEnqueueNDRangeKernel(cli->env.queue, cli->env.kernel,
@@ -194,7 +194,7 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
     {
         pdf_results[i] = cli->h_kronrod[i];
         errs[i] = cli->h_kronrod[i] - cli->h_gauss[i];
-        stablecl_log(log_message, "[Stable-OpenCl] Results set P%d: gauss_sum = %.3g, kronrod_sum = %.3g, abserr = %.3g\n", cli->h_gauss[i], cli->h_kronrod[i], errs[i]);
+        stablecl_log(log_message, "[Stable-OpenCl] Results set P%zu: gauss_sum = %.3g, kronrod_sum = %.3g, abserr = %.3g\n", i, cli->h_gauss[i], cli->h_kronrod[i], errs[i]);
     }
     bench_end(cli->profiling.set_results, cli->profile_enabled);
 
