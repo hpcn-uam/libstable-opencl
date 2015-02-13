@@ -115,49 +115,33 @@ cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_pr
 void _stable_pdf_integ(constant struct stable_info* stable, struct stable_precalc* precalc, local cl_precision2* sums)
 {
 	size_t gk_point = get_local_id(0);
-	size_t subinterval_index = get_group_id(0);
+	size_t subinterval_index = get_local_id(1);
 	size_t subinterval_count = get_local_size(0);
 	size_t interval_count = get_local_size(1);
 	size_t i;
 	cl_precision gauss_sum = 0, kronrod_sum = 0;
 
 	if(gk_point < KRONROD_EVAL_POINTS)
-		sums[gk_point] = eval_gk_pair(stable, precalc, subinterval_index, gk_point);
+		sums[subinterval_index][gk_point] = eval_gk_pair(stable, precalc, subinterval_index, gk_point);
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	for(size_t offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
 	{
 	    if (gk_point < offset)
-	  		sums[gk_point] += sums[gk_point + offset];
+	  		sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
 
 	    barrier(CLK_LOCAL_MEM_FENCE);
 	}
 
 	if(gk_point == 0)
 	{
-		gauss[subinterval_index] = sums[0].y * stable->subinterval_length;
-		kronrod[subinterval_index] = sums[0].x * stable->subinterval_length;
-	}
+		sums[subinterval_index][0] *= stable->subinterval_length;
 
-	barrier(CLK_GLOBAL_MEM_FENCE);
-
-	if(subinterval_index == 0)
-	{
-		size_t offset = subinterval_count / 2;
-
-		if(gk_point < offset)
-		{
-			sums[gk_point].x = gauss[gk_point + offset] + gauss[gk_point];
-			sums[gk_point].y = kronrod[gk_point + offset] + kronrod[gk_point];
-		}
-
-		barrier(CLK_LOCAL_MEM_FENCE);
-
-		for(offset = offset >> 1; offset > 0; offset >>= 1)
+		for(size_t offset = subinterval_count / 2; offset > 0; offset >>= 1)
 		{
 			if(gk_point < offset)
-				sums[gk_point] += sums[gk_point + offset];
+				sums[subinterval_index][0] += sums[subinterval_index + offset][0];
 
 			barrier(CLK_LOCAL_MEM_FENCE);
 		}
@@ -176,7 +160,8 @@ kernel void stable_pdf_integ(global cl_precision* gauss, global cl_precision* kr
    	precalc.ibegin = stable->ibegin;
    	precalc.iend = stable->iend;
 
-	_stable_pdf_integ(gauss, kronrod, stable, &precalc, sums);
+	_stable_pdf_integ(¡
+		stable, &precalc, sums);
 
 	if(gk_point == 0)
 	{
@@ -197,7 +182,6 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 	cl_precision pdf = 0;
     cl_precision x_, xxi;
- 	cl_precision ibegin, iend;
 
     x_ = (x[point_index] - stable->mu_0) / stable->sigma;
    	xxi = x_ - stable->xi;
@@ -238,24 +222,11 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     _stable_pdf_integ(stable, &precalc, sums[subinterval_index]);
 
-    if(gk_point == 0)
+    if(gk_point == 0 && subinterval_index == 0)
     {
-    	sums[subinterval_index][0] = sums[subinterval_index][0] * stable->c2_part / (xxi * stable->sigma);
+    	sums[0][0] = sums[0][0] * stable->c2_part / (xxi * stable->sigma);
 
-    	barrier(CLK_LOCAL_MEM_FENCE);
-
-    	for(size_t offset = subinterval_count / 2; offset > 0; offset >>= 1)
-    	{
-    		if(subinterval_index < offset)
-    			sums[subinterval_index][0] += sums[subinterval_index + offset][0];
-
-    		barrier(CLK_LOCAL_MEM_FENCE);
-    	}
-
-    	if(subinterval_index == 0)
-    	{
-    		gauss[point_index] = sums[0][0].x;
-    		kronrod[point_index] = sums[0][0].y;
-    	}
+		gauss[point_index] = sums[0][0].x;
+		kronrod[point_index] = sums[0][0].y;
 	}
 }
