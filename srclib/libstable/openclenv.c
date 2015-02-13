@@ -57,11 +57,18 @@ static void _opencl_kernel_info(cl_kernel kernel)
 {
 #if STABLE_MIN_LOG <= 0
     int j;
+    cl_int err;
     size_t wg_sizes[3], max_dims;
 
-    clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_WORK_GROUP_SIZE, sizeof wg_sizes, wg_sizes, &max_dims);
+    err = clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_WORK_GROUP_SIZE, sizeof wg_sizes, wg_sizes, &max_dims);
 
-    max_dims = 3;
+    max_dims /= sizeof(size_t);
+    if(err)
+    {
+        stablecl_log(log_err, "[Stable-OpenCL] Unable to get kernel info: %s (%d)\n", opencl_strerr(err), err);
+        return;
+    }
+
     stablecl_log(log_message, "[Stable-OpenCL] Max dimensions for kernel: %zu.\n", max_dims);
 
     for (j = 0; j < max_dims; j++)
