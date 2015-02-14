@@ -37,11 +37,10 @@ int main (void)
 {
     double alfa = 1.25, beta = 0.5, sigma = 1.0, mu = 0.0;
     int param = 0;
-    double x = 10;
-    double pdf = 0, gpu_pdf = 0;
-    double err;
+    double x[] = { 10, 20, 30 };
+    double pdf[3], gpu_pdf[3];
+    double err[3], gpu_err[3];
     int i;
-    int max_tries = 1;
 
     printf("=== GPU tests for libstable:\n");
     printf("Using %d points GK rule with %d subdivisions.\n", GK_POINTS, GK_SUBDIVISIONS);
@@ -55,14 +54,9 @@ int main (void)
         return 1;
     }
 
-    for(i = 0; i < max_tries; i++)
-        pdf += stable_pdf_point(dist, x, &err);
+    for(i = 0; i < sizeof x / sizeof(double); i++)
+        pdf[i] = stable_pdf_point(dist, x[i], err + i);
 
-    pdf /= max_tries;
-
-    printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e ± %1.2e\n",
-           x, alfa, beta, sigma, mu, pdf, err);
-    printf("CPU relative error is %1.2e %%.\n\n", 100 * err / pdf);
 
     if(stable_activate_gpu(dist))
     {
@@ -70,12 +64,17 @@ int main (void)
         return 1;
     }
 
-    stable_clinteg_points(&dist->cli, &x, &gpu_pdf, &err, 1, dist);
-
-    printf("GPU PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e ± %1.2e\n",
-           x, alfa, beta, sigma, mu, gpu_pdf, err);
-    printf("GPU relative error is %1.2e %%.\n\n", 100 * fabs(err / gpu_pdf));
-    printf("GPU / CPU difference: %3.3g\n\n", fabs(gpu_pdf - pdf));
+    stable_clinteg_points(&dist->cli, x, gpu_pdf, gpu_err, 3, dist);
+    for(i = 0; i < sizeof x / sizeof(double); i++)
+    {
+        printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e ± %1.2e\n",
+           x[i], alfa, beta, sigma, mu, pdf[i], err[i]);
+        printf("CPU relative error is %1.2e %%.\n\n", 100 * err[i] / pdf[i]);
+        printf("GPU PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e ± %1.2e\n",
+               x[i], alfa, beta, sigma, mu, gpu_pdf[i], gpu_err[i]);
+        printf("GPU relative error is %1.2e %%.\n\n", 100 * fabs(gpu_err[i] / gpu_pdf[i]));
+        printf("GPU / CPU difference: %3.3g\n\n", fabs(gpu_pdf[i] - pdf[i]));
+    }
 
     stable_free(dist);
     return 0;
