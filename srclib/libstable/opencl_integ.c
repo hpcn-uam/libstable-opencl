@@ -43,7 +43,7 @@ static int _stable_create_points_array(struct stable_clinteg *cli, cl_precision 
 
 static int _stable_map_gk_buffers(struct stable_clinteg *cli, size_t points)
 {
-    int err;
+    int err = 0;
 
     cli->h_gauss = clEnqueueMapBuffer(cli->env.queue, cli->gauss, CL_TRUE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
     cli->h_kronrod = clEnqueueMapBuffer(cli->env.queue, cli->kronrod, CL_TRUE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
@@ -207,7 +207,7 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
 
     if (err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Error reading results from the GPU: %d\n", err);
+        stablecl_log(log_err, "[Stable-OpenCl] Error reading results from the GPU: %s (%d)\n", opencl_strerr(err), err);
         goto cleanup;
     }
 
