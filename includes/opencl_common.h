@@ -39,8 +39,6 @@ struct stable_info {
     cl_precision iend;
     cl_precision theta;
     cl_precision k1;
-    cl_precision subinterval_length;
-    cl_precision half_subint_length;
     cl_precision theta0;
     cl_precision alfa;
     cl_precision alfainvalfa1;
@@ -64,6 +62,8 @@ struct stable_precalc {
     cl_precision xxipow;
     cl_precision ibegin;
     cl_precision iend;
+    cl_precision subinterval_length;
+    cl_precision half_subint_length;
 };
 
 #endif

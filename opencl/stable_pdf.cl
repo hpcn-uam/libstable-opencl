@@ -22,8 +22,8 @@
 
 cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc, size_t subinterval_index, size_t gk_point)
 {
-	const cl_precision center = precalc->ibegin + stable->subinterval_length * subinterval_index + stable->half_subint_length;
-	const cl_precision abscissa = stable->half_subint_length * gk_absc[gk_point]; // Translated integrand evaluation
+	const cl_precision center = precalc->ibegin + precalc->subinterval_length * subinterval_index + precalc->half_subint_length;
+	const cl_precision abscissa = precalc->half_subint_length * gk_absc[gk_point]; // Translated integrand evaluation
 
 	cl_precision2 val, res;
 	cl_precision2 w = gk_weights[gk_point];
@@ -113,6 +113,8 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     precalc.ibegin = -precalc.theta0_ + stable->THETA_TH;;
     precalc.iend = M_PI_2 - stable->THETA_TH;
+    precalc.subinterval_length = precalc.iend - precalc.ibegin;
+    precalc.half_subint_length = precalc.subinterval_length / 2;
 
     precalc.xxipow = stable->alfainvalfa1 * log(fabs(xxi));
 
@@ -147,7 +149,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     if(gk_point == 0 && subinterval_index == 0)
     {
-    	sums[0][0] *= stable->subinterval_length * stable->c2_part / (xxi * stable->sigma);
+    	sums[0][0] *= precalc.subinterval_length * stable->c2_part / (xxi * stable->sigma);
 
 		gauss[point_index] = sums[0][0].x;
 		kronrod[point_index] = sums[0][0].y;
