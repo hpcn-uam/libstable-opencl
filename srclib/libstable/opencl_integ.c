@@ -60,6 +60,8 @@ int stable_clinteg_init(struct stable_clinteg *cli)
 
 #ifdef BENCHMARK
     cli->profile_enabled = 1;
+#else
+    cli->profile_enabled = 0;
 #endif
 
     if (_stable_can_overflow(cli))

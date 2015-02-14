@@ -38,8 +38,8 @@ int main (void)
     double alfa = 1.25, beta = 0.5, sigma = 1.0, mu = 0.0;
     int param = 0;
     double x[] = { 10, 20, 30 };
-    double pdf[3], gpu_pdf[3];
-    double err[3], gpu_err[3];
+    double pdf[3] = { 0,0,0 }, gpu_pdf[3] = { 0,0,0 };
+    double err[3] = { 0,0,0 }, gpu_err[3] = { 0,0,0 };
     int i;
 
     printf("=== GPU tests for libstable:\n");
