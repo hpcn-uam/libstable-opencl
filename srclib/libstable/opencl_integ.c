@@ -31,7 +31,7 @@ static int _stable_create_points_array(struct stable_clinteg *cli, cl_precision 
     if (cli->kronrod)
         clReleaseMemObject(cli->kronrod);
 
-    cli->points = clCreateBuffer(cli->env.context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR,
+    cli->points = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
                                  sizeof(cl_precision) * num_points, points, &err);
     cli->gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
                                  sizeof(cl_precision) * num_points, NULL, &err);
@@ -124,6 +124,7 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
     cl_int err = 0;
     size_t work_threads[2] = { KRONROD_EVAL_POINTS * num_points, GK_SUBDIVISIONS };
     size_t workgroup_size[2] = { KRONROD_EVAL_POINTS, GK_SUBDIVISIONS };
+    cl_precision* points = NULL;
     cl_event event;
 
     cli->h_args->k1 = dist->k1;
@@ -147,9 +148,25 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
     else
         cli->h_args->integrand = PDF_ALPHA_NEQ1;
 
+#ifdef CL_PRECISION_IS_FLOAT
+    stablecl_log(log_message, "[Stable-OpenCl] Using floats, forcing cast.\n");
+
+    points = (cl_precision*) calloc(num_points, sizeof(cl_precision));
+
+    if(!points)
+    {
+        stablecl_log(log_err, "[Stable-OpenCl] Couldn't allocate memory.\n");
+        goto cleanup;
+    }
+
+    for(size_t i = 0; i < num_points; i++)
+        points[i] = (cl_precision) x[i];
+#else
+    points = x;
+#endif
 
     err |= clEnqueueWriteBuffer(cli->env.queue, cli->args, CL_FALSE, 0, sizeof(struct stable_info), cli->h_args, 0, NULL, NULL);
-    err |= _stable_create_points_array(cli, x, num_points);
+    err |= _stable_create_points_array(cli, points, num_points);
 
     if (err)
     {
@@ -209,6 +226,10 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
 
 cleanup:
     stablecl_log(log_message, "[Stable-OpenCl] Integration end.\n");
+
+#ifdef CL_PRECISION_IS_FLOAT
+    if(points) free(points);
+#endif
 
     return err;
 }

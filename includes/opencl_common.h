@@ -23,6 +23,7 @@
 #define cl_precision float
 #define cl_precision2 float2
 #define cl_precision_type "float"
+#define CL_PRECISION_IS_FLOAT
 #else
 #define cl_precision double
 #define cl_precision2 double2
