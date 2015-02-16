@@ -143,7 +143,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	for(offset = subinterval_count / 2; offset > 0; offset >>= 1)
 	{
 		if(subinterval_index < offset)
-			sums[subinterval_index][gk_point] = sums[subinterval_index][gk_point] + sums[subinterval_index + offset][gk_point];
+			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];
 
 		barrier(CLK_LOCAL_MEM_FENCE);
 	}
