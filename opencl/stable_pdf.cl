@@ -81,6 +81,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	size_t points_count = get_num_groups(0);
 	size_t subinterval_count = get_local_size(1);
 	struct stable_precalc precalc;
+	size_t offset;
 	local cl_precision2 sums[GK_SUBDIVISIONS][KRONROD_EVAL_POINTS];
 
 	cl_precision pdf = 0;
@@ -88,6 +89,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     x_ = (x[point_index] - stable->mu_0) / stable->sigma;
    	xxi = x_ - stable->xi;
+
 
     if (fabs(xxi) <= stable->xxi_th)
     {
@@ -130,7 +132,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	for(size_t offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
+	for(offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
 	{
 	    if (gk_point < offset)
 	  		sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
@@ -138,11 +140,21 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	    barrier(CLK_LOCAL_MEM_FENCE);
 	}
 
-
-	for(size_t offset = subinterval_count / 2; offset > 0; offset >>= 1)
+	for(offset = subinterval_count / 2; offset > 0; offset >>= 1)
 	{
+		cl_precision2 a = sums[subinterval_index][gk_point];
+		cl_precision2 b = sums[subinterval_index + offset][gk_point];
+		cl_precision2 c;
+
 		if(gk_point < offset)
-			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];
+		{
+			c = a + b;
+			// This crashes on Linux
+			sums[subinterval_index][gk_point] = c;
+
+			// This does not. WTF.
+			// sums[subinterval_index][gk_point] = vec(1);
+		}
 
 		barrier(CLK_LOCAL_MEM_FENCE);
 	}
