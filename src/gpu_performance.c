@@ -20,19 +20,22 @@ void profile_sum(struct opencl_profile* dest, struct opencl_profile* src)
     dest->profile_total += src->profile_total;
 }
 
-static void _measure_gpu_performance(StableDist *gpu_dist, double x, double alfa, double beta, struct opencl_profile* general_profile)
+static void _measure_gpu_performance(StableDist *gpu_dist, double* x, size_t nx, double alfa, double beta, struct opencl_profile* general_profile)
 {
     int i;
-    double gpu_pdf = 0;
     double gpu_start, gpu_end, gpu_duration;
     struct opencl_profile current_prof_info;
+    double* dummya, *dummyb;
+
+    dummya = calloc(nx, sizeof(double));
+    dummyb = calloc(nx, sizeof(double));
 
     bzero(&current_prof_info, sizeof(struct opencl_profile));
     gpu_dist->cli.profile_enabled = 0;
 
     gpu_start = get_ms_time();
     for (i = 0; i < NUMTESTS; i++)
-        gpu_pdf += stable_pdf_point(gpu_dist, x, NULL);
+        stable_clinteg_points(&gpu_dist->cli, x, dummya, dummyb, nx, gpu_dist);
     gpu_end = get_ms_time();
 
     gpu_duration = gpu_end - gpu_start;
@@ -42,7 +45,7 @@ static void _measure_gpu_performance(StableDist *gpu_dist, double x, double alfa
     gpu_start = get_ms_time();
     for (i = 0; i < NUMTESTS; i++)
     {
-        gpu_pdf += stable_pdf_point(gpu_dist, x, NULL);
+        stable_clinteg_points(&gpu_dist->cli, x, dummya, dummyb, nx, gpu_dist);
         profile_sum(&current_prof_info, &gpu_dist->cli.profiling);
     }
     gpu_end = get_ms_time();
@@ -67,17 +70,20 @@ static void _measure_gpu_performance(StableDist *gpu_dist, double x, double alfa
            current_prof_info.argset, current_prof_info.enqueue, current_prof_info.buffer_read, current_prof_info.set_results);
 }
 
-static void _measure_cpu_performance(StableDist *dist, double x, double alfa, double beta, struct opencl_profile* general_profile)
+static void _measure_cpu_performance(StableDist *dist, double* x, size_t nx, double alfa, double beta, struct opencl_profile* general_profile)
 {
     int i;
-    double gpu_pdf = 0;
     double gpu_start, gpu_end;
+    double* pdf, *err;
+
+    pdf = calloc(nx, sizeof(double));
+    err = calloc(nx, sizeof(double));
 
     dist->cli.profile_enabled = 0;
 
     gpu_start = get_ms_time();
     for (i = 0; i < NUMTESTS; i++)
-        gpu_pdf += stable_pdf_point(dist, x, NULL);
+        stable_pdf(dist, x, nx, pdf, err);
     gpu_end = get_ms_time();
 
     general_profile->total += gpu_end - gpu_start;
@@ -96,7 +102,7 @@ int main (int argc, char** argv)
     size_t evpoints_len = sizeof ev_points / sizeof(double);
     long test_num;
     StableDist *dist;
-    int ai, bi, evi;
+    int ai, bi;
     double cpu_total;
     struct opencl_profile profile;
     double ms_per_point;
@@ -124,9 +130,7 @@ int main (int argc, char** argv)
         for (bi = 0; bi < betas_len; bi++)
         {
             stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
-
-            for (evi = 0; evi < evpoints_len; evi++)
-                _measure_cpu_performance(dist, ev_points[evi], alfas[ai], betas[bi], &profile);
+            _measure_cpu_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile);
         }
     }
 
@@ -149,9 +153,7 @@ int main (int argc, char** argv)
         {
             stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
 
-            for (evi = 0; evi < evpoints_len; evi++)
-                _measure_gpu_performance(dist, ev_points[evi], alfas[ai], betas[bi], &profile);
-
+            _measure_gpu_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile);
         }
     }
 
