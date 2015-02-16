@@ -142,19 +142,8 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 	for(offset = subinterval_count / 2; offset > 0; offset >>= 1)
 	{
-		cl_precision2 a = sums[subinterval_index][gk_point];
-		cl_precision2 b = sums[subinterval_index + offset][gk_point];
-		cl_precision2 c;
-
-		if(gk_point < offset)
-		{
-			c = a + b;
-			// This crashes on Linux
-			sums[subinterval_index][gk_point] = c;
-
-			// This does not. WTF.
-			// sums[subinterval_index][gk_point] = vec(1);
-		}
+		if(subinterval_index < offset)
+			sums[subinterval_index][gk_point] = sums[subinterval_index][gk_point] + sums[subinterval_index + offset][gk_point];
 
 		barrier(CLK_LOCAL_MEM_FENCE);
 	}
