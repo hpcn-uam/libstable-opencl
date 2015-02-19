@@ -265,6 +265,9 @@ double stable_pdf_point(StableDist *dist, const double x, double *err);
 void stable_pdf(StableDist *dist, const double x[], const int Nx,
                 double *pdf, double *err);
 
+void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
+                double *pdf, double *err);
+
 /******************************************************************************/
 /*   PDF integrand functions                                                  */
 /******************************************************************************/

@@ -575,6 +575,12 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
     return pdf;
 }
 
+void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
+                double *pdf, double *err)
+{
+    stable_clinteg_points(&dist->cli, (double*) x, pdf, err, Nx, dist);
+}
+
 /******************************************************************************/
 /*   PDF de casos particulares                                                */
 /******************************************************************************/
