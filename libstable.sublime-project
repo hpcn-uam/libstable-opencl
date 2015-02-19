@@ -17,6 +17,10 @@
     		"-pedantic",
     		"-std=c99",
     		"-D_GNU_SOURCE"
-       	]
+       	],
+       	"AStyleFormatter":
+        {
+        	"autoformat_on_save": false
+        }
 	}
 }
