@@ -76,7 +76,10 @@ double stable_loglike_p(stable_like_params *params)
 
   pdf=malloc(sizeof(double)*(params->length));
 
-  stable_pdf(params->dist,params->data,params->length,pdf,NULL);
+  if(params->dist->gpu_enabled)
+    stable_pdf_gpu(params->dist,params->data,params->length,pdf,NULL);
+  else
+    stable_pdf(params->dist,params->data,params->length,pdf,NULL);
 
   for(i=0;i<params->length;i++)
     {
