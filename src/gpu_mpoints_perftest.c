@@ -20,6 +20,7 @@ int main (void)
 	int min_x_range = -20;
 	int max_x_range = -min_x_range;
 	double x_step_size = (max_x_range - min_x_range) / max_test_size;
+	double x_step_size = ((double)(max_x_range - min_x_range)) / (double) max_test_size;
 	double start, end, duration;
 
 	dist = stable_create(alfa, beta, sigma, mu, param);
@@ -48,7 +49,7 @@ int main (void)
 		for (i = 0; i < num_tests_per_size; i++)
 		{
 			start = get_ms_time();
-			stable_pdf(dist, x, test_size, pdf, NULL);
+			stable_pdf_gpu(dist, x, test_size, pdf, NULL);
 			end = get_ms_time();
 			duration += end - start;
 		}
