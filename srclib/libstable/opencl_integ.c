@@ -217,12 +217,21 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
         stable_retrieve_profileinfo(cli, event);
 
     bench_begin(cli->profiling.set_results, cli->profile_enabled);
-    for(size_t i = 0; i < num_points; i++)
+
+    for (size_t i = 0; i < num_points; i++)
     {
         pdf_results[i] = cli->h_kronrod[i];
-        errs[i] = cli->h_kronrod[i] - cli->h_gauss[i];
-        stablecl_log(log_message, "[Stable-OpenCl] Results set P%zu: gauss_sum = %.3g, kronrod_sum = %.3g, abserr = %.3g\n", i, cli->h_gauss[i], cli->h_kronrod[i], errs[i]);
+
+        stablecl_log(log_message, "[Stable-OpenCl] Results set P%zu: gauss_sum = %.3g, kronrod_sum = %.3g", i, cli->h_gauss[i], cli->h_kronrod[i]);
+        if (errs)
+        {
+            errs[i] = cli->h_kronrod[i] - cli->h_gauss[i];
+            stablecl_log(log_message, ", abserr = %.3g", errs[i]);
+        }
+
+        stablecl_log(log_message, "\n");
     }
+
     bench_end(cli->profiling.set_results, cli->profile_enabled);
 
 
