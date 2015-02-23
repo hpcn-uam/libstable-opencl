@@ -227,6 +227,7 @@ StableDist *stable_create(double alfa, double beta, double sigma, double mu,
                           int parametrization);
 
 short stable_activate_gpu(StableDist* dist);
+void stable_deactivate_gpu(StableDist* dist);
 
 StableDist *stable_copy(StableDist *src_dist);
 

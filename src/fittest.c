@@ -76,8 +76,8 @@ int main (int argc, char* argv[])
      stable_activate_gpu(dist);
 
       /* Select estimation algorithm to test */
-     stable_fit_mle(dist,data+iexp*N,N);
-     //stable_fit_mle2d(dist,data+iexp*N,N);
+     //stable_fit_mle(dist,data+iexp*N,N);
+     stable_fit_mle2d(dist,data+iexp*N,N);
      //stable_fit_koutrouvelis(dist,data+iexp*N,N);
 
      ma+=dist->alfa;

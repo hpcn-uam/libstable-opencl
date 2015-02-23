@@ -374,6 +374,9 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
 
 short stable_activate_gpu(StableDist* dist)
 {
+  if(dist->gpu_enabled)
+    return 0;
+
   short error = stable_clinteg_init(&dist->cli);
 
   if(!error)
@@ -385,6 +388,9 @@ short stable_activate_gpu(StableDist* dist)
 
 void stable_deactivate_gpu(StableDist* dist)
 {
+  if(!dist->gpu_enabled)
+    return;
+
   stable_clinteg_teardown(&dist->cli);
   dist->gpu_enabled = 0;
 }
