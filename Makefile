@@ -24,7 +24,8 @@ LIBSRCDIR = srclib
 CLDIR = opencl
 TARGETS = example fittest stable_array \
 			stable_test stable_performance stable_precision \
-			gpu_tests gpu_performance opencl_tests fitperf
+			gpu_tests gpu_performance opencl_tests fitperf \
+			gpu_mpoints_perftest
 INCLUDES = -I./includes/
 
 INCS := $(wildcard $(INCDIR)/*.h)
