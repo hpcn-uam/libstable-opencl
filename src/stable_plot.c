@@ -21,6 +21,12 @@ int main(int argc, char **argv)
 	StableDist* dist;
 	int i;
 
+	if (argc == 3)
+	{
+		alfa = strtod(argv[1], NULL);
+		beta = strtod(argv[2], NULL);
+	}
+
 	dist = stable_create(alfa, beta, sigma, mu, param);
 	x = calloc(num_samples, sizeof(double));
 	pdf = calloc(num_samples, sizeof(double));

@@ -19,7 +19,6 @@ int main (void)
 	StableDist *dist;
 	int min_x_range = -20;
 	int max_x_range = -min_x_range;
-	double x_step_size = (max_x_range - min_x_range) / max_test_size;
 	double x_step_size = ((double)(max_x_range - min_x_range)) / (double) max_test_size;
 	double start, end, duration;
 
