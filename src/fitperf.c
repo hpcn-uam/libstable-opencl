@@ -46,6 +46,7 @@ int main (int argc, char *argv[])
 	int i = 1, iexp, N, Nexp;
 	int seed;
 	double total_duration, start, end;
+	double ma = 0, mb = 0, ms = 0, mm = 0, va = 0, vb = 0, vs = 0, vm = 0;
 	struct fittest tests[] =
 	{
 		{ stable_fit_mle, 0, "MLE" },
@@ -64,7 +65,7 @@ int main (int argc, char *argv[])
 	beta = 0.75;
 	sigma = 5.0;
 	mu = 15.0;
-	N = 100;
+	N = 400;
 	Nexp = 5;
 	seed = -1;
 
@@ -90,10 +91,14 @@ int main (int argc, char *argv[])
 
 	stable_rnd(dist, data, N * Nexp);
 
+	printf("Fitter\tms/fit\t\tα\t\tβ\t\tμ\t\tσ\n");
+
 	for (i = 0; i < num_tests; i++)
 	{
 		test = tests + i;
 		total_duration = 0;
+		ma = mb = ms = mm = va = vb = vs = vm = 0;
+
 		for (iexp = 0; iexp < Nexp; iexp++)
 		{
 			stable_fit_init(dist, data + iexp * N, N, NULL, NULL);
@@ -107,15 +112,35 @@ int main (int argc, char *argv[])
 			test->func(dist, data + iexp * N, N);
 			end = get_ms_time();
 
+			ma += dist->alfa;
+			mb += dist->beta;
+			ms += dist->sigma;
+			mm += dist->mu_0;
+
+			va += dist->alfa * dist->alfa;
+			vb += dist->beta * dist->beta;
+			vs += dist->sigma * dist->sigma;
+			vm += dist->mu_0 * dist->mu_0;
+
 			total_duration += end - start;
 		}
+
+		ma = ma / Nexp;
+		va = sqrt((va / Nexp - ma * ma) * Nexp / (Nexp - 1));
+		mb = mb / Nexp;
+		vb = sqrt((vb / Nexp - mb * mb) * Nexp / (Nexp - 1));
+		ms = ms / Nexp;
+		vs = sqrt((vs / Nexp - ms * ms) * Nexp / (Nexp - 1));
+		mm = mm / Nexp;
+		vm = sqrt((vm / Nexp - mm * mm) * Nexp / (Nexp - 1));
 
 		printf("%s", test->name);
 
 		if (test->gpu_enabled)
 			printf("_GPU");
 
-		printf("\t%lf\n", total_duration / Nexp);
+		printf("\t%lf\t%.2lf ± %.2lf\t%.2lf ± %.2lf\t%.2lf ± %.2lf\t%.2lf ± %.2lf\n",
+		       total_duration / Nexp, ma, va, mb, vb, ms, vs, mm, vm);
 	}
 
 
