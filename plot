@@ -5,5 +5,6 @@ if ! make release &>/dev/null; then
 	exit 1
 fi
 
-bin/release/stable_plot $@ > stab.dat
+bin/release/stable_plot $@ > stab.dat.1
+mv stab.dat.1 stab.dat
 
