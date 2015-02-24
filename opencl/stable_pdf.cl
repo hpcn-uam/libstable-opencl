@@ -33,7 +33,7 @@ cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_pr
 	{
 		cl_precision2 V, aux;
 
-		aux = (precalc->beta_ * val + (cl_precision2)(M_PI_2, M_PI_2)) / cos(val);
+		aux = (precalc->beta_ * val + vec(M_PI_2)) / cos(val);
 		V = sin(val) * aux / precalc->beta_ + log(aux) + stable->k1;
 
 		res = exp(V + precalc->xxipow);
