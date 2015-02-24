@@ -8,7 +8,7 @@
 int main(int argc, char **argv)
 {
 	double alfa = 1.25;
-    double beta = 0.5;
+    double beta = 0.91;
     int param = 0;
 	double sigma = 1.0, mu = 0.0;
 	int min_x_range = -3;
@@ -67,6 +67,7 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Average relative error: %g\n", relerr / num_samples);
 	fprintf(stderr, "Average cpu error: %g\n", cpu_err / num_samples);
 	fprintf(stderr, "Average gpu error: %g\n", gpu_err / num_samples);
+	fprintf(stderr, "ξ is %g\n", - beta * tan(alfa * M_PI_2));
 
 	stable_free(dist);
 	return 0;
