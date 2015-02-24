@@ -503,14 +503,8 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
     integ_eval = 0;
 #endif
 
-    // Default integration algorithms when not using GPU.
     int integration_algorithms[] = { STABLE_QNG, STABLE_QAG2, STABLE_QAG1, STABLE_QAG1};
     int i;
-    if(dist->gpu_enabled)
-    {
-        for(i = 0; i < sizeof integration_algorithms / sizeof(int); i++)
-            integration_algorithms[i] = STABLE_OCL;
-    }
 
     i = 0;
     stable_integration(dist, integrando, theta[1], theta[2],
