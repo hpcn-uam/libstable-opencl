@@ -19,6 +19,7 @@ int main(int argc, char **argv)
 	double *errs, *cpu_errs;
 	double x_step_size = ((double)(max_x_range - min_x_range)) / (double) num_samples;
 	StableDist* dist;
+	double abserr = 0, relerr = 0, cpu_err = 0, gpu_err = 0;
 	int i;
 
 	if (argc == 3)
@@ -54,7 +55,18 @@ int main(int argc, char **argv)
 	stable_pdf_gpu(dist, x, num_samples, pdf, cpu_errs);
 
 	for (i = 0; i < num_samples; i++)
+	{
+		abserr += fabs(pdf[i] - cpu_pdf[i]);
+		relerr += fabs(pdf[i] - cpu_pdf[i]) / cpu_pdf[i];
+		cpu_err += cpu_errs[i];
+		gpu_err += errs[i];
 		printf("%lf %lf %lf %lf %lf\n", x[i], pdf[i], cpu_pdf[i], errs[i], cpu_errs[i]);
+	}
+
+	fprintf(stderr, "Average absolute error: %g\n", abserr / num_samples);
+	fprintf(stderr, "Average relative error: %g\n", relerr / num_samples);
+	fprintf(stderr, "Average cpu error: %g\n", cpu_err / num_samples);
+	fprintf(stderr, "Average gpu error: %g\n", gpu_err / num_samples);
 
 	stable_free(dist);
 	return 0;
