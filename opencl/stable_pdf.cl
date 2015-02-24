@@ -87,6 +87,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	cl_precision pdf = 0;
     cl_precision x_, xxi;
 
+
     x_ = (x[point_index] - stable->mu_0) / stable->sigma;
    	xxi = x_ - stable->xi;
 
@@ -115,8 +116,8 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     if(stable->integrand == PDF_ALPHA_NEQ1)
     {
-    	precalc.ibegin = -precalc.theta0_ + stable->THETA_TH;
-    	precalc.iend = M_PI_2 - stable->THETA_TH;
+    	precalc.ibegin = -precalc.theta0_;
+    	precalc.iend = M_PI_2;
 	}
 	else
 	{
