@@ -5,19 +5,23 @@
 #include "benchmarking.h"
 #include "opencl_integ.h"
 
+#define XI_TH 0.01
+#define AROUND_XI
+
 int main(int argc, char **argv)
 {
-	double alfa = 0.9;
-    double beta = 0.91;
+	double alfa = 1.2;
+    double beta = 0.1;
     int param = 0;
 	double sigma = 1.0, mu = 0.0;
-	int min_x_range = -5;
-	int max_x_range = 5;
+	double min_x_range;
+	double max_x_range;
+	double xi;
 	int num_samples = 10000;
 	double *x;
 	double *pdf, *cpu_pdf;
 	double *errs, *cpu_errs;
-	double x_step_size = ((double)(max_x_range - min_x_range)) / (double) num_samples;
+	double x_step_size;
 	StableDist* dist;
 	double abserr = 0, relerr = 0, cpu_err = 0, gpu_err = 0;
 	double abserr_v = 0, relerr_v = 0, cpu_err_v = 0, gpu_err_v = 0;
@@ -28,6 +32,18 @@ int main(int argc, char **argv)
 		alfa = strtod(argv[1], NULL);
 		beta = strtod(argv[2], NULL);
 	}
+
+#ifdef AROUND_XI
+	xi = - beta * tan(alfa * M_PI_2);
+	stable_set_XXI_TH(0.0 * XI_TH);
+	min_x_range = xi - XI_TH;
+	max_x_range = xi + XI_TH;
+#else
+	min_x_range = 0;
+	max_x_range = 1;
+#endif
+
+	x_step_size = ((double)(max_x_range - min_x_range)) / (double) num_samples;
 
 	dist = stable_create(alfa, beta, sigma, mu, param);
 	x = calloc(num_samples, sizeof(double));
@@ -81,7 +97,7 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Average relative error: %g ± %g\n", relerr, relerr_v);
 	fprintf(stderr, "Average cpu error: %g ± %g\n", cpu_err, cpu_err_v);
 	fprintf(stderr, "Average gpu error: %g ± %g\n", gpu_err, gpu_err_v);
-	fprintf(stderr, "ξ is %g\n", - beta * tan(alfa * M_PI_2));
+	fprintf(stderr, "ξ is %g\n", xi);
 
 	stable_free(dist);
 	return 0;
