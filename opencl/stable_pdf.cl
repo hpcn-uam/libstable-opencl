@@ -113,8 +113,17 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
         precalc.beta_ = stable->beta;
     }
 
-    precalc.ibegin = -precalc.theta0_ + stable->THETA_TH;;
-    precalc.iend = M_PI_2 - stable->THETA_TH;
+    if(stable->integrand == PDF_ALPHA_NEQ1)
+    {
+    	precalc.ibegin = -precalc.theta0_ + stable->THETA_TH;
+    	precalc.iend = M_PI_2 - stable->THETA_TH;
+	}
+	else
+	{
+    	precalc.ibegin = - M_PI_2;
+    	precalc.iend = M_PI_2;
+	}
+
     precalc.subinterval_length = precalc.iend - precalc.ibegin;
     precalc.half_subint_length = precalc.subinterval_length / 2;
 
