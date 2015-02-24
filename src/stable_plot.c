@@ -20,6 +20,7 @@ int main(int argc, char **argv)
 	double x_step_size = ((double)(max_x_range - min_x_range)) / (double) num_samples;
 	StableDist* dist;
 	double abserr = 0, relerr = 0, cpu_err = 0, gpu_err = 0;
+	double abserr_v = 0, relerr_v = 0, cpu_err_v = 0, gpu_err_v = 0;
 	int i;
 
 	if (argc == 3)
@@ -57,16 +58,29 @@ int main(int argc, char **argv)
 	for (i = 0; i < num_samples; i++)
 	{
 		abserr += fabs(pdf[i] - cpu_pdf[i]);
+		abserr_v += (fabs(pdf[i] - cpu_pdf[i])) * (fabs(pdf[i] - cpu_pdf[i]));
 		relerr += fabs(pdf[i] - cpu_pdf[i]) / cpu_pdf[i];
+		relerr_v += (fabs(pdf[i] - cpu_pdf[i]) / cpu_pdf[i]) * (fabs(pdf[i] - cpu_pdf[i]) / cpu_pdf[i]);
 		cpu_err += cpu_errs[i];
+		cpu_err_v += (cpu_errs[i]) * (cpu_errs[i]);
 		gpu_err += errs[i];
+		gpu_err_v += (errs[i]) * (errs[i]);
 		printf("%lf %lf %lf %lf %lf\n", x[i], pdf[i], cpu_pdf[i], errs[i], cpu_errs[i]);
 	}
 
-	fprintf(stderr, "Average absolute error: %g\n", abserr / num_samples);
-	fprintf(stderr, "Average relative error: %g\n", relerr / num_samples);
-	fprintf(stderr, "Average cpu error: %g\n", cpu_err / num_samples);
-	fprintf(stderr, "Average gpu error: %g\n", gpu_err / num_samples);
+	abserr /= num_samples;
+	abserr_v = sqrt((abserr_v / num_samples - abserr * abserr) * num_samples / (num_samples - 1));
+	relerr /= num_samples;
+	relerr_v = sqrt((relerr_v / num_samples - relerr * relerr) * num_samples / (num_samples - 1));
+	cpu_err /= num_samples;
+	cpu_err_v = sqrt((cpu_err_v / num_samples - cpu_err * cpu_err) * num_samples / (num_samples - 1));
+	gpu_err /= num_samples;
+	gpu_err_v = sqrt((gpu_err_v / num_samples - gpu_err * gpu_err) * num_samples / (num_samples - 1));
+
+	fprintf(stderr, "Average absolute error: %g ± %g\n", abserr, abserr_v);
+	fprintf(stderr, "Average relative error: %g ± %g\n", relerr, relerr_v);
+	fprintf(stderr, "Average cpu error: %g ± %g\n", cpu_err, cpu_err_v);
+	fprintf(stderr, "Average gpu error: %g ± %g\n", gpu_err, gpu_err_v);
 	fprintf(stderr, "ξ is %g\n", - beta * tan(alfa * M_PI_2));
 
 	stable_free(dist);
