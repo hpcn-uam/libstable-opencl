@@ -7,13 +7,13 @@
 
 int main(int argc, char **argv)
 {
-	double alfa = 1.25;
+	double alfa = 0.9;
     double beta = 0.91;
     int param = 0;
 	double sigma = 1.0, mu = 0.0;
-	int min_x_range = -3;
-	int max_x_range = 3;
-	int num_samples = 4000;
+	int min_x_range = -5;
+	int max_x_range = 5;
+	int num_samples = 10000;
 	double *x;
 	double *pdf, *cpu_pdf;
 	double *errs, *cpu_errs;
