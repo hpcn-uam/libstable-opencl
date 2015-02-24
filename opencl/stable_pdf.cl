@@ -125,7 +125,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
     	precalc.iend = M_PI_2;
 	}
 
-    precalc.subinterval_length = precalc.iend - precalc.ibegin;
+    precalc.subinterval_length = (precalc.iend - precalc.ibegin) / subinterval_count;
     precalc.half_subint_length = precalc.subinterval_length / 2;
 
     precalc.xxipow = stable->alfainvalfa1 * log(fabs(xxi));
