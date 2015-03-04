@@ -12,6 +12,7 @@ data_*.txt
 errlog.txt
 results/*
 *.dat
+*.dat.1
 
 *.results
 *.png
