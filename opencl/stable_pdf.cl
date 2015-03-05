@@ -20,6 +20,8 @@
 #define anyf(a) any((int2) a)
 #define vec(b) (cl_precision2)((b), (b))
 
+#define SUBINT_CONTRIB_TH 0.0001
+
 cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc, size_t subinterval_index, size_t gk_point)
 {
 	const cl_precision center = precalc->ibegin + precalc->subinterval_length * subinterval_index + precalc->half_subint_length;
@@ -83,6 +85,11 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	struct stable_precalc precalc;
 	size_t offset;
 	local cl_precision2 sums[GK_SUBDIVISIONS][KRONROD_EVAL_POINTS];
+	local int min_contributing, max_contributing;
+	local short reevaluate;
+
+	min_contributing = GK_SUBDIVISIONS;
+	max_contributing = 0;
 
 	cl_precision pdf = 0;
     cl_precision x_, xxi;
@@ -125,9 +132,6 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
     	precalc.iend = M_PI_2;
 	}
 
-    precalc.subinterval_length = (precalc.iend - precalc.ibegin) / subinterval_count;
-    precalc.half_subint_length = precalc.subinterval_length / 2;
-
     precalc.xxipow = stable->alfainvalfa1 * log(fabs(xxi));
 
     if (fabs(precalc.theta0_ + M_PI_2) < 2 * stable->THETA_TH)
@@ -137,18 +141,53 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
         return;
     }
 
-	if(gk_point < KRONROD_EVAL_POINTS)
-		sums[subinterval_index][gk_point] = eval_gk_pair(stable, &precalc, subinterval_index, gk_point);
+    do
+    {
+	    precalc.subinterval_length = (precalc.iend - precalc.ibegin) / subinterval_count;
+	    precalc.half_subint_length = precalc.subinterval_length / 2;
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+	    if(gk_point == 0 && subinterval_index == 0)
+	    	printf("Evaluating interval (%lf, %lf), subinterval_length is %lf\n",  precalc.ibegin, precalc.iend, precalc.subinterval_length);
 
-	for(offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
-	{
-	    if (gk_point < offset)
-	  		sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
+		if(gk_point < KRONROD_EVAL_POINTS)
+			sums[subinterval_index][gk_point] = eval_gk_pair(stable, &precalc, subinterval_index, gk_point);
 
-	    barrier(CLK_LOCAL_MEM_FENCE);
-	}
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		for(offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
+		{
+		    if (gk_point < offset)
+		  		sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
+
+		    barrier(CLK_LOCAL_MEM_FENCE);
+		}
+
+		if(gk_point == 0)
+		{
+			if(any(sums[subinterval_index][gk_point] >= SUBINT_CONTRIB_TH))
+			{
+				atomic_max(&max_contributing, subinterval_index);
+				atomic_min(&min_contributing, subinterval_index);
+			}
+		}
+
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		int num_contributing = max_contributing - min_contributing + 1;
+
+		if(!reevaluate && num_contributing < GK_SUBDIVISIONS / 2)
+		{
+			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subinterval_length;
+			precalc.iend = precalc.ibegin + max_contributing * precalc.subinterval_length;
+
+			reevaluate = 1;
+		}
+		else
+		{
+			reevaluate = 0;
+		}
+
+	} while(reevaluate);
 
 	for(offset = subinterval_count / 2; offset > 0; offset >>= 1)
 	{
