@@ -147,9 +147,6 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	    precalc.subinterval_length = (precalc.iend - precalc.ibegin) / subinterval_count;
 	    precalc.half_subint_length = precalc.subinterval_length / 2;
 
-	    if(gk_point == 0 && subinterval_index == 0)
-	    	printf("Evaluating interval (%lf, %lf), subinterval_length is %lf\n",  precalc.ibegin, precalc.iend, precalc.subinterval_length);
-
 		if(gk_point < KRONROD_EVAL_POINTS)
 			sums[subinterval_index][gk_point] = eval_gk_pair(stable, &precalc, subinterval_index, gk_point);
 
