@@ -35,11 +35,12 @@
 
 int main (void)
 {
-    double alfa = 1.25, beta = 0.5, sigma = 1.0, mu = 0.0;
+    double alfa = 1.2, beta = 0.1, sigma = 1.0, mu = 0.0;
     int param = 0;
-    double x[] = { 2, 1, 0 };
+    double x[] = { 2, 1, 0, 0.307368 };
     double pdf[3] = { 0,0,0 }, gpu_pdf[3] = { 0,0,0 };
     double err[3] = { 0,0,0 }, gpu_err[3] = { 0,0,0 };
+    size_t num_points = sizeof x / sizeof(double);
     int i;
 
     printf("=== GPU tests for libstable:\n");
@@ -54,7 +55,7 @@ int main (void)
         return 1;
     }
 
-    for(i = 0; i < sizeof x / sizeof(double); i++)
+    for(i = 0; i < num_points; i++)
         pdf[i] = stable_pdf_point(dist, x[i], err + i);
 
 
@@ -64,7 +65,7 @@ int main (void)
         return 1;
     }
 
-    stable_clinteg_points(&dist->cli, x, gpu_pdf, gpu_err, 3, dist);
+    stable_clinteg_points(&dist->cli, x, gpu_pdf, gpu_err, num_points, dist);
     for(i = 0; i < sizeof x / sizeof(double); i++)
     {
         printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e ± %1.2e\n",
