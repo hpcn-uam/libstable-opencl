@@ -176,7 +176,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		if(!reevaluate && num_contributing < MIN_CONTRIBUTING_SUBINTS)
 		{
 			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subinterval_length;
-			precalc.iend = precalc.ibegin + max_contributing * precalc.subinterval_length;
+			precalc.iend = precalc.ibegin + num_contributing * precalc.subinterval_length;
 
 			reevaluate = 1;
 		}
