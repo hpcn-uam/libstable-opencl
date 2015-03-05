@@ -68,8 +68,8 @@ int main(int argc, char **argv)
 	}
 
 
-	stable_pdf(dist, x, num_samples, cpu_pdf, errs);
-	stable_pdf_gpu(dist, x, num_samples, pdf, cpu_errs);
+	stable_pdf(dist, x, num_samples, cpu_pdf, cpu_errs);
+	stable_pdf_gpu(dist, x, num_samples, pdf, errs);
 
 	for (i = 0; i < num_samples; i++)
 	{
