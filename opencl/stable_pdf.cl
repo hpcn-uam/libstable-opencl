@@ -21,6 +21,7 @@
 #define vec(b) (cl_precision2)((b), (b))
 
 #define SUBINT_CONTRIB_TH 0.0001
+#define MIN_CONTRIBUTING_SUBINTS GK_SUBDIVISIONS / 3
 
 cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc, size_t subinterval_index, size_t gk_point)
 {
@@ -175,7 +176,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 		int num_contributing = max_contributing - min_contributing + 1;
 
-		if(!reevaluate && num_contributing < GK_SUBDIVISIONS / 2)
+		if(!reevaluate && num_contributing < MIN_CONTRIBUTING_SUBINTS)
 		{
 			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subinterval_length;
 			precalc.iend = precalc.ibegin + max_contributing * precalc.subinterval_length;
