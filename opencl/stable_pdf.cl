@@ -20,7 +20,7 @@
 #define anyf(a) any((int2) a)
 #define vec(b) (cl_precision2)((b), (b))
 
-#define SUBINT_CONTRIB_TH 0.0001
+#define SUBINT_CONTRIB_TH 0.00001
 #define MIN_CONTRIBUTING_SUBINTS GK_SUBDIVISIONS / 3
 
 cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc, size_t subinterval_index, size_t gk_point)
@@ -87,7 +87,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	size_t offset;
 	local cl_precision2 sums[GK_SUBDIVISIONS][KRONROD_EVAL_POINTS];
 	local int min_contributing, max_contributing;
-	local short reevaluate;
+	short reevaluate = 0;
 
 	min_contributing = GK_SUBDIVISIONS;
 	max_contributing = 0;
@@ -172,7 +172,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 		int num_contributing = max_contributing - min_contributing + 1;
 
-		if(!reevaluate && num_contributing < MIN_CONTRIBUTING_SUBINTS)
+		if(!reevaluate && num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS)
 		{
 			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subinterval_length;
 			precalc.iend = precalc.ibegin + num_contributing * precalc.subinterval_length;
