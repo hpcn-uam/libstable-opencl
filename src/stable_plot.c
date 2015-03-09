@@ -6,7 +6,7 @@
 #include "opencl_integ.h"
 
 #define XI_TH 0.01
-#define AROUND_XI
+// #define AROUND_XI
 
 int main(int argc, char **argv)
 {
@@ -35,8 +35,8 @@ int main(int argc, char **argv)
 
 	xi = - beta * tan(alfa * M_PI_2);
 
-#ifdef AROUND_XI
 	stable_set_XXI_TH(1.0 * XI_TH);
+#ifdef AROUND_XI
 	min_x_range = xi - XI_TH;
 	max_x_range = xi + XI_TH;
 #else
