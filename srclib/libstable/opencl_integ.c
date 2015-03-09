@@ -132,6 +132,7 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
     cli->h_args->k1 = dist->k1;
     cli->h_args->alfa = dist->alfa;
     cli->h_args->alfainvalfa1 = dist->alfainvalfa1;
+    cli->h_args->beta = dist->beta;
     cli->h_args->THETA_TH = stable_get_THETA_TH();
     cli->h_args->theta0 = dist->theta0;
     cli->h_args->xi = dist->xi;

@@ -132,7 +132,10 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
     	precalc.iend = M_PI_2;
 	}
 
-    precalc.xxipow = stable->alfainvalfa1 * log(fabs(xxi));
+	if(stable->integrand == PDF_ALPHA_NEQ1)
+	    precalc.xxipow = stable->alfainvalfa1 * log(fabs(xxi));
+    else
+		precalc.xxipow = (-M_PI * x_ * stable->c2_part);
 
     if (fabs(precalc.theta0_ + M_PI_2) < 2 * stable->THETA_TH)
     {
