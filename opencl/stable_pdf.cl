@@ -101,9 +101,6 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     if(stable->integrand == PDF_ALPHA_NEQ1)
     {
-    	precalc.ibegin = -precalc.theta0_;
-    	precalc.iend = M_PI_2;
-
     	if (fabs(xxi) <= stable->xxi_th)
 	    {
 	        pdf = stable->xi_coef * cos(stable->theta0);
@@ -123,14 +120,16 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	    {
 	        precalc.theta0_ = stable->theta0;
 	        precalc.beta_ = stable->beta;
+
 	    }
+    	precalc.ibegin = -precalc.theta0_;
+    	precalc.iend = M_PI_2;
 	}
 	else
 	{
     	precalc.ibegin = - M_PI_2;
     	precalc.iend = M_PI_2;
 
-    	x_ = fabs(x_);
     	precalc.beta_ = fabs(stable->beta);
 	}
 
