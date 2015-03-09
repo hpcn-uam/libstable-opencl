@@ -99,37 +99,39 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
     x_ = (x[point_index] - stable->mu_0) / stable->sigma;
    	xxi = x_ - stable->xi;
 
-
-    if (fabs(xxi) <= stable->xxi_th)
-    {
-        pdf = stable->xi_coef * cos(stable->theta0);
-
-        gauss[point_index] = pdf / stable->sigma;
-        kronrod[point_index] = pdf / stable->sigma;
-        return;
-    }
-
-    if (xxi < 0)
-    {
-        xxi = -xxi;
-        precalc.theta0_ = -stable->theta0;
-        precalc.beta_ = -stable->beta;
-    }
-    else
-    {
-        precalc.theta0_ = stable->theta0;
-        precalc.beta_ = stable->beta;
-    }
-
     if(stable->integrand == PDF_ALPHA_NEQ1)
     {
     	precalc.ibegin = -precalc.theta0_;
     	precalc.iend = M_PI_2;
+
+    	if (fabs(xxi) <= stable->xxi_th)
+	    {
+	        pdf = stable->xi_coef * cos(stable->theta0);
+
+	        gauss[point_index] = pdf / stable->sigma;
+	        kronrod[point_index] = pdf / stable->sigma;
+	        return;
+	    }
+
+	   	if (xxi < 0)
+	    {
+	        xxi = -xxi;
+	        precalc.theta0_ = -stable->theta0;
+	        precalc.beta_ = -stable->beta;
+	    }
+	    else
+	    {
+	        precalc.theta0_ = stable->theta0;
+	        precalc.beta_ = stable->beta;
+	    }
 	}
 	else
 	{
     	precalc.ibegin = - M_PI_2;
     	precalc.iend = M_PI_2;
+
+    	x_ = fabs(x_);
+    	precalc.beta_ = fabs(stable->beta);
 	}
 
 	if(stable->integrand == PDF_ALPHA_NEQ1)
@@ -199,7 +201,10 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     if(gk_point == 0 && subinterval_index == 0)
     {
-    	sums[0][0] *= precalc.subinterval_length * stable->c2_part / (xxi * stable->sigma);
+    	if(stable->integrand == PDF_ALPHA_NEQ1)
+	    	sums[0][0] *= precalc.subinterval_length * stable->c2_part / (xxi * stable->sigma);
+    	else
+    		sums[0][0] *= precalc.subinterval_length * stable->c2_part / stable->sigma;
 
 		gauss[point_index] = sums[0][0].x;
 		kronrod[point_index] = sums[0][0].y;
