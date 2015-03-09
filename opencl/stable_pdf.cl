@@ -120,8 +120,8 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	    {
 	        precalc.theta0_ = stable->theta0;
 	        precalc.beta_ = stable->beta;
-
 	    }
+
     	precalc.ibegin = -precalc.theta0_;
     	precalc.iend = M_PI_2;
 	}
