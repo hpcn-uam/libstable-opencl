@@ -102,8 +102,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     if (fabs(xxi) <= stable->xxi_th)
     {
-        pdf = exp(lgamma(1.0 + 1.0 / stable->alfa)) *
-              cos(stable->theta0) / (M_PI * stable->S);
+        pdf = stable->xi_coef * cos(stable->theta0);
 
         gauss[point_index] = pdf / stable->sigma;
         kronrod[point_index] = pdf / stable->sigma;

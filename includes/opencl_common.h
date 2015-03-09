@@ -50,6 +50,7 @@ struct stable_info {
     cl_precision c2_part;
     cl_precision THETA_TH;
     cl_precision beta;
+    cl_precision xi_coef;
     unsigned int threads_per_interval;
     unsigned int gauss_points;
     unsigned int kronrod_points;
