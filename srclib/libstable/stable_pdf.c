@@ -572,7 +572,10 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
                 double *pdf, double *err)
 {
-    stable_clinteg_points(&dist->cli, (double*) x, pdf, err, Nx, dist);
+    if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
+        stable_pdf(dist, x, Nx, pdf, err); // Rely on analytical formulae where possible
+    else
+        stable_clinteg_points(&dist->cli, (double*) x, pdf, err, Nx, dist);
 }
 
 /******************************************************************************/
