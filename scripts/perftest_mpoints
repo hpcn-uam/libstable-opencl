@@ -1,0 +1,9 @@
+#!/bin/bash
+
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+cd "$DIR"/..
+
+make release
+bin/release/gpu_mpoints_perftest | tee mpoints.dat
+gnuplot gnuplot/mpoints_perftest.gp
