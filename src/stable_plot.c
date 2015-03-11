@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 	double min_x_range;
 	double max_x_range;
 	double xi;
-	int num_samples = 10000;
+	int num_samples = 8000;
 	double *x;
 	double *pdf, *cpu_pdf;
 	double *errs, *cpu_errs;
