@@ -33,8 +33,14 @@ static int _stable_create_points_array(struct stable_clinteg *cli, cl_precision 
 
     cli->points = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
                                  sizeof(cl_precision) * num_points, points, &err);
+
+    if(err) return err;
+
     cli->gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
                                  sizeof(cl_precision) * num_points, NULL, &err);
+
+    if(err) return err;
+
     cli->kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
                                  sizeof(cl_precision) * num_points, NULL, &err);
 
