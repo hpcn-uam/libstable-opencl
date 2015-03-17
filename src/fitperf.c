@@ -62,14 +62,21 @@ struct fitresult
 	result->variable ## _err += dist->variable * dist->variable; \
 } while(0)
 
+#define print_deviation(variable) do { \
+	double dev = fabs(result->variable - variable); \
+	double perc_dev = 100 * dev / variable; \
+	acc_pdev += perc_dev; \
+	printf("\t%.3lf (%.1lf %%)", dev, perc_dev); \
+} while(0)
+
 int main (int argc, char *argv[])
 {
-	double alfa, beta, sigma, mu;
+	double alfa, beta, sigma, mu_0;
 	double *data;
 	int i = 1, iexp, N, Nexp;
 	int seed;
+	double acc_pdev;
 	double total_duration, start, end;
-	double ma = 0, mb = 0, ms = 0, mm = 0, va = 0, vb = 0, vs = 0, vm = 0;
 	struct fittest tests[] =
 	{
 		{ stable_fit_mle, 0, "MLE" },
@@ -91,13 +98,20 @@ int main (int argc, char *argv[])
 	alfa = 1.5;
 	beta = 0.75;
 	sigma = 5.0;
-	mu = 15.0;
+	mu_0 = 15.0;
 	N = 400;
 	Nexp = 5;
 	seed = -1;
 
-	printf("%f %f %f %f %d %d\n", alfa, beta, sigma, mu, N, Nexp);
-	if ((dist = stable_create(alfa, beta, sigma, mu, 0)) == NULL)
+	printf("Parameters for the random data generated:\n");
+	printf("α\t%lf\n", alfa);
+	printf("β\t%lf\n", beta);
+	printf("σ\t%lf\n", sigma);
+	printf("μ\t%lf\n", mu_0);
+	printf("Size\t%d\n", N);
+	printf("\nWill perform %d experiments for each fitter.\n\n", Nexp);
+
+	if ((dist = stable_create(alfa, beta, sigma, mu_0, 0)) == NULL)
 	{
 		printf("Error when creating the distribution");
 		exit(1);
@@ -125,7 +139,6 @@ int main (int argc, char *argv[])
 		test = tests + i;
 		result = results + i;
 		total_duration = 0;
-		ma = mb = ms = mm = va = vb = vs = vm = 0;
 
 		for (iexp = 0; iexp < Nexp; iexp++)
 		{
@@ -165,6 +178,28 @@ int main (int argc, char *argv[])
 		       result->beta, result->beta_err,
 		       result->sigma, result->sigma_err,
 		       result->mu_0, result->mu_0_err);
+	}
+
+	printf("\n\nComparison of actual vs. expected results:\n");
+	printf("Fitter\tα error\t\tβ error\t\tμ error\t\tσ error\t\tAverage %% error\n");
+
+	for(i = 0; i < num_tests; i++)
+	{
+		result = results + i;
+		test = tests + i;
+		acc_pdev = 0;
+
+		printf("%s", test->name);
+
+		if (test->gpu_enabled)
+			printf("_GPU");
+
+		print_deviation(alfa);
+		print_deviation(beta);
+		print_deviation(sigma);
+		print_deviation(mu_0);
+
+		printf("\t%.1lf %%\n", acc_pdev / 4);
 	}
 
 
