@@ -39,6 +39,29 @@ struct fittest
 	const char *name;
 };
 
+struct fitresult
+{
+	double ms_duration;
+	double alfa;
+	double beta;
+	double sigma;
+	double mu_0;
+	double alfa_err;
+	double beta_err;
+	double sigma_err;
+	double mu_0_err;
+};
+
+#define calc_avg_err(variable) do { \
+	result->variable /= Nexp; \
+	result->variable ## _err = sqrt((result->variable ## _err / Nexp - result->variable * result->variable) * Nexp / (Nexp - 1)); \
+} while (0)
+
+#define add_avg_err(variable) do { \
+	result->variable += dist->variable; \
+	result->variable ## _err += dist->variable * dist->variable; \
+} while(0)
+
 int main (int argc, char *argv[])
 {
 	double alfa, beta, sigma, mu;
@@ -58,6 +81,10 @@ int main (int argc, char *argv[])
 	};
 	struct fittest *test;
 	size_t num_tests = sizeof tests / sizeof(struct fittest);
+	struct fitresult* results;
+	struct fitresult* result;
+
+	results = calloc(num_tests, sizeof(struct fitresult));
 
 	StableDist *dist = NULL;
 
@@ -96,6 +123,7 @@ int main (int argc, char *argv[])
 	for (i = 0; i < num_tests; i++)
 	{
 		test = tests + i;
+		result = results + i;
 		total_duration = 0;
 		ma = mb = ms = mm = va = vb = vs = vm = 0;
 
@@ -112,27 +140,19 @@ int main (int argc, char *argv[])
 			test->func(dist, data + iexp * N, N);
 			end = get_ms_time();
 
-			ma += dist->alfa;
-			mb += dist->beta;
-			ms += dist->sigma;
-			mm += dist->mu_0;
+			add_avg_err(alfa);
+			add_avg_err(beta);
+			add_avg_err(sigma);
+			add_avg_err(mu_0);
 
-			va += dist->alfa * dist->alfa;
-			vb += dist->beta * dist->beta;
-			vs += dist->sigma * dist->sigma;
-			vm += dist->mu_0 * dist->mu_0;
-
-			total_duration += end - start;
+			result->ms_duration += end - start;
 		}
 
-		ma = ma / Nexp;
-		va = sqrt((va / Nexp - ma * ma) * Nexp / (Nexp - 1));
-		mb = mb / Nexp;
-		vb = sqrt((vb / Nexp - mb * mb) * Nexp / (Nexp - 1));
-		ms = ms / Nexp;
-		vs = sqrt((vs / Nexp - ms * ms) * Nexp / (Nexp - 1));
-		mm = mm / Nexp;
-		vm = sqrt((vm / Nexp - mm * mm) * Nexp / (Nexp - 1));
+		calc_avg_err(alfa);
+		calc_avg_err(beta);
+		calc_avg_err(sigma);
+		calc_avg_err(mu_0);
+		result->ms_duration /= Nexp;
 
 		printf("%s", test->name);
 
@@ -140,11 +160,16 @@ int main (int argc, char *argv[])
 			printf("_GPU");
 
 		printf("\t%lf\t%.2lf ± %.2lf\t%.2lf ± %.2lf\t%.2lf ± %.2lf\t%.2lf ± %.2lf\n",
-		       total_duration / Nexp, ma, va, mb, vb, ms, vs, mm, vm);
+		       result->ms_duration,
+		       result->alfa, result->alfa_err,
+		       result->beta, result->beta_err,
+		       result->sigma, result->sigma_err,
+		       result->mu_0, result->mu_0_err);
 	}
 
 
 	free(data);
+	free(results);
 	stable_free(dist);
 
 	fclose(stable_get_FLOG());
