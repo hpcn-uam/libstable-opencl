@@ -5,6 +5,15 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 cd "$DIR"/..
 
+function finish {
+  	git checkout -- .
+	if [ $dirty -ne 0 ]; then
+		git undo-commit
+	fi
+}
+
+trap finish EXIT
+
 # Save the current state of the codebase if necessary
 git diff --exit-code --quiet
 dirty=$?
@@ -28,7 +37,3 @@ bin/release/fittest
 gnuplot gnuplot/loglikelihoodgraph.gp
 
 # Undo the changes
-git checkout -- .
-if [ $dirty -ne 0 ]; then
-	git undo-commit
-fi

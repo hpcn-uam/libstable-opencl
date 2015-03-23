@@ -45,7 +45,7 @@ int main (int argc, char* argv[])
   if (argc > 1) { sigma = strtod(argv[i], &aux); argc--; i++; } else sigma = 5.0;
   if (argc > 1) {    mu = strtod(argv[i], &aux); argc--; i++; } else mu = 15.0;
   if (argc > 1) {     N = (int)strtod(argv[i], &aux); argc--; i++; } else N = 100;
-  if (argc > 1) {  Nexp = (int)strtod(argv[i], &aux); argc--; i++; } else Nexp = 100;
+  if (argc > 1) {  Nexp = (int)strtod(argv[i], &aux); argc--; i++; } else Nexp = 1;
   if (argc > 1) {  seed = (int)strtod(argv[i], &aux); argc--; i++; } else seed = -1;
 
   printf("%f %f %f %f %d %d\n", alfa, beta, sigma, mu, N, Nexp);
