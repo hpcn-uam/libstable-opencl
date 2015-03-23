@@ -5,9 +5,15 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 cd "$DIR"/..
 
-# Save the current state of the codebase.
-git add -A
-git commit -m "Temporal savepoint"
+# Save the current state of the codebase if necessary
+git diff --exit-code --quiet
+dirty=$?
+
+
+if [ $dirty -ne 0 ]; then
+	git add -A
+	git commit -m "Temporal savepoint"
+fi
 
 # Apply the patch for dirty logging
 patch -p1 < scripts/loglikelihoodgraph.patch
@@ -23,4 +29,6 @@ gnuplot gnuplot/loglikelihoodgraph.gp
 
 # Undo the changes
 git checkout -- .
-git undo-commit
+if [ $dirty -ne 0 ]; then
+	git undo-commit
+fi
