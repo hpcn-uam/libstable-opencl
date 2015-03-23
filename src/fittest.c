@@ -33,81 +33,81 @@ int main (int argc, char* argv[])
 {
   char *aux;
   double alfa, beta, sigma, mu;
-  double ma=0,mb=0,ms=0,mm=0,va=0,vb=0,vs=0,vm=0;
+  double ma = 0, mb = 0, ms = 0, mm = 0, va = 0, vb = 0, vs = 0, vm = 0;
   double * data;
-  int i=1,iexp,N,Nexp;
+  int i = 1, iexp, N, Nexp;
   int seed;
 
   StableDist *dist = NULL;
 
-  if (argc>1) {  alfa = strtod(argv[i],&aux); argc--; i++; } else alfa=1.5;
-  if (argc>1) {  beta = strtod(argv[i],&aux); argc--; i++; } else beta=0.75;
-  if (argc>1) { sigma = strtod(argv[i],&aux); argc--; i++; } else sigma=5.0;
-  if (argc>1) {    mu = strtod(argv[i],&aux); argc--; i++; } else mu=15.0;
-  if (argc>1) {     N = (int)strtod(argv[i],&aux); argc--; i++; } else N=100;
-  if (argc>1) {  Nexp = (int)strtod(argv[i],&aux); argc--; i++; } else Nexp=100;
-  if (argc>1) {  seed = (int)strtod(argv[i],&aux); argc--; i++; } else seed=-1;
+  if (argc > 1) {  alfa = strtod(argv[i], &aux); argc--; i++; } else alfa = 1.5;
+  if (argc > 1) {  beta = strtod(argv[i], &aux); argc--; i++; } else beta = 0.75;
+  if (argc > 1) { sigma = strtod(argv[i], &aux); argc--; i++; } else sigma = 5.0;
+  if (argc > 1) {    mu = strtod(argv[i], &aux); argc--; i++; } else mu = 15.0;
+  if (argc > 1) {     N = (int)strtod(argv[i], &aux); argc--; i++; } else N = 100;
+  if (argc > 1) {  Nexp = (int)strtod(argv[i], &aux); argc--; i++; } else Nexp = 100;
+  if (argc > 1) {  seed = (int)strtod(argv[i], &aux); argc--; i++; } else seed = -1;
 
-  printf("%f %f %f %f %d %d\n",alfa,beta,sigma,mu,N,Nexp);
-  if ((dist = stable_create(alfa,beta,sigma,mu,0)) == NULL) {
-        printf("Error when creating the distribution");
-        exit(1);
-    }
+  printf("%f %f %f %f %d %d\n", alfa, beta, sigma, mu, N, Nexp);
+  if ((dist = stable_create(alfa, beta, sigma, mu, 0)) == NULL) {
+    printf("Error when creating the distribution");
+    exit(1);
+  }
 
   stable_set_THREADS(1);
   stable_set_absTOL(1e-16);
   stable_set_relTOL(1e-8);
   stable_set_FLOG("errlog.txt");
 
-  if (seed<0) stable_rnd_seed(dist,time(NULL));
-  else stable_rnd_seed(dist,seed);
+  if (seed < 0) stable_rnd_seed(dist, time(NULL));
+  else stable_rnd_seed(dist, seed);
 
   /* Random sample generation */
-  data = (double*)malloc(N*Nexp*sizeof(double));
+  data = (double*)malloc(N * Nexp * sizeof(double));
 
-  stable_rnd(dist,data,N*Nexp);
+  stable_rnd(dist, data, N * Nexp);
 
-  for(iexp=0;iexp<Nexp;iexp++)
-   {
-     printf("o");fflush(stdout);
+  for (iexp = 0; iexp < Nexp; iexp++)
+  {
+    printf("o"); fflush(stdout);
 
-     stable_fit_init(dist,data+iexp*N,N,NULL,NULL);
+    stable_fit_init(dist, data + iexp * N, N, NULL, NULL);
 
-     stable_activate_gpu(dist);
+    stable_activate_gpu(dist);
 
-      /* Select estimation algorithm to test */
-     //stable_fit_mle(dist,data+iexp*N,N);
-     stable_fit_mle2d(dist,data+iexp*N,N);
-     //stable_fit_koutrouvelis(dist,data+iexp*N,N);
+    /* Select estimation algorithm to test */
+    //stable_fit_mle(dist,data+iexp*N,N);
+    stable_fit_mle2d(dist, data + iexp * N, N);
+    //stable_fit_koutrouvelis(dist,data+iexp*N,N);
 
-     ma+=dist->alfa;
-     mb+=dist->beta;
-     ms+=dist->sigma;
-     mm+=dist->mu_0;
+    ma += dist->alfa;
+    mb += dist->beta;
+    ms += dist->sigma;
+    mm += dist->mu_0;
 
-     va+=dist->alfa*dist->alfa;
-     vb+=dist->beta*dist->beta;
-     vs+=dist->sigma*dist->sigma;
-     vm+=dist->mu_0*dist->mu_0;
+    va += dist->alfa * dist->alfa;
+    vb += dist->beta * dist->beta;
+    vs += dist->sigma * dist->sigma;
+    vm += dist->mu_0 * dist->mu_0;
 
-     printf("\b.");
-     fflush(stdout);
-   }
+    printf("\b.");
+    fflush(stdout);
+  }
   printf(" DONE\n");
-  ma=ma/Nexp;
-  va=sqrt((va/Nexp-ma*ma)*Nexp/(Nexp-1));
-  mb=mb/Nexp;
-  vb=sqrt((vb/Nexp-mb*mb)*Nexp/(Nexp-1));
-  ms=ms/Nexp;
-  vs=sqrt((vs/Nexp-ms*ms)*Nexp/(Nexp-1));
-  mm=mm/Nexp;
-  vm=sqrt((vm/Nexp-mm*mm)*Nexp/(Nexp-1));
+  ma = ma / Nexp;
+  va = sqrt((va / Nexp - ma * ma) * Nexp / (Nexp - 1));
+  mb = mb / Nexp;
+  vb = sqrt((vb / Nexp - mb * mb) * Nexp / (Nexp - 1));
+  ms = ms / Nexp;
+  vs = sqrt((vs / Nexp - ms * ms) * Nexp / (Nexp - 1));
+  mm = mm / Nexp;
+  vm = sqrt((vm / Nexp - mm * mm) * Nexp / (Nexp - 1));
 
   printf("-----------------------------------------------------------\n");
-  printf("Alpha = %f+-%f\n",ma,va);
-  printf("Beta  = %f+-%f\n",mb,vb);
-  printf("Sigma = %f+-%f\n",ms,vs);
-  printf("Mu    = %f+-%f\n",mm,vm);
+  printf("Alpha = %f+-%f\n", ma, va);
+  printf("Beta  = %f+-%f\n", mb, vb);
+  printf("Sigma = %f+-%f\n", ms, vs);
+  printf("Mu    = %f+-%f\n", mm, vm);
 
   free(data);
   stable_free(dist);
