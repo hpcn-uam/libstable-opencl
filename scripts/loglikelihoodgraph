@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Set the correct CWD
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+cd "$DIR"/..
+
+# Save the current state of the codebase.
+git add -A
+git commit -m "Temporal savepoint"
+
+# Apply the patch for dirty logging
+patch -p1 < scripts/loglikelihoodgraph.patch
+
+# Build
+make release
+
+# Execute the fit test
+bin/release/fittest
+
+# Plot it
+gnuplot gnuplot/loglikelihoodgraph.gp
+
+# Undo the changes
+git checkout -- .
+git undo-commit

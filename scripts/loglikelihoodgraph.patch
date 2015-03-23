@@ -1,0 +1,53 @@
+diff --git a/srclib/libstable/stable_fit.c b/srclib/libstable/stable_fit.c
+index 122fd96..16091f3 100644
+--- a/srclib/libstable/stable_fit.c
++++ b/srclib/libstable/stable_fit.c
+@@ -49,6 +49,8 @@ void stable_fft(double *data, const unsigned int length, double * y)
+ 	return;
+ }
+
++FILE* _f;
++
+ double stable_loglikelihood(StableDist *dist, double *data, const unsigned int length)
+ {
+ 	double *pdf = NULL;
+@@ -65,6 +67,8 @@ double stable_loglikelihood(StableDist *dist, double *data, const unsigned int l
+ 	}
+
+ 	free(pdf);
++	fprintf(_f, "%lf %lf %lf\n", dist->alfa, dist->beta, l);
++
+ 	return l;
+ }
+
+@@ -87,6 +91,7 @@ double stable_loglike_p(stable_like_params *params)
+ 	}
+
+ 	free(pdf);
++	fprintf(_f, "%lf %lf %lf\n", params->dist->alfa, params->dist->beta, l);
+
+ 	return l;
+ }
+@@ -316,9 +321,10 @@ int stable_fit(StableDist *dist, const double *data, const unsigned int length)
+ {
+ 	double nu_c = 0.0, nu_z = 0.0;
+ 	int status = 0;
+-
++	_f = fopen("fit.dat", "w");
+ 	stable_fit_init(dist, data, length, &nu_c, &nu_z);
+ 	status = stable_fit_iter(dist, data, length, nu_c, nu_z);
++	fclose(_f);
+
+ 	return status;
+ }
+@@ -427,8 +433,9 @@ int stable_fit_whole(StableDist *dist, const double *data, const unsigned int le
+ 	int status = 0;
+ //  stable_fit_init(dist,data,length,&nu_c,&nu_z);
+ //  printf("McCulloch %d muestras: %f %f %f %f\n",length,dist->alfa,dist->beta,dist->sigma,dist->mu_1);
+-
++	_f = fopen("fit.dat", "w");
+ 	status = stable_fit_iter_whole(dist, data, length);
++	fclose(_f);
+
+ 	return status;
+ }
