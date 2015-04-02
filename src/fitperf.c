@@ -196,8 +196,8 @@ int main (int argc, char *argv[])
 
 		print_deviation(alfa);
 		print_deviation(beta);
-		print_deviation(sigma);
 		print_deviation(mu_0);
+		print_deviation(sigma);
 
 		printf("\t%.1lf %%\n", acc_pdev / 4);
 	}
