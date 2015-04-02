@@ -37,6 +37,11 @@
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_fft_real.h>
 
+#define ESTM_2D_EPSABS 0.008
+#define ESTM_2D_MAX_ITER 300
+#define ESTM_4D_EPSABS 0.008
+#define ESTM_4D_MAX_ITER 300
+
 
 void stable_fft(double *data, const unsigned int length, double * y)
 {
@@ -256,7 +261,7 @@ int stable_fit_iter(StableDist *dist, const double * data, const unsigned int le
 //      }
 
 		size = gsl_multimin_fminimizer_size (s);
-		status = gsl_multimin_test_size (size, 0.02);
+		status = gsl_multimin_test_size (size, ESTM_2D_EPSABS);
 		/*
 					if (status == GSL_SUCCESS)
 						{
@@ -272,7 +277,7 @@ int stable_fit_iter(StableDist *dist, const double * data, const unsigned int le
 									s->fval, size);
 						//}
 		*/
-	} while (status == GSL_CONTINUE && iter < 200);
+	} while (status == GSL_CONTINUE && iter < ESTM_2D_MAX_ITER);
 
 //  if (status!=GSL_SUCCESS)
 //    {
@@ -386,13 +391,13 @@ int stable_fit_iter_whole(StableDist *dist, const double * data, const unsigned 
 		}
 
 		size   = gsl_multimin_fminimizer_size (s);
-		status = gsl_multimin_test_size (size, 0.002);
+		status = gsl_multimin_test_size (size, ESTM_4D_EPSABS);
 
 //      printf(" %03d\t size = %f a_ = %f  b_ = %f  c_ = %f  m_ = %f\n",iter,size,gsl_vector_get (s->x, 0),gsl_vector_get (s->x, 1),
 //                                                           gsl_vector_get (s->x, 2),gsl_vector_get (s->x, 3));
 //      fflush(stdout);
 
-	} while (status == GSL_CONTINUE && iter < 100);
+	} while (status == GSL_CONTINUE && iter < ESTM_4D_MAX_ITER);
 
 
 
