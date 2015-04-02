@@ -486,6 +486,8 @@ typedef struct
   {
     StableDist *dist;
     double *data;
+    double *pdf;
+    double *err;
     unsigned int length;
     double nu_c;
     double nu_z;

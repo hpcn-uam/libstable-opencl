@@ -70,23 +70,17 @@ double stable_loglikelihood(StableDist *dist, double *data, const unsigned int l
 
 double stable_loglike_p(stable_like_params *params)
 {
-	double *pdf;
 	double l = 0.0;
 	int i;
 
-	pdf = malloc(sizeof(double) * (params->length));
-
 	if (params->dist->gpu_enabled)
-		stable_pdf_gpu(params->dist, params->data, params->length, pdf, NULL);
+		stable_pdf_gpu(params->dist, params->data, params->length, params->pdf, NULL);
 	else
-		stable_pdf(params->dist, params->data, params->length, pdf, NULL);
+		stable_pdf(params->dist, params->data, params->length, params->pdf, NULL);
 
 	for (i = 0; i < params->length; i++)
-	{
-		if (pdf[i] > 0.0) {l += log(pdf[i]);}
-	}
-
-	free(pdf);
+		if (params->pdf[i] > 0.0)
+			l += log(params->pdf[i]);
 
 	return l;
 }
@@ -218,6 +212,8 @@ int stable_fit_iter(StableDist *dist, const double * data, const unsigned int le
 	par.length = length;
 	par.nu_c = nu_c;
 	par.nu_z = nu_z;
+	par.pdf = (double*) calloc(length, sizeof(double));
+	par.err = (double*) calloc(length, sizeof(double));
 
 	/* Inicio: Debe haberse inicializado dist con alfa y beta de McCulloch */
 	theta = gsl_vector_alloc(2);
@@ -308,6 +304,8 @@ int stable_fit_iter(StableDist *dist, const double * data, const unsigned int le
 
 	gsl_vector_free(ss);
 	gsl_multimin_fminimizer_free (s);
+	free(par.err);
+	free(par.pdf);
 
 	return status;
 }
@@ -344,6 +342,8 @@ int stable_fit_iter_whole(StableDist *dist, const double * data, const unsigned 
 	par.length = length;
 	par.nu_c = 0;
 	par.nu_z = 0;
+	par.pdf = (double*) calloc(length, sizeof(double));
+	par.err = (double*) calloc(length, sizeof(double));
 
 	/* Inicio: Debe haberse inicializado dist con McCulloch */
 	theta = gsl_vector_alloc(4);
@@ -417,6 +417,8 @@ int stable_fit_iter_whole(StableDist *dist, const double * data, const unsigned 
 
 	gsl_vector_free(ss);
 	gsl_multimin_fminimizer_free (s);
+	free(par.err);
+	free(par.pdf);
 
 	return status;
 }
