@@ -64,7 +64,11 @@ struct fitresult
 
 #define print_deviation(variable) do { \
 	double dev = fabs(result->variable - variable); \
-	double perc_dev = 100 * dev / variable; \
+	double perc_dev; \
+	if (variable == 0) \
+		perc_dev = 100 * dev; \
+	else \
+		perc_dev = 100 * dev / variable; \
 	acc_pdev += perc_dev; \
 	printf("\t%.3lf (%.1lf %%)", dev, perc_dev); \
 } while(0)
