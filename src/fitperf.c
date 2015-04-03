@@ -132,9 +132,9 @@ int main (int argc, char *argv[])
 		stable_rnd_seed(dist, seed);
 
 	/* Random sample generation */
-	data = (double *)malloc(N * Nexp * sizeof(double));
+	data = (double *)malloc(N * sizeof(double));
 
-	stable_rnd(dist, data, N * Nexp);
+	stable_rnd(dist, data, N);
 
 	printf("Fitter\tms/fit\t\tα\t\tβ\t\tμ\t\tσ\n");
 
@@ -146,7 +146,7 @@ int main (int argc, char *argv[])
 
 		for (iexp = 0; iexp < Nexp; iexp++)
 		{
-			stable_fit_init(dist, data + iexp * N, N, NULL, NULL);
+			stable_fit_init(dist, data, N, NULL, NULL);
 
 			if (test->gpu_enabled)
 				stable_activate_gpu(dist);
@@ -154,7 +154,7 @@ int main (int argc, char *argv[])
 				stable_deactivate_gpu(dist);
 
 			start = get_ms_time();
-			test->func(dist, data + iexp * N, N);
+			test->func(dist, data, N);
 			end = get_ms_time();
 
 			add_avg_err(alfa);
