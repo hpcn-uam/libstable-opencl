@@ -36,6 +36,10 @@ short stable_clinteg_points(struct stable_clinteg *cli,
 	double *x, double *pdf_results, double *errs, size_t num_points,
 	struct StableDistStruct *dist);
 void stable_clinteg_teardown(struct stable_clinteg* cli);
+short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results, double* errs, size_t num_points, struct StableDistStruct *dist, cl_event* event);
+short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t num_points, struct StableDistStruct *dist, cl_event* event);
+
+
 
 
 #endif

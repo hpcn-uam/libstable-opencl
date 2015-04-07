@@ -127,13 +127,12 @@ static void _stable_print_profileinfo(struct opencl_profile *prof)
     printf("\tKernel exec time: %3.3g.\n", prof->exec_time);
 }
 
-short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_results, double *errs, size_t num_points, struct StableDistStruct *dist)
+short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t num_points, struct StableDistStruct *dist, cl_event* event)
 {
     cl_int err = 0;
     size_t work_threads[2] = { KRONROD_EVAL_POINTS * num_points, GK_SUBDIVISIONS };
     size_t workgroup_size[2] = { KRONROD_EVAL_POINTS, GK_SUBDIVISIONS };
     cl_precision* points = NULL;
-    cl_event event;
 
     cli->h_args->k1 = dist->k1;
     cli->h_args->alfa = dist->alfa;
@@ -202,7 +201,7 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
 
     bench_begin(cli->profiling.enqueue, cli->profile_enabled);
     err = clEnqueueNDRangeKernel(cli->env.queue, cli->env.kernel,
-                                 2, NULL, work_threads, workgroup_size, 0, NULL, &event);
+                                 2, NULL, work_threads, workgroup_size, 0, NULL, event);
     bench_end(cli->profiling.enqueue, cli->profile_enabled);
 
     if (err)
@@ -211,6 +210,38 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
         goto cleanup;
     }
 
+cleanup:
+    stablecl_log(log_message, "[Stable-OpenCl] Async command issued.\n");
+
+#ifdef CL_PRECISION_IS_FLOAT
+    if(points) free(points);
+#endif
+
+    return err;
+}
+
+short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_results, double *errs, size_t num_points, struct StableDistStruct *dist)
+{
+    cl_event event;
+    cl_int err;
+
+    err = stable_clinteg_points_async(cli, x, num_points, dist, &event);
+
+    if(err)
+    {
+        stablecl_log(log_err, "[Stable-OpenCl] Couldn't issue evaluation command to the GPU.\n");
+        return err;
+    }
+
+    return stable_clinteg_points_end(cli, pdf_results, errs, num_points, dist, &event);
+}
+
+short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results, double* errs, size_t num_points, struct StableDistStruct *dist, cl_event* event)
+{
+    cl_int err = 0;
+
+    clWaitForEvents(1, event);
+
     bench_begin(cli->profiling.buffer_read, cli->profile_enabled);
     err = _stable_map_gk_buffers(cli, num_points);
     bench_end(cli->profiling.buffer_read, cli->profile_enabled);
@@ -218,11 +249,11 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
     if (err)
     {
         stablecl_log(log_err, "[Stable-OpenCl] Error reading results from the GPU: %s (%d)\n", opencl_strerr(err), err);
-        goto cleanup;
+        return err;
     }
 
     if (cli->profile_enabled)
-        stable_retrieve_profileinfo(cli, event);
+        stable_retrieve_profileinfo(cli, *event);
 
     bench_begin(cli->profiling.set_results, cli->profile_enabled);
 
@@ -241,14 +272,6 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
     }
 
     bench_end(cli->profiling.set_results, cli->profile_enabled);
-
-
-cleanup:
-    stablecl_log(log_message, "[Stable-OpenCl] Integration end.\n");
-
-#ifdef CL_PRECISION_IS_FLOAT
-    if(points) free(points);
-#endif
 
     return err;
 }
