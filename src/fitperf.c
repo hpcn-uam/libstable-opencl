@@ -27,6 +27,7 @@
  */
 #include "stable_api.h"
 #include "benchmarking.h"
+#include "stable_gridfit.h"
 #include <time.h>
 #include <stdlib.h>
 
@@ -89,6 +90,7 @@ int main (int argc, char *argv[])
 		{ stable_fit_mle, 1, "MLE" },
 		{ stable_fit_mle2d, 1, "M2D"},
 		{ stable_fit_koutrouvelis, 1, "KTR"},
+		{ stable_fit_grid, 1, "GRD" }
 	};
 	struct fittest *test;
 	size_t num_tests = sizeof tests / sizeof(struct fittest);
