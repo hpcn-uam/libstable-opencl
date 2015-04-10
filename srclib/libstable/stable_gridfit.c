@@ -85,10 +85,10 @@ static void gridfit_init(struct stable_gridfit* gridfit, StableDist *dist, const
 	gridfit->likelihoods = calloc(gridfit->fitter_dist_count, sizeof(double));
 
 	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
-	{
 		gridfit->fitter_dists[i] = stable_create(1, 0.5, 1, 1, 0);
-		stable_activate_gpu(gridfit->fitter_dists[i]);
-	}
+
+	stable_activate_gpu(dist);
+	gridfit->cli = &dist->cli;
 
 	memcpy(gridfit->point_sep, initial_point_separation, gridfit->fitter_dimensions * sizeof(double));
 	memcpy(gridfit->contracting_coefs, initial_contracting_coefs, gridfit->fitter_dimensions * sizeof(double));
@@ -109,24 +109,10 @@ static void gridfit_iterate(struct stable_gridfit* gridfit)
 
 	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
 	{
-		if(prepare_grid_params_for_fitter(gridfit, i) == 0)
-		{
-			dist = gridfit->fitter_dists[i];
-			stable_clinteg_points_async(&dist->cli, (double*) gridfit->data, gridfit->data_length, dist, gridfit->waiting_events + i);
-		}
-		else
-		{
-			gridfit->likelihoods[i] = DBL_MAX;
-			gridfit->waiting_events[i] = NULL;
-		}
-	}
-
-	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
-	{
 		dist = gridfit->fitter_dists[i];
 
-		if(gridfit->waiting_events[i])
-			stable_clinteg_points_end(&dist->cli, pdf, NULL, gridfit->data_length, dist, gridfit->waiting_events + i);
+		if(prepare_grid_params_for_fitter(gridfit, i) == 0)
+			stable_clinteg_points(gridfit->cli, (double*) gridfit->data, pdf, NULL, gridfit->data_length, dist);
 		else
 			continue;
 
@@ -166,6 +152,7 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 		point_sep_iterate(&gridfit);
 
 		likelihood_diff = gridfit.max_likelihood - gridfit.min_likelihood;
+		gridfit.current_iteration++;
 	}
 
 	set_params_to_dist(dist, best_params, gridfit.fitter_dimensions);

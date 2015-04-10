@@ -27,6 +27,7 @@ struct stable_gridfit {
 	double max_likelihood;
 	double min_likelihood;
 	size_t min_fitter;
+	struct stable_clinteg* cli;
 };
 
 int stable_fit_grid(StableDist *dist, const double *data, const unsigned int length);
