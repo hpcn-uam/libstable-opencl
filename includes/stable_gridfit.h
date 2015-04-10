@@ -4,7 +4,7 @@
 #include "stable_api.h"
 #include "opencl_integ.h"
 
-#define GRIDFIT_TEST_PER_DIM 4
+#define GRIDFIT_TEST_PER_DIM 2
 #define MAX_STABLE_PARAMS 4
 #define MAX_ITERATIONS 200 // Tip: Use the iterations_calc script in scripts folder
 #define WANTED_PRECISION 1
