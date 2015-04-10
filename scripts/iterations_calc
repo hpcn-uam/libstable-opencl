@@ -1,0 +1,18 @@
+#!/usr/bin/python
+
+from math import *
+
+contracting_coef = float(raw_input("Contracting coefficient: "))
+precision = float(raw_input("Desired precision: "))
+initial_sep = float(raw_input("Initial point separation: "))
+points_per_dim = float(raw_input("Points per dimension: "))
+
+grid_width = initial_sep * (points_per_dim - 1)
+target_contraction = precision / grid_width
+iterations = log(target_contraction) / log(contracting_coef)
+
+print "Target iterations: %d" % iterations
+
+
+
+
