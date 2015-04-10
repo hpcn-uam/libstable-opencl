@@ -143,6 +143,8 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 
 	while(gridfit.current_iteration < MAX_ITERATIONS && likelihood_diff > WANTED_PRECISION)
 	{
+		printf("\rIteration %d... ", gridfit.current_iteration);
+		fflush(stdout);
 		calculate_upperleft_corner_point(&gridfit);
 		gridfit_iterate(&gridfit);
 
@@ -153,7 +155,11 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 
 		likelihood_diff = gridfit.max_likelihood - gridfit.min_likelihood;
 		gridfit.current_iteration++;
+		printf(" done - diff is %lf", likelihood_diff);
+		fflush(stdout);
 	}
+
+	printf("\n");
 
 	set_params_to_dist(dist, best_params, gridfit.fitter_dimensions);
 
