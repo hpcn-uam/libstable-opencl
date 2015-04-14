@@ -6,12 +6,12 @@ CLFLAGS = -emit-llvm -c -arch $(CLC_ARCH) -DFLOAT_GPU_UNIT
 DEBUG_CFLAGS = -O -ggdb -DSTABLE_MIN_LOG=0
 BENCHMARK_CFLAGS =  $(RELEASE_CFLAGS) -DBENCHMARK
 RELEASE_CFLAGS = -O3 -march=native -DSTABLE_MIN_LOG=1
-PROFILE_CFLAGS = $(RELEASE_CFLAGS) -pg -static-libgcc
+PROFILE_CFLAGS = $(RELEASE_CFLAGS) -ggdb -pg
 E_LIBS = $(shell pkg-config --libs gsl) -pthread
 
 PROJECT_NAME = libstable
 
-CONFS = debug release benchmark
+CONFS = debug release benchmark profile
 DEFAULT_CONF = debug
 
 OBJDIR = obj
