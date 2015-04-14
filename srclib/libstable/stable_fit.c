@@ -43,6 +43,8 @@
 #define ESTM_4D_MAX_ITER 300
 
 
+void get_original(const gsl_vector *s, double *a, double *b, double *c, double *m);
+
 void stable_fft(double *data, const unsigned int length, double * y)
 {
 	//int i;
@@ -133,6 +135,7 @@ inline void get_original(const gsl_vector *s, double *a, double *b, double *c, d
 	*c = exp(gsl_vector_get(s, 2));
 	*m = gsl_vector_get(s, 3);
 }
+
 inline void set_expanded(gsl_vector *s, const double a, const double b, const double c, const double m)
 {
 	gsl_vector_set(s, 0, tan(M_PI_2 * (a - 1.0)));
