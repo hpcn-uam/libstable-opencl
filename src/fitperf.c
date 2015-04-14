@@ -74,9 +74,14 @@ struct fitresult
 	printf("\t%.3lf (%.1lf %%)", dev, perc_dev); \
 } while(0)
 
+#define add_initial_estimations(variable) do { \
+	variable ## _init += dist->variable; \
+} while(0)
+
 int main (int argc, char *argv[])
 {
 	double alfa, beta, sigma, mu_0;
+	double alfa_init = 0, beta_init = 0, sigma_init = 0, mu_0_init = 0;
 	double *data;
 	int i = 1, iexp, N, Nexp;
 	int seed;
@@ -106,7 +111,7 @@ int main (int argc, char *argv[])
 	sigma = 5.0;
 	mu_0 = 15.0;
 	N = 400;
-	Nexp = 5;
+	Nexp = 10;
 	seed = -1;
 
 	printf("Parameters for the random data generated:\n");
@@ -150,6 +155,11 @@ int main (int argc, char *argv[])
 		{
 			stable_fit_init(dist, data, N, NULL, NULL);
 
+			add_initial_estimations(alfa);
+			add_initial_estimations(beta);
+			add_initial_estimations(sigma);
+			add_initial_estimations(mu_0);
+
 			if (test->gpu_enabled)
 				stable_activate_gpu(dist);
 			else
@@ -185,6 +195,15 @@ int main (int argc, char *argv[])
 		       result->sigma, result->sigma_err,
 		       result->mu_0, result->mu_0_err);
 	}
+
+	alfa_init /= Nexp * num_tests;
+	beta_init /= Nexp * num_tests;
+	sigma_init /= Nexp * num_tests;
+	mu_0_init /= Nexp * num_tests;
+
+	printf("\n\nInitial estimations: \n");
+	printf("α = %lf\nβ = %.2lf\nμ = %.2lf\nσ = %.2lf\n",
+	       alfa_init, beta_init, sigma_init, mu_0_init);
 
 	printf("\n\nComparison of actual vs. expected results:\n");
 	printf("Fitter\tα error\t\tβ error\t\tμ error\t\tσ error\t\tAverage %% error\n");
