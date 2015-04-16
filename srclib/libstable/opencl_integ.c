@@ -51,8 +51,8 @@ static int _stable_map_gk_buffers(struct stable_clinteg *cli, size_t points)
 {
     int err = 0;
 
-    cli->h_gauss = clEnqueueMapBuffer(cli->env.queue, cli->gauss, CL_TRUE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
-    cli->h_kronrod = clEnqueueMapBuffer(cli->env.queue, cli->kronrod, CL_TRUE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
+    cli->h_gauss = clEnqueueMapBuffer(opencl_get_queue(&cli->env), cli->gauss, CL_TRUE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
+    cli->h_kronrod = clEnqueueMapBuffer(opencl_get_queue(&cli->env), cli->kronrod, CL_TRUE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
 
     return err;
 }
@@ -103,7 +103,7 @@ int stable_clinteg_init(struct stable_clinteg *cli)
         return -1;
     }
 
-    cli->h_args = clEnqueueMapBuffer(cli->env.queue, cli->args, CL_TRUE, CL_MAP_WRITE, 0, sizeof(struct stable_info), 0, NULL, NULL, &err);
+    cli->h_args = clEnqueueMapBuffer(opencl_get_queue(&cli->env), cli->args, CL_TRUE, CL_MAP_WRITE, 0, sizeof(struct stable_info), 0, NULL, NULL, &err);
 
     if (err)
     {
@@ -174,7 +174,7 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     points = x;
 #endif
 
-    err |= clEnqueueWriteBuffer(cli->env.queue, cli->args, CL_FALSE, 0, sizeof(struct stable_info), cli->h_args, 0, NULL, NULL);
+    err |= clEnqueueWriteBuffer(opencl_get_queue(&cli->env), cli->args, CL_FALSE, 0, sizeof(struct stable_info), cli->h_args, 0, NULL, NULL);
     err |= _stable_create_points_array(cli, points, num_points);
 
     if (err)
@@ -200,7 +200,7 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     stablecl_log(log_message, "[Stable-OpenCl] Enqueing kernel - %zu × %zu work threads, %zu × %zu workgroup size\n", work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
 
     bench_begin(cli->profiling.enqueue, cli->profile_enabled);
-    err = clEnqueueNDRangeKernel(cli->env.queue, cli->env.kernel,
+    err = clEnqueueNDRangeKernel(opencl_get_queue(&cli->env), cli->env.kernel,
                                  2, NULL, work_threads, workgroup_size, 0, NULL, event);
     bench_end(cli->profiling.enqueue, cli->profile_enabled);
 
@@ -279,9 +279,9 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
 
 void stable_clinteg_teardown(struct stable_clinteg *cli)
 {
-    clEnqueueUnmapMemObject(cli->env.queue, cli->gauss, cli->h_gauss, 0, NULL, NULL);
-    clEnqueueUnmapMemObject(cli->env.queue, cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
-    clEnqueueUnmapMemObject(cli->env.queue, cli->args, cli->h_args, 0, NULL, NULL);
+    clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
+    clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
+    clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->args, cli->h_args, 0, NULL, NULL);
 
     clReleaseMemObject(cli->gauss);
     clReleaseMemObject(cli->kronrod);

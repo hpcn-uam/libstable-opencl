@@ -42,7 +42,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
     int argc = 0;
     err |= clSetKernelArg(ocl->kernel, argc++, sizeof(cl_mem), &array_ocl);
     err |= clSetKernelArg(ocl->kernel, argc++, sizeof(testtype) * (*local_work_size), NULL);
-    err = clEnqueueNDRangeKernel(ocl->queue, ocl->kernel,
+    err = clEnqueueNDRangeKernel(opencl_get_queue(ocl), ocl->kernel,
                                 dim, NULL, global_work_size, local_work_size, 0, NULL, &event);
 
     if(err)
@@ -59,7 +59,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 
 cleanup:
     if(array_ocl)
-        clEnqueueUnmapMemObject(ocl->queue, array_ocl, array, 0, NULL, NULL);
+        clEnqueueUnmapMemObject(opencl_get_queue(ocl), array_ocl, array, 0, NULL, NULL);
 
     if(array)
         free(array);

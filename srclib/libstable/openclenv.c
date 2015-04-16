@@ -158,12 +158,18 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    env->queue = clCreateCommandQueue(env->context, env->device, CL_QUEUE_PROFILING_ENABLE, &err);
-    if (!env->queue)
+    env->queues = NULL;
+    env->queue_count = 0;
+
+    err = opencl_set_queues(env, 1);
+
+    if(err)
     {
-        err_msg = "clCreateCommandQueue";
-        goto error;
+    	err_msg = "opencl_set_queues";
+    	goto error;
     }
+
+    opencl_set_current_queue(env, 0);
 
 #ifdef __APPLE__
     env->program = clCreateProgramWithSource(env->context, 1, (const char **)&bitcode_path, &pathlen, &err);
@@ -241,14 +247,74 @@ error:
     return err;
 }
 
+short opencl_set_current_queue(struct openclenv* env, size_t queue)
+{
+	if(queue >= env->queue_count)
+		return -1;
+
+	env->current_queue = queue;
+	return 0;
+}
+
+inline cl_command_queue opencl_get_queue(struct openclenv* env)
+{
+	return env->queues[env->current_queue];
+}
+
+short opencl_set_queues(struct openclenv* env, size_t new_count)
+{
+	cl_int err;
+
+    if(env->queue_count == new_count)
+    	return 0;
+
+    if(env->queue_count > new_count)
+    	return opencl_remove_last_n_queues(env, env->queue_count - new_count);
+
+    env->queues = realloc(env->queues, new_count * sizeof(cl_command_queue));
+
+    if(!env->queues)
+    	return -1;
+
+    bzero(env->queues + env->queue_count, (new_count - env->queue_count) * sizeof(cl_command_queue));
+
+    for(size_t i = env->queue_count; i < new_count; i++)
+    {
+    	env->queues[i] = clCreateCommandQueue(env->context, env->device, CL_QUEUE_PROFILING_ENABLE, &err);
+
+	    if (!env->queues[i])
+	    	return err;
+	}
+
+	env->queue_count = new_count;
+
+	return 0;
+}
+
+short opencl_remove_last_n_queues(struct openclenv* env, size_t n)
+{
+    int last_deleted_queue = env->queue_count - n;
+
+    if(last_deleted_queue < 0)
+        last_deleted_queue = 0;
+
+    for(int i = env->queue_count - 1; i >= last_deleted_queue; i--)
+    	if(env->queues[i])
+    		clReleaseCommandQueue(env->queues[i]);
+
+    return 0;
+}
+
 int opencl_teardown(struct openclenv *env)
 {
     if (env->program)
         clReleaseProgram(env->program);
     if (env->kernel)
         clReleaseKernel(env->kernel);
-    if (env->queue)
-        clReleaseCommandQueue(env->queue);
+
+    if(env->queues)
+	    opencl_remove_last_n_queues(env, env->queue_count);
+
     if (env->context)
         clReleaseContext(env->context);
 
@@ -323,7 +389,12 @@ void stablecl_log(log_level level, const char *string, ...)
 
 int stablecl_finish_all(struct openclenv *env)
 {
-    return clFinish(env->queue);
+	cl_int err = 0;
+
+	for(size_t i = 0; i < env->queue_count; i++)
+    	err |= clFinish(env->queues[i]);
+
+    return err;
 }
 
 void stablecl_profileinfo(struct opencl_profile *prof, cl_event event)
