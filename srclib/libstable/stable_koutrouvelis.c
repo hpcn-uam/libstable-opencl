@@ -43,6 +43,7 @@
 #include <gsl/gsl_multifit.h>
 #include "stable_api.h"
 
+double sign(double x);
 inline double sign(double x) {
   return ((.0 < x) - (x < .0));
 }

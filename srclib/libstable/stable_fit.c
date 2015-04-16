@@ -44,6 +44,7 @@
 
 
 void get_original(const gsl_vector *s, double *a, double *b, double *c, double *m);
+void set_expanded(gsl_vector *s, const double a, const double b, const double c, const double m);
 
 void stable_fft(double *data, const unsigned int length, double * y)
 {

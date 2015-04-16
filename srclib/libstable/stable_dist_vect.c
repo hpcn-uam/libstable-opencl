@@ -1,21 +1,21 @@
 /* stable/stable_dist_vect.c
- * 
+ *
  * Vectorial approach to the calculation of stable densities and
  * distribution. No paralellized code.
  *
  * Copyright (C) 2013. Javier Royuela del Val
  *                     Federico Simmross Wattenberg
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; If not, see <http://www.gnu.org/licenses/>.
  *
@@ -24,7 +24,7 @@
  *  E.T.S.I. Telecomunicación
  *  Universidad de Valladolid
  *  Paseo de Belén 15, 47002 Valladolid, Spain.
- *  jroyval@lpi.tel.uva.es    
+ *  jroyval@lpi.tel.uva.es
  */
 
 #include "stable_api.h"
@@ -47,6 +47,7 @@
 /*                         Private" functions                                 */
 /*----------------------------------------------------------------------------*/
 
+double stable_v_V1(double theta, void *args);
 inline double stable_v_V1(double theta, void *args)
 {
   StableDistV *dist = (StableDistV *)args;
@@ -62,6 +63,7 @@ inline double stable_v_V1(double theta, void *args)
   return V;
 }
 
+double stable_v_V2(double theta,void *args);
 inline double stable_v_V2(double theta,void *args)
 {
   StableDistV *dist = (StableDistV *)args;
@@ -130,11 +132,11 @@ double *stable_v_pdf_g2_(double theta, void *args, double *g, size_t N,unsigned 
 {
   double g_,V;
   unsigned int k;
-  
+
   V = stable_v_V2(theta,args);
- 
+
   k = first; //posicion en la que comienza el vector.
-  while (k<N) //el final se indica con k=N; 
+  while (k<N) //el final se indica con k=N;
   {
 //    printf(" %d\n",k);
     g_ = ((StableDistV*)args)->xxipow[k]*V;
@@ -151,11 +153,11 @@ double *stable_v_cdf_g2(double theta, void *args, double *g, size_t N,unsigned i
 {
   double g_,V;
   unsigned int k;
-  
+
   V = stable_v_V2(theta,args);
- 
+
   k = first; //posicion en la que comienza el vector.
-  while (k<N) //el final se indica con k=N; 
+  while (k<N) //el final se indica con k=N;
   {
 //    printf(" %d\n",k);
     g_ = ((StableDistV*)args)->xxipow[k]*V;
@@ -235,7 +237,7 @@ double *stable_v_pdf_g_mat2_max(const double *theta, size_t Nth, void *args, dou
 //Tratamiento NaNs, infs, etc y situa el máximo en un intervalo entre las thetas dadas:
 // alfa > 1 -> V decreciente -> si V*(x-xi)^a/(a-1) > 1 todavía no se ha alcanzado el máximo.
 // alfa <=1 -> V creciente   -> si V*(x-xi)^a/(a-1) > 1 todavía no se ha alcanzado el máximo.
-  P=dist->alfa>1.0; 
+  P=dist->alfa>1.0;
   for (l=0;l<Nth;l++) {
     for (k=0;k<Nx;k++) {
       t=k+Nx*l;
@@ -367,7 +369,7 @@ int stable_v_setparams(StableDistV *dist,
 
   dist->alfa = alfa;
   dist->beta = beta;
-  dist->sigma = sigma;    
+  dist->sigma = sigma;
 
   switch (zona)
     {
@@ -395,7 +397,7 @@ int stable_v_setparams(StableDistV *dist,
             dist->c3 = -M_1_PI;
           }
         break;
-        
+
       case CAUCHY:
         dist->beta=0;
         dist->alfa=1;
@@ -627,7 +629,7 @@ quadstep_vect(double*(*func)(double,void *,double*,size_t,unsigned int, unsigned
   *fcnt+=2;
 
   *warn=0;
-/* esto esta en la funcion bucle de arriba. 
+/* esto esta en la funcion bucle de arriba.
   for(k=0;k<N;k++)
     {
       if (prevconv[k]) {conv[k]=1; continue;}
@@ -682,7 +684,7 @@ quadstep_vect(double*(*func)(double,void *,double*,size_t,unsigned int, unsigned
 
 //      for(k=0;k<N;k++)
       k=newfirst;
-      while (k<N) 
+      while (k<N)
         {
           Q[k] = Q[k] + q2[k];
           abserr[k] = err[k]*err[k] + abserr[k]*abserr[k];
@@ -728,7 +730,7 @@ stable_v_integration_v(StableDistV *dist,double *(function)(double,void*,double*
     {
       warn[k]=0;
       t[k] = a+k*h;
-      if (function(t[k],dist,f+N*k,N,first,next) == NULL) exit(1);      
+      if (function(t[k],dist,f+N*k,N,first,next) == NULL) exit(1);
       t[6-k] = b-k*h;
       if (function(t[6-k],dist,f+N*(6-k),N,first,next) == NULL) exit(1);
       //printf("  %+e\t%+e\n",t[k],t[6-k]);
@@ -751,7 +753,7 @@ stable_v_integration_v(StableDistV *dist,double *(function)(double,void*,double*
     }
 
   for(k=0;k<3;k++)
-    {  
+    {
       if(warn[k]>*warnt) *warnt=warn[k];
     }
 
@@ -788,7 +790,7 @@ stable_v_integration_v3(StableDistV *dist,double *(function)(double,void*,double
   partialerr=(double*)malloc(N*sizeof(double));
   //g = (double*)malloc(N_thinit*N*sizeof(double));
 
-  
+
   tauinit[0]=0;
   tauinit[Nth_init-1]=1;
   tauinit[(int)(0.5*(Nth_init-1))] = 0.250;
@@ -867,7 +869,7 @@ void stable_v_cdf(StableDistV *dist, const double x[],
           k_r++;
           dist->xxipow[k] = pow(xxi[k],dist->alfainvalfa1);
         }
-      
+
       //printf("%e\n",dist->xxipow[k]);
     }
 
@@ -941,7 +943,7 @@ void stable_v_pdf(StableDistV *dist, const double x[],
   //xxi_th = pow(10,-10/fabs(dist->alfainvalfa1));
   xxi_th = 1e-6;
   for(k=0;k<Nx;k++)
-    {  
+    {
       xxi[k]=(x[k]-dist->mu_0)/dist->sigma-dist->xi;
       if(fabs(xxi[k])<xxi_th)
         {
@@ -961,7 +963,7 @@ void stable_v_pdf(StableDistV *dist, const double x[],
           k_r++;
           dist->xxipow[k] = pow(xxi[k],dist->alfainvalfa1);
         }
-      
+
       //printf("%e\n",dist->xxipow[k]);
     }
 
