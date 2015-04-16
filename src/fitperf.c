@@ -95,7 +95,8 @@ int main (int argc, char *argv[])
 		{ stable_fit_mle, 1, "MLE" },
 		{ stable_fit_mle2d, 1, "M2D"},
 		{ stable_fit_koutrouvelis, 1, "KTR"},
-		{ stable_fit_grid, 1, "GRD" }
+		{ stable_fit_grid, 1, "GRD" },
+		{ stable_fit_grid, 0, "GRD" }
 	};
 	struct fittest *test;
 	size_t num_tests = sizeof tests / sizeof(struct fittest);
@@ -164,6 +165,8 @@ int main (int argc, char *argv[])
 				stable_activate_gpu(dist);
 			else
 				stable_deactivate_gpu(dist);
+
+			dist->parallel_gridfit = test->gpu_enabled; // Temporary.
 
 			start = get_ms_time();
 			test->func(dist, data, N);

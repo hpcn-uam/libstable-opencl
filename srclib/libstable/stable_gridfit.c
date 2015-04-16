@@ -72,6 +72,7 @@ static void gridfit_init(struct stable_gridfit* gridfit, StableDist *dist, const
 	gridfit->fitter_dimensions = MAX_STABLE_PARAMS;
 	gridfit->fitter_dist_count = 1;
 	gridfit->current_iteration = 0;
+	gridfit->parallel = dist->parallel_gridfit;
 
 	for(size_t i = 0; i < gridfit->fitter_dimensions; i++)
 	{
@@ -89,6 +90,7 @@ static void gridfit_init(struct stable_gridfit* gridfit, StableDist *dist, const
 
 	stable_activate_gpu(dist);
 	gridfit->cli = &dist->cli;
+	opencl_set_queues(&gridfit->cli->env, gridfit->fitter_dist_count);
 
 	memcpy(gridfit->point_sep, initial_point_separation, gridfit->fitter_dimensions * sizeof(double));
 	memcpy(gridfit->contracting_coefs, initial_contracting_coefs, gridfit->fitter_dimensions * sizeof(double));
@@ -132,6 +134,52 @@ static void gridfit_iterate(struct stable_gridfit* gridfit)
 	}
 }
 
+static void gridfit_iterate_parallel(struct stable_gridfit* gridfit)
+{
+	double pdf[gridfit->data_length];
+	short fitter_enabled[gridfit->fitter_dist_count];
+	StableDist* dist;
+
+	gridfit->max_likelihood = DBL_MIN;
+	gridfit->min_likelihood = DBL_MAX;
+	bzero(fitter_enabled, gridfit->fitter_dist_count * sizeof(short));
+
+	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
+	{
+		dist = gridfit->fitter_dists[i];
+
+		if(prepare_grid_params_for_fitter(gridfit, i) == 0)
+		{
+			opencl_set_current_queue(&gridfit->cli->env, i);
+			stable_clinteg_points_async(gridfit->cli, (double*) gridfit->data, gridfit->data_length, dist, NULL);
+			fitter_enabled[i] = 1;
+		}
+	}
+
+	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
+	{
+		if(!fitter_enabled[i])
+			continue;
+
+		opencl_set_current_queue(&gridfit->cli->env, i);
+		stable_clinteg_points_end(gridfit->cli, pdf, NULL, gridfit->data_length, dist, NULL);
+
+		gridfit->likelihoods[i] = 0;
+
+		for(size_t point = 0; point < gridfit->data_length; point++)
+			gridfit->likelihoods[i] += -log(pdf[point]);
+
+		if(gridfit->likelihoods[i] > gridfit->max_likelihood)
+			gridfit->max_likelihood = gridfit->likelihoods[i];
+
+		if(gridfit->likelihoods[i] < gridfit->min_likelihood)
+		{
+			gridfit->min_likelihood = gridfit->likelihoods[i];
+			gridfit->min_fitter = i;
+		}
+	}
+}
+
 int stable_fit_grid(StableDist *dist, const double *data, const unsigned int length)
 {
 	struct stable_gridfit gridfit;
@@ -144,7 +192,11 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 	while(gridfit.current_iteration < MAX_ITERATIONS && likelihood_diff > WANTED_PRECISION)
 	{
 		calculate_upperleft_corner_point(&gridfit);
-		gridfit_iterate(&gridfit);
+
+		if(gridfit.parallel)
+			gridfit_iterate_parallel(&gridfit);
+		else
+			gridfit_iterate(&gridfit);
 
 		get_params_from_dist(gridfit.fitter_dists[gridfit.min_fitter], best_params);
 		set_new_center(&gridfit, best_params);
