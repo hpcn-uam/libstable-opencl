@@ -5,8 +5,8 @@
 #define DIM_MU 2
 #define DIM_SIGMA 3
 
-static double initial_point_separation[] = { 0.1, 0.1, 0.1, 0.1 };
-static double initial_contracting_coefs[] = { 0.8, 0.8, 0.8, 0.8 };
+static double initial_point_separation[] = { 0.2, 0.2, 0.2, 0.2 };
+static double initial_contracting_coefs[] = { 0.7, 0.8, 0.6, 0.8 };
 
 static void get_params_from_dist(StableDist* dist, double params[4])
 {
