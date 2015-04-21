@@ -188,6 +188,7 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 
 	gridfit_init(&gridfit, dist, data, length);
 	get_params_from_dist(dist, gridfit.centers);
+	gridfit.min_fitter = 0;
 
 	while(gridfit.current_iteration < MAX_ITERATIONS && likelihood_diff > WANTED_PRECISION)
 	{
