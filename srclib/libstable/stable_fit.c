@@ -193,8 +193,8 @@ void stable_fit_init(StableDist *dist, const double * data, const unsigned int l
 	}
 
 	//necesarios los estadisticos para estimar sigma y mu en cada iteracion
-	//if(pnu_c != NULL && pnu_z !=NULL)
-	cztab(sorted, length, pnu_c, pnu_z);
+	if(pnu_c != NULL && pnu_z !=NULL)
+		cztab(sorted, length, pnu_c, pnu_z);
 
 	free(sorted);
 	return;
