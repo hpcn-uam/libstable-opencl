@@ -54,7 +54,7 @@ struct fitresult
 };
 
 #define calc_avg_err(variable) do { \
-	variable /= Nexp; \
+	variable ## _est /= Nexp; \
 	variable ## _est_err = sqrt((variable ## _est_err / Nexp - variable ## _est * variable ## _est) * Nexp / (Nexp - 1)); \
 } while (0)
 
