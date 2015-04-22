@@ -188,10 +188,10 @@ int main (int argc, char *argv[])
 
 						for (iexp = 0; iexp < Nexp; iexp++)
 						{
-							stable_fit_init(dist, data, N, NULL, NULL);
+							stable_fit_init(dist, data + iexp * N, N, NULL, NULL);
 
 							start = get_ms_time();
-							test->func(dist, data, N);
+							test->func(dist, data + iexp * N, N);
 							end = get_ms_time();
 
 							add_avg_err(alfa);
