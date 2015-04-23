@@ -497,7 +497,7 @@ stable_like_params;
 
 /* Estimation functions */
 
-void stable_fit_init(StableDist *dist, const double *data,
+short stable_fit_init(StableDist *dist, const double *data,
              const unsigned int length,  double *nu_c,double *nu_z);
 
 int stable_fit_koutrouvelis(StableDist *dist, const double *data, const unsigned int length);

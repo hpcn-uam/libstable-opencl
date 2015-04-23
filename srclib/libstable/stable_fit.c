@@ -169,7 +169,7 @@ double stable_minusloglikelihood_whole(const gsl_vector * theta, void * p)
 }
 
 //stable_like_params
-void stable_fit_init(StableDist *dist, const double * data, const unsigned int length, double *pnu_c, double *pnu_z)
+short stable_fit_init(StableDist *dist, const double * data, const unsigned int length, double *pnu_c, double *pnu_z)
 {
 	double *sorted = NULL;
 	double alfa0, beta0, sigma0, mu1;
@@ -189,7 +189,8 @@ void stable_fit_init(StableDist *dist, const double * data, const unsigned int l
 	if (stable_setparams(dist, alfa0, beta0, sigma0, mu1, 0) < 0)
 	{
 		printf("INITIAL ESTIMATED PARAMETER ARE NOT VALID");
-		fflush(stdout); exit(3);
+		fflush(stdout);
+		return -1;
 	}
 
 	//necesarios los estadisticos para estimar sigma y mu en cada iteracion
@@ -197,7 +198,7 @@ void stable_fit_init(StableDist *dist, const double * data, const unsigned int l
 		cztab(sorted, length, pnu_c, pnu_z);
 
 	free(sorted);
-	return;
+	return 0;
 }
 
 int stable_fit_iter(StableDist *dist, const double * data, const unsigned int length, const double nu_c, const double nu_z)
