@@ -119,7 +119,7 @@ int main (int argc, char *argv[])
 	sigma = 5.0;
 	mu_0 = 15.0;
 	N = 400;
-	Nexp = 11;
+	Nexp = 20;
 	seed = -1;
 
 	if ((dist = stable_create(alfa, beta, sigma, mu_0, 0)) == NULL)
