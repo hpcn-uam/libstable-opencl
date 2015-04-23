@@ -78,7 +78,11 @@ struct fitresult
 	variable ## _init += dist->variable; \
 } while(0)
 
+#define ALFA_START 0.1
+#define ALFA_END 1.9
 #define ALPHA_INCR 0.05
+#define BETA_START -0.9
+#define BETA_END 0.9
 #define BETA_INCR 0.05
 #define MU_START -10
 #define MU_END 10
@@ -165,9 +169,9 @@ int main (int argc, char *argv[])
 
 		printf("Estimation evaluation for %s%s...\n", test->name, gpu_marker);
 
-		for(alfa = 0; alfa <= 2; alfa += ALPHA_INCR)
+		for(alfa = ALFA_START; alfa <= ALFA_END; alfa += ALPHA_INCR)
 		{
-			for(beta = -1; beta <= 1; beta += BETA_INCR)
+			for(beta = BETA_START; beta <= BETA_END; beta += BETA_INCR)
 			{
 				for(mu_0 = MU_START; mu_0 <= MU_END; mu_0 += MU_INCR)
 				{
@@ -188,7 +192,8 @@ int main (int argc, char *argv[])
 
 						for (iexp = 0; iexp < Nexp; iexp++)
 						{
-							stable_fit_init(dist, data + iexp * N, N, NULL, NULL);
+							if(stable_fit_init(dist, data + iexp * N, N, NULL, NULL) != 0)
+								continue;
 
 							start = get_ms_time();
 							test->func(dist, data + iexp * N, N);
