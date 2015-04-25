@@ -131,7 +131,6 @@ int main (int argc, char *argv[])
 	stable_set_THREADS(1);
 	stable_set_absTOL(1e-16);
 	stable_set_relTOL(1e-8);
-	stable_set_FLOG("errlog.txt");
 
 	if (seed < 0)
 		stable_rnd_seed(dist, time(NULL));
