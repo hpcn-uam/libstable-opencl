@@ -172,9 +172,11 @@ int main (int argc, char *argv[])
 		{
 			for(beta = BETA_START; beta <= BETA_END; beta += BETA_INCR)
 			{
-				for(mu_0 = MU_START; mu_0 <= MU_END; mu_0 += MU_INCR)
+				mu_0 = 0;
+				sigma = 1;
+				//for(mu_0 = MU_START; mu_0 <= MU_END; mu_0 += MU_INCR)
 				{
-					for(sigma = SIGMA_START; sigma <= SIGMA_END; sigma += SIGMA_INCR)
+				//	for(sigma = SIGMA_START; sigma <= SIGMA_END; sigma += SIGMA_INCR)
 					{
 						double alfa_est = 0, beta_est = 0, mu_0_est = 0, sigma_est = 0;
 						double alfa_est_err = 0, beta_est_err = 0, mu_0_est_err = 0, sigma_est_err = 0;
