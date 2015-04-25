@@ -101,11 +101,11 @@ int main (int argc, char *argv[])
 	struct fittest tests[] =
 	{
 		//{ stable_fit_mle, 0, "MLE" },
-		//{ stable_fit_mle2d, 0, "M2D"},
-		//{ stable_fit_koutrouvelis, 0, "KTR"},
+		{ stable_fit_mle2d, 0, "M2D"},
+		{ stable_fit_koutrouvelis, 0, "KTR"},
 		{ stable_fit_mle, 1, "MLE" },
 		{ stable_fit_mle2d, 1, "M2D"},
-		//{ stable_fit_koutrouvelis, 1, "KTR"},
+		{ stable_fit_koutrouvelis, 1, "KTR"},
 		{ stable_fit_grid, 1, "GRD" },
 		{ stable_fit_grid, 0, "GRD" }
 	};
