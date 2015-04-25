@@ -215,7 +215,7 @@ int main (int argc, char *argv[])
 
 						ms_duration /= Nexp;
 
-						fprintf(out, "%lf %lf %lf %lf %lf", alfa, beta, mu_0, sigma, ms_duration);
+						fprintf(out, "%lf %lf %lf %lf %lf ", alfa, beta, mu_0, sigma, ms_duration);
 						fprintf(out, "%lf %lf %lf %lf %lf %lf %lf %lf\n",
 					       alfa_est, alfa_est_err,
 					       beta_est, beta_est_err,
