@@ -188,7 +188,7 @@ short stable_fit_init(StableDist *dist, const double * data, const unsigned int 
 	//punto inicial se mete en la dist
 	if (stable_setparams(dist, alfa0, beta0, sigma0, mu1, 0) < 0)
 	{
-		printf("INITIAL ESTIMATED PARAMETER ARE NOT VALID");
+		printf("INITIAL ESTIMATED PARAMETER ARE NOT VALID\n");
 		fflush(stdout);
 		return -1;
 	}

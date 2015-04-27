@@ -102,7 +102,7 @@ static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_nu
 #if STABLE_MIN_LOG <= 0
     int i;
     char version[500], name[500], vendor[500], extensions[500];
-    cl_uint float_vecwidth, double_vecwidth;
+    cl_uint float_vecwidth = 0, double_vecwidth = 0;
 
     stablecl_log(log_message, "[Stable-OpenCL] Available platforms (OPENCL_FORCE_CPU = %d): %d\n", OPENCL_FORCE_CPU, platform_num);
     for (i = 0; i < platform_num; i++)
