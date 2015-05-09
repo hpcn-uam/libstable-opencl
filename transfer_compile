@@ -35,7 +35,11 @@ function remote_make()
 
 echo "Target: $host"
 echob "Syncing files..."
-rsync -avzPt --exclude=.git --exclude=data --exclude=results --exclude=obj --exclude=bin --exclude=lib ./ $host:/home/gjulian/libstable || (echo ${tred}Sync failed.${tnorm} && exit 1)
+rsync -avzPt --exclude=.git --exclude=data --exclude=results \
+	--exclude=obj --exclude=bin --exclude=lib --exclude="*pdf" \
+	--exclude="*.dat" --exclude="*.results" --exclude="*.txt" \
+	--exclude="*.out" \
+	-- ./ $host:/home/gjulian/libstable || (echo ${tred}Sync failed.${tnorm} && exit 1)
 echob "Synced. Remoting to compile..."
 
 remote_make /home/gjulian/libstable Library
