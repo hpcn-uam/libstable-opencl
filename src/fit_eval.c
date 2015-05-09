@@ -116,9 +116,6 @@ int main (int argc, char *argv[])
 	/* Random sample generation */
 	data = (double *) malloc(Nexp * N * sizeof(double));
 
-	stable_rnd(dist, data, Nexp);
-
-
 	for (i = 0; i < num_tests; i++)
 	{
 		test = tests + i;
@@ -157,7 +154,11 @@ int main (int argc, char *argv[])
 						double alfa_est = 0, beta_est = 0, mu_0_est = 0, sigma_est = 0;
 						double alfa_est_err = 0, beta_est_err = 0, mu_0_est_err = 0, sigma_est_err = 0;
 						stable_setparams(dist, alfa, beta, sigma, mu_0, 0);
-						stable_rnd(dist, data, Nexp);
+
+						printf("Testing %.2lf/%.2lf/%.2lf/%.2lf\n", alfa, beta, mu_0, sigma);
+
+						stable_rnd(dist, data, N * Nexp);
+
 						double ms_duration = 0;
 
 						if (test->gpu_enabled)
@@ -170,7 +171,10 @@ int main (int argc, char *argv[])
 						for (iexp = 0; iexp < Nexp; iexp++)
 						{
 							if(stable_fit_init(dist, data + iexp * N, N, NULL, NULL) != 0)
+							{
+								printf("Warning: couldn't init distribution\n");
 								continue;
+							}
 
 							start = get_ms_time();
 							test->func(dist, data + iexp * N, N);
@@ -197,6 +201,9 @@ int main (int argc, char *argv[])
 					       beta_est, beta_est_err,
 					       sigma_est, sigma_est_err,
 					       mu_0_est, mu_0_est_err);
+
+						fflush(out);
+						fflush(stdout);
 					}
 
 				}
