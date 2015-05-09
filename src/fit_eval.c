@@ -54,10 +54,10 @@ struct fitresult
 
 #define ALFA_START 0.3
 #define ALFA_END 1.9
-#define ALPHA_INCR 0.05
+#define ALPHA_INCR 0.2
 #define BETA_START 0.55
 #define BETA_END 0.9
-#define BETA_INCR 0.05
+#define BETA_INCR 0.2
 #define MU_START -10
 #define MU_END 10
 #define MU_INCR 1
@@ -76,9 +76,9 @@ int main (int argc, char *argv[])
 	{
 		//{ stable_fit_mle, 0, "MLE" },
 		//{ stable_fit_mle2d, 0, "M2D"},
-		//{ stable_fit_koutrouvelis, 0, "KTR"},
-		// { stable_fit_koutrouvelis, 1, "KTR"},
-		// { stable_fit_mle, 1, "MLE" },
+		{ stable_fit_koutrouvelis, 0, "KTR"},
+		//{ stable_fit_koutrouvelis, 1, "KTR"},
+		{ stable_fit_mle, 1, "MLE" },
 		// { stable_fit_mle2d, 1, "M2D"},
 		{ stable_fit_grid, 1, "GRD" },
 		// { stable_fit_grid, 0, "GRD" }
