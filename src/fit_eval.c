@@ -28,6 +28,7 @@
 #include "stable_api.h"
 #include "benchmarking.h"
 #include "stable_gridfit.h"
+#include "sysutils.h"
 #include <time.h>
 #include <stdlib.h>
 
@@ -121,6 +122,8 @@ int main (int argc, char *argv[])
 	N = 400;
 	Nexp = 20;
 	seed = -1;
+
+	install_stop_handlers();
 
 	if ((dist = stable_create(alfa, beta, sigma, mu_0, 0)) == NULL)
 	{
