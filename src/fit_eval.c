@@ -175,6 +175,8 @@ int main (int argc, char *argv[])
 								printf("Warning: couldn't init distribution\n");
 								continue;
 							}
+							printf("Eval %d... ", iexp);
+							fflush(stdout);
 
 							start = get_ms_time();
 							test->func(dist, data + iexp * N, N);
@@ -186,6 +188,8 @@ int main (int argc, char *argv[])
 							add_avg_err(mu_0);
 
 							ms_duration += end - start;
+							printf("Done\n");
+							fflush(stdout);
 						}
 
 						calc_avg_err(alfa);
