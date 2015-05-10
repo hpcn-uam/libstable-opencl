@@ -581,6 +581,7 @@ double ecfRoot(const double * data, int N) {
   gsl_complex val = stable_samplecharfunc_point(data, N, t);
   int iter=0;
   while (iter<10000 && fabs(GSL_REAL(val))>1e-3) {
+	iter++;
     t += GSL_REAL(val)/m;
     val = stable_samplecharfunc_point(data, N, t);
   }
