@@ -83,6 +83,7 @@ int stable_fit_koutrouvelis(StableDist * dist, const double * data, const unsign
 
   int maxiter = 5;
   double xTol = 0.01;
+  short stop = 0;
 
   double * s = NULL;
   gsl_complex * phi = NULL;
@@ -154,7 +155,7 @@ int stable_fit_koutrouvelis(StableDist * dist, const double * data, const unsign
   covmat = gsl_matrix_alloc(2,2);
   cvout = gsl_vector_alloc(2);
 
-  for (iter = 0; iter<maxiter; iter ++) {
+  for (iter = 0; iter<maxiter && !stop; iter ++) {
     if (iter <= 1) {
       K = chooseK(alpha,N);
 
@@ -304,8 +305,8 @@ int stable_fit_koutrouvelis(StableDist * dist, const double * data, const unsign
 
     if (isnan(alpha) || isnan(beta) || isnan(sigma) || isnan(mu1))
     {
-      iter++;
-      break;
+      stop = 1;
+      goto loopend;
     }
 
 //    printf("check conv");
@@ -331,17 +332,15 @@ int stable_fit_koutrouvelis(StableDist * dist, const double * data, const unsign
       diffbest = diff;
 
       if (diff < xTol) {
-        gsl_matrix_free(X);
-        gsl_vector_free(ydat);
-        if (iter>0) gsl_vector_free(weights);
-        iter++;
-        break;
+        stop = 1;
+        goto loopend;
       }
     }
 
     alphaold = alpha;
     mu1old   = mu1;
 
+loopend:
     gsl_matrix_free(X);
     gsl_vector_free(ydat);
     if (iter>0) {
