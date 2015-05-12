@@ -71,6 +71,7 @@ int main (int argc, char *argv[])
 	double *data;
 	int i = 1, iexp, N, Nexp;
 	int seed;
+	char testname[100];
 	double total_duration, start, end;
 	struct fittest tests[] =
 	{
@@ -130,6 +131,7 @@ int main (int argc, char *argv[])
 
 
 		snprintf(out_fname, 100, "%s%s.dat", test->name, gpu_marker);
+		snprintf(testname, 100, "%s%s", test->name, gpu_marker);
 
 		FILE* out = fopen(out_fname, "w");
 
@@ -139,7 +141,7 @@ int main (int argc, char *argv[])
 			return 1;
 		}
 
-		printf("Estimation evaluation for %s%s...\n", test->name, gpu_marker);
+		printf("Estimation evaluation for %s...\n", testname);
 
 		for(alfa = ALFA_START; alfa <= ALFA_END; alfa += ALPHA_INCR)
 		{
@@ -155,7 +157,7 @@ int main (int argc, char *argv[])
 						double alfa_est_err = 0, beta_est_err = 0, mu_0_est_err = 0, sigma_est_err = 0;
 						stable_setparams(dist, alfa, beta, sigma, mu_0, 0);
 
-						printf("Testing %.2lf/%.2lf/%.2lf/%.2lf\n", alfa, beta, mu_0, sigma);
+						printf("Testing %s %.2lf/%.2lf/%.2lf/%.2lf\n", testname, alfa, beta, mu_0, sigma);
 
 						stable_rnd(dist, data, N * Nexp);
 
