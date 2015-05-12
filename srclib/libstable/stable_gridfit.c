@@ -96,6 +96,16 @@ static void gridfit_init(struct stable_gridfit* gridfit, StableDist *dist, const
 	memcpy(gridfit->contracting_coefs, initial_contracting_coefs, gridfit->fitter_dimensions * sizeof(double));
 }
 
+void stable_gridfit_destroy(struct stable_gridfit* gridfit)
+{
+	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
+	 	stable_free(gridfit->fitter_dists[i]);
+
+	free(gridfit->fitter_dists);
+	free(gridfit->waiting_events);
+	free(gridfit->likelihoods);
+}
+
 static void set_new_center(struct stable_gridfit* gridfit, double* params)
 {
 	memcpy(gridfit->centers, params, gridfit->fitter_dimensions);
@@ -209,6 +219,7 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 	}
 
 	set_params_to_dist(dist, best_params, gridfit.fitter_dimensions);
+	stable_gridfit_destroy(&gridfit);
 
 	return 0;
 }
