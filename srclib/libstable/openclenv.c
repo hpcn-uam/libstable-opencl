@@ -221,6 +221,8 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
                 stablecl_log(log_err, "[Stable-OpenCL] Couldn't get build log: %s\n", opencl_strerr(log_err));
             else if (err)
                 stablecl_log(log_err, "[Stable-OpenCL] Build log (size %zu):\n%s\n", build_log_size, build_log);
+
+			free(build_log);
         }
     }
 
