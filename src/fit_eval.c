@@ -224,7 +224,5 @@ int main (int argc, char *argv[])
 	free(data);
 	stable_free(dist);
 
-	fclose(stable_get_FLOG());
-
 	return 0;
 }
