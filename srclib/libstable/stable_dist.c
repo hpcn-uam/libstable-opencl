@@ -410,9 +410,7 @@ void stable_free(StableDist *dist)
     return;
 
   if(dist->gpu_enabled)
-  {
-    stable_clinteg_teardown(&dist->cli);
-  }
+    stable_deactivate_gpu(dist);
 
   gsl_integration_workspace_free(dist->gslworkspace);
   gsl_rng_free(dist->gslrand);

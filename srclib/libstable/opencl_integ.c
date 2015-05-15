@@ -59,8 +59,16 @@ static int _stable_map_gk_buffers(struct stable_clinteg *cli, size_t points)
 
 static int  _stable_unmap_gk_buffers(struct stable_clinteg* cli)
 {
-    clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
-    clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
+	int err;
+    err = clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
+
+	if(err) return err;
+    cli->h_gauss = NULL;
+
+    err = clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
+
+	if(err) return err;
+    cli->h_kronrod = NULL;
 
     return 0;
 }
@@ -282,7 +290,9 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
 
     bench_end(cli->profiling.set_results, cli->profile_enabled);
 
-	_stable_unmap_gk_buffers(cli);
+	cl_int retval = _stable_unmap_gk_buffers(cli);
+	if(retval)
+		stablecl_log(log_warning, "[Stable-OpenCl] Error unmapping buffers: %s (%d)", opencl_strerr(retval), retval);
 
     return err;
 }
@@ -290,8 +300,12 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
 
 void stable_clinteg_teardown(struct stable_clinteg *cli)
 {
-    clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
-    clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
+    if(cli->h_gauss)
+        clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
+
+    if(cli->h_kronrod)
+        clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
+
     clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->args, cli->h_args, 0, NULL, NULL);
 
     clReleaseMemObject(cli->gauss);
