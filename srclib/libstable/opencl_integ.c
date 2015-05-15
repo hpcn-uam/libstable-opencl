@@ -57,6 +57,14 @@ static int _stable_map_gk_buffers(struct stable_clinteg *cli, size_t points)
     return err;
 }
 
+static int  _stable_unmap_gk_buffers(struct stable_clinteg* cli)
+{
+    clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
+    clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
+
+    return 0;
+}
+
 int stable_clinteg_init(struct stable_clinteg *cli)
 {
     int err;
@@ -273,6 +281,8 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
     }
 
     bench_end(cli->profiling.set_results, cli->profile_enabled);
+
+	_stable_unmap_gk_buffers(cli);
 
     return err;
 }
