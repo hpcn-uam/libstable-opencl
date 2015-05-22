@@ -249,7 +249,6 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 
 		get_params_from_dist(gridfit.fitter_dists[gridfit.min_fitter], best_params);
 		set_new_center(&gridfit, best_params);
-		printf("A\n");
 		estimate_remaining_parameters(&gridfit);
 
 		point_sep_iterate(&gridfit);
