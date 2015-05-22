@@ -145,8 +145,6 @@ static void estimate_remaining_parameters(struct stable_gridfit* gridfit)
 
 	czab(alfa, beta, current_mu, current_sigma,
 		gridfit->centers + DIM_MU, gridfit->centers + DIM_SIGMA);
-
-	printf("McCulloch reports %lf, %lf\n", gridfit->centers[DIM_MU], gridfit->centers[DIM_SIGMA]);
 }
 
 static void gridfit_iterate(struct stable_gridfit* gridfit)
