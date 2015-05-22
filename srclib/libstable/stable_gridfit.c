@@ -1,12 +1,13 @@
 #include "stable_gridfit.h"
+#include "mcculloch.h"
 
 #define DIM_ALPHA 0
 #define DIM_BETA 1
 #define DIM_MU 2
 #define DIM_SIGMA 3
 
-static double initial_point_separation[] = { 0.2, 0.2, 0.2, 0.2 };
-static double initial_contracting_coefs[] = { 0.7, 0.8, 0.6, 0.8 };
+static double initial_point_separation[] = { 0.2, 0.2, 0.2, 0.4 };
+static double initial_contracting_coefs[] = { 0.7, 0.8, 0.6, 0.2 };
 
 static void get_params_from_dist(StableDist* dist, double params[4])
 {
@@ -65,14 +66,32 @@ static void point_sep_iterate(struct stable_gridfit* gridfit)
 		gridfit->point_sep[dim] *= gridfit->contracting_coefs[dim];
 }
 
+int dbl_compare (const void * a, const void * b)
+{
+	double da = *(const double *)a;
+	double db = *(const double *)b;
+
+	return (db < da) - (da < db);
+}
+
+static void sort_data(struct stable_gridfit* gridfit, const double* data)
+{
+	double* sorted = calloc(gridfit->data_length, sizeof(double));
+	memcpy(sorted, data, gridfit->data_length * sizeof(double));
+	qsort(sorted, gridfit->data_length, sizeof(double), dbl_compare);
+
+	gridfit->data = sorted;
+}
+
 static void gridfit_init(struct stable_gridfit* gridfit, StableDist *dist, const double *data, const unsigned int length)
 {
-	gridfit->data = data;
 	gridfit->data_length = length;
-	gridfit->fitter_dimensions = MAX_STABLE_PARAMS;
+	gridfit->fitter_dimensions = ESTIMATING_PARAMS;
 	gridfit->fitter_dist_count = 1;
 	gridfit->current_iteration = 0;
 	gridfit->parallel = dist->parallel_gridfit;
+
+	sort_data(gridfit, data);
 
 	for(size_t i = 0; i < gridfit->fitter_dimensions; i++)
 	{
@@ -104,11 +123,30 @@ void stable_gridfit_destroy(struct stable_gridfit* gridfit)
 	free(gridfit->fitter_dists);
 	free(gridfit->waiting_events);
 	free(gridfit->likelihoods);
+	free(gridfit->data);
 }
 
 static void set_new_center(struct stable_gridfit* gridfit, double* params)
 {
 	memcpy(gridfit->centers, params, gridfit->fitter_dimensions);
+}
+
+static void estimate_remaining_parameters(struct stable_gridfit* gridfit)
+{
+	if(gridfit->fitter_dimensions == 4)
+		return; // No parameters remaining.
+	else if(gridfit->fitter_dimensions < 2)
+		abort(); // This should not happen. Aborting so we notice.
+
+	double alfa = gridfit->centers[DIM_ALPHA];
+	double beta = gridfit->centers[DIM_BETA];
+	double current_sigma = gridfit->centers[DIM_SIGMA];
+	double current_mu = gridfit->centers[DIM_MU];
+
+	czab(alfa, beta, current_mu, current_sigma,
+		gridfit->centers + DIM_MU, gridfit->centers + DIM_SIGMA);
+
+	printf("McCulloch reports %lf, %lf\n", gridfit->centers[DIM_MU], gridfit->centers[DIM_SIGMA]);
 }
 
 static void gridfit_iterate(struct stable_gridfit* gridfit)
@@ -211,6 +249,8 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 
 		get_params_from_dist(gridfit.fitter_dists[gridfit.min_fitter], best_params);
 		set_new_center(&gridfit, best_params);
+		printf("A\n");
+		estimate_remaining_parameters(&gridfit);
 
 		point_sep_iterate(&gridfit);
 

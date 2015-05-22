@@ -6,6 +6,7 @@
 
 #define GRIDFIT_TEST_PER_DIM 2
 #define MAX_STABLE_PARAMS 4
+#define ESTIMATING_PARAMS 2
 #define MAX_ITERATIONS 200 // Tip: Use the iterations_calc script in scripts folder
 #define WANTED_PRECISION 10
 
@@ -16,7 +17,7 @@ struct stable_gridfit {
 	size_t fitter_dimensions;
 	size_t fitter_per_dimension[MAX_STABLE_PARAMS];
 	unsigned int current_iteration;
-	const double *data;
+	double *data;
 	size_t data_length;
 	double corners[MAX_STABLE_PARAMS];
 	double centers[MAX_STABLE_PARAMS];
