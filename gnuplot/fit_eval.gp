@@ -12,6 +12,6 @@ set xtics border out
 set ytics border out
 
 splot data using 1:2:($6-$1) with lines title "α estimation bias",\
-	data using 1:2:($8-$1) with lines title "β estimation bias"
+	data using 1:2:($8-$2) with lines title "β estimation bias"
 
 pause -1
