@@ -200,6 +200,10 @@ static void gridfit_iterate_parallel(struct stable_gridfit* gridfit)
 			stable_clinteg_points_async(gridfit->cli, (double*) gridfit->data, gridfit->data_length, dist, NULL);
 			fitter_enabled[i] = 1;
 		}
+		else
+		{
+			fitter_enabled[i] = 0;
+		}
 	}
 
 	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
@@ -251,7 +255,7 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 
 		point_sep_iterate(&gridfit);
 
-		likelihood_diff = gridfit.max_likelihood - gridfit.min_likelihood;
+		likelihood_diff = (gridfit.max_likelihood - gridfit.min_likelihood) / length;
 		gridfit.current_iteration++;
 	}
 

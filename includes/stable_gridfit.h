@@ -8,7 +8,7 @@
 #define MAX_STABLE_PARAMS 4
 #define ESTIMATING_PARAMS 2
 #define MAX_ITERATIONS 200 // Tip: Use the iterations_calc script in scripts folder
-#define WANTED_PRECISION 10
+#define WANTED_PRECISION 0.2
 
 struct stable_gridfit {
 	StableDist* initial_dist;
