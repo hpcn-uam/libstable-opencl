@@ -18,3 +18,5 @@ results/*
 *.png
 *.pdf
 *.out
+*.txt
+*.bz2
