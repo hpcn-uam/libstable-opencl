@@ -20,3 +20,4 @@ results/*
 *.out
 *.txt
 *.bz2
+*.pyc
