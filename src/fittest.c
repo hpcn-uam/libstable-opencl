@@ -41,12 +41,12 @@ int main (int argc, char* argv[])
 
   StableDist *dist = NULL;
 
-  if (argc > 1) {  alfa = strtod(argv[i], &aux); argc--; i++; } else alfa = 1.01;
-  if (argc > 1) {  beta = strtod(argv[i], &aux); argc--; i++; } else beta = 0.2;
+  if (argc > 1) {  alfa = strtod(argv[i], &aux); argc--; i++; } else alfa = 0.1;
+  if (argc > 1) {  beta = strtod(argv[i], &aux); argc--; i++; } else beta = -0.9;
   if (argc > 1) { sigma = strtod(argv[i], &aux); argc--; i++; } else sigma = 1.0;
   if (argc > 1) {    mu = strtod(argv[i], &aux); argc--; i++; } else mu = 0.0;
-  if (argc > 1) {     N = (int)strtod(argv[i], &aux); argc--; i++; } else N = 100;
-  if (argc > 1) {  Nexp = (int)strtod(argv[i], &aux); argc--; i++; } else Nexp = 20;
+  if (argc > 1) {     N = (int)strtod(argv[i], &aux); argc--; i++; } else N = 1000;
+  if (argc > 1) {  Nexp = (int)strtod(argv[i], &aux); argc--; i++; } else Nexp = 1;
   if (argc > 1) {  seed = (int)strtod(argv[i], &aux); argc--; i++; } else seed = -1;
 
   printf("%f %f %f %f %d %d\n", alfa, beta, sigma, mu, N, Nexp);
