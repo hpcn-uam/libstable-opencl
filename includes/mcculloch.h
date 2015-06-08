@@ -38,4 +38,6 @@ void cztab(double *x, unsigned int n, double *cn, double *zn);
 
 void czab(double alfa, double beta, double cn, double q50, double *c, double *zeta);
 
+double frctl (const double *xx, double p, unsigned int n);
+
 #endif
