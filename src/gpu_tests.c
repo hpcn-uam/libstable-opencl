@@ -35,9 +35,9 @@
 
 int main (void)
 {
-    double alfa = 1.2, beta = 0.1, sigma = 1.0, mu = 0.0;
+    double alfa = 0.25, beta = 0, sigma = 1.0, mu = 0.0;
     int param = 0;
-    double x[] = { 2, 1, 0, 0.307368 };
+    double x[] = { -1000, 1, 0, 0.307368 };
     double pdf[3] = { 0,0,0 }, gpu_pdf[3] = { 0,0,0 };
     double err[3] = { 0,0,0 }, gpu_err[3] = { 0,0,0 };
     size_t num_points = sizeof x / sizeof(double);
