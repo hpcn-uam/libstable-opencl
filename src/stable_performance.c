@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
     if(argc == 4)
     {
         stable_activate_gpu(dist);
-        printf("GPU activada");
+        printf("GPU activada\n");
     }
 
     finteg = stable_set_FINTEG("data_integrando.txt");
