@@ -1,7 +1,7 @@
 #!/usr/bin/gnuplot
 
-set term cairolatex size 15cm,10cm
-set output "fit_eval_bias.tex"
+set term pngcairo size 800,600
+set output "fit_eval_bias.png"
 
 set xlabel "α"
 set ylabel "β"
@@ -17,7 +17,3 @@ set ytics border out
 
 splot data using 1:2:(abs($6-$1)) with lines title "alpha estimation bias",\
 	data using 1:2:(abs($8-$2)) with lines title "beta estimation bias"
-
-set term wxt
-replot
-pause -1
