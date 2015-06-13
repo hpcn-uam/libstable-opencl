@@ -72,7 +72,9 @@ int main (void)
 
                     gpu_err_sum += fabs(gpu_err[j]);
                     abs_diff_sum += diff;
-                    rel_diff_sum += diff / cpu;
+
+                    if(cpu != 0)
+                        rel_diff_sum += diff / cpu;
                 }
 
                 abs_diff_sum /= points_per_interval;
