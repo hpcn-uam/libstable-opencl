@@ -7,9 +7,9 @@
 
 int main (void)
 {
-    double alfas[] = { 0.25, 0.5, 0.75, 1.5, 1.75 };
+    double alfas[] = { 0.25, 0.5, 0.75, 1.25 };
     double betas[] = { 0, 0.5, 1 };
-    double intervals[] = { -1000, -10, 10, 1000};
+    double intervals[] = { -100, 100 };
     int points_per_interval = 100;
     double cpu_pdf[points_per_interval], gpu_pdf[points_per_interval];
     double cpu_err[points_per_interval], gpu_err[points_per_interval];
@@ -37,9 +37,8 @@ int main (void)
     size_t interval_count = (sizeof(intervals) / sizeof(double)) - 1;
     size_t alfa_count = sizeof(alfas) / sizeof(double);
     size_t beta_count = sizeof(betas) / sizeof(double);
-    FILE* f = fopen("/tmp/stabout", "w");
 
-    double abs_diff_sum, rel_diff_sum;
+    double abs_diff_sum, rel_diff_sum, gpu_err_sum;
 
     for(i = 0; i < interval_count; i++)
     {
@@ -63,6 +62,7 @@ int main (void)
 
                 abs_diff_sum = 0;
                 rel_diff_sum = 0;
+                gpu_err_sum = 0;
 
                 for(j = 0; j < points_per_interval; j++)
                 {
@@ -70,21 +70,19 @@ int main (void)
                     double gpu = gpu_pdf[j];
                     double diff = fabs(cpu - gpu);
 
-                    fprintf(f, "%lf %lf %lf\n", points[j], cpu, gpu);
-
+                    gpu_err_sum += fabs(gpu_err[j]);
                     abs_diff_sum += diff;
                     rel_diff_sum += diff / cpu;
                 }
 
                 abs_diff_sum /= points_per_interval;
                 rel_diff_sum /= points_per_interval;
+                gpu_err_sum /= points_per_interval;
 
-                printf("%.3lf %.3lf %1.3g   \t%1.3g\n", alfas[ai], betas[bi], abs_diff_sum, rel_diff_sum);
+                printf("%.3lf %.3lf %1.3g   \t%1.3g\t%1.3g\n", alfas[ai], betas[bi], abs_diff_sum, rel_diff_sum, gpu_err_sum);
             }
         }
     }
-
-    fclose(f);
 
     stable_free(dist);
     return 0;
