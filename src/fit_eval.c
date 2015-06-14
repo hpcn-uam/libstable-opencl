@@ -52,10 +52,10 @@ struct fitresult
 	variable ## _init += dist->variable; \
 } while(0)
 
-#define ALFA_START 0.1
+#define ALFA_START 0.5
 #define ALFA_END 1.9
 #define ALPHA_INCR 0.05
-#define BETA_START -0.9
+#define BETA_START 0
 #define BETA_END 0.9
 #define BETA_INCR 0.05
 #define MU_START -10
