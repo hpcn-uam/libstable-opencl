@@ -6,9 +6,14 @@ tred=$(tput setaf 1)
 tgreen=$(tput setaf 2)
 tyellow=$(tput setaf 3)
 host=gjulian@azufre.ii.uam.es
+path=/home/gjulian/libstable
 
 if [ ! -z "$1" ]; then
-	host=gjulian@$1.ii.uam.es
+	host=$1
+fi
+
+if [ ! -z "$2" ]; then
+	path=$2
 fi
 
 function echob()
@@ -21,7 +26,7 @@ function remote_make()
 	path=$1
 	name=$2
 
-	out=$(ssh -t $host "cd $path; make -j 8 all" 2>&1)
+	out=$(ssh -t $host "cd $path; make -j 8" 2>&1)
 	retval=$?
 	echo "$out" | ./hilite.sh -f red [Ee]rror | ./hilite.sh -f yellow warning
 
@@ -39,7 +44,7 @@ rsync -avzPt --exclude=.git --exclude=data --exclude=results \
 	--exclude=obj --exclude=bin --exclude=lib --exclude="*pdf" \
 	--exclude="*.dat" --exclude="*.results" --exclude="*.txt" \
 	--exclude="*.out" \
-	-- ./ $host:/home/gjulian/libstable || (echo ${tred}Sync failed.${tnorm} && exit 1)
+	-- ./ $host:$path || (echo ${tred}Sync failed.${tnorm} && exit 1)
 echob "Synced. Remoting to compile..."
 
-remote_make /home/gjulian/libstable Library
+remote_make $path Library
