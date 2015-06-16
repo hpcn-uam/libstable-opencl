@@ -35,7 +35,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
                 sizeof(testtype) * size, array, &err);
     if (err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Buffer creation failed: %s\n", opencl_strerr(err));
+        stablecl_log(log_err, "Buffer creation failed: %s", opencl_strerr(err));
         goto cleanup;
     }
 
@@ -47,7 +47,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
 
     if(err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Error enqueueing the kernel command: %s (%d)\n", opencl_strerr(err), err);
+        stablecl_log(log_err, "Error enqueueing the kernel command: %s (%d).", opencl_strerr(err), err);
         goto cleanup;
     }
 
@@ -55,7 +55,7 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
     stablecl_profileinfo(profiling, event);
 
     if(array[0] != sum)
-        stablecl_log(log_err, "[Stable-OpenCl] Error: expected result is %ld, actual was %ld.\n", sum, array[0]);
+        stablecl_log(log_err, "Error: expected result is %ld, actual was %ld.", sum, array[0]);
 
 cleanup:
     if(array_ocl)
@@ -87,11 +87,11 @@ short test_kernel(const char* file, const char* kernel_name)
 
 	if (opencl_initenv(&ocl, file, kernel_name))
     {
-        stablecl_log(log_message, "[Stable-OpenCl] OpenCL environment failure.\n");
+        stablecl_log(log_message, "OpenCL environment failure.");
         return -1;
     }
 
-    stablecl_log(log_message, "[Stable-OpenCl] Testing kernel %s\n", kernel_name);
+    stablecl_log(log_message, "Testing kernel %s...", kernel_name);
 
     for(wg_i = 0; wg_i < sizeof workgroup_sizes / sizeof(size_t); wg_i++)
     {

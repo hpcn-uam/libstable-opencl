@@ -88,14 +88,14 @@ int stable_clinteg_init(struct stable_clinteg *cli)
 
     if (_stable_can_overflow(cli))
     {
-        stablecl_log(log_warning, "[Stable-OpenCl] Warning: possible overflow in work dimension (%d x %d).\n"
+        stablecl_log(log_warning, "Warning: possible overflow in work dimension (%d x %d)."
                      , cli->points_rule, cli->subdivisions);
         return -1;
     }
 
     if (opencl_initenv(&cli->env, "opencl/stable_pdf.cl", "stable_pdf_points"))
     {
-        stablecl_log(log_message, "[Stable-OpenCl] OpenCL environment failure.\n");
+        stablecl_log(log_message, "OpenCL environment failure.");
         return -1;
     }
 
@@ -103,7 +103,7 @@ int stable_clinteg_init(struct stable_clinteg *cli)
 
     if (!cli->subdivisions)
     {
-        perror("[Stable-OpenCl] Host memory allocation failed.");
+        perror("Host memory allocation failed.");
         return -1;
     }
 
@@ -115,7 +115,7 @@ int stable_clinteg_init(struct stable_clinteg *cli)
 
     if (err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Buffer creation failed: %s\n", opencl_strerr(err));
+        stablecl_log(log_err, "Buffer creation failed: %s", opencl_strerr(err));
         return -1;
     }
 
@@ -123,8 +123,8 @@ int stable_clinteg_init(struct stable_clinteg *cli)
 
     if (err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Buffer mapping failed: %s. "
-                     "Host pointers (gauss, kronrod, args): (%p, %p, %p)\n",
+        stablecl_log(log_err, "Buffer mapping failed: %s. "
+                     "Host pointers (gauss, kronrod, args): (%p, %p, %p)",
                      opencl_strerr(err), cli->h_gauss, cli->h_kronrod, cli->h_args);
         return -1;
     }
@@ -174,13 +174,13 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
         cli->h_args->integrand = PDF_ALPHA_NEQ1;
 
 #ifdef CL_PRECISION_IS_FLOAT
-    stablecl_log(log_message, "[Stable-OpenCl] Using floats, forcing cast.\n");
+    stablecl_log(log_message, "Using floats, forcing cast.");
 
     points = (cl_precision*) calloc(num_points, sizeof(cl_precision));
 
     if(!points)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Couldn't allocate memory.\n");
+        stablecl_log(log_err, "Couldn't allocate memory.");
         goto cleanup;
     }
 
@@ -195,7 +195,7 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
 
     if (err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Couldn't set buffers: %d (%s)\n", err, opencl_strerr(err));
+        stablecl_log(log_err, "Couldn't set buffers: %d (%s)", err, opencl_strerr(err));
         goto cleanup;
     }
 
@@ -209,11 +209,11 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
 
     if (err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Couldn't set kernel arguments: error %d\n", err);
+        stablecl_log(log_err, "Couldn't set kernel arguments: error %d", err);
         goto cleanup;
     }
 
-    stablecl_log(log_message, "[Stable-OpenCl] Enqueing kernel - %zu × %zu work threads, %zu × %zu workgroup size\n", work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
+    stablecl_log(log_message, "Enqueing kernel - %zu × %zu work threads, %zu × %zu workgroup size", work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
 
     bench_begin(cli->profiling.enqueue, cli->profile_enabled);
     err = clEnqueueNDRangeKernel(opencl_get_queue(&cli->env), cli->env.kernel,
@@ -222,12 +222,12 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
 
     if (err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Error enqueueing the kernel command: %s (%d)\n", opencl_strerr(err), err);
+        stablecl_log(log_err, "Error enqueueing the kernel command: %s (%d)", opencl_strerr(err), err);
         goto cleanup;
     }
 
 cleanup:
-    stablecl_log(log_message, "[Stable-OpenCl] Async command issued.\n");
+    stablecl_log(log_message, "Async command issued.");
 
 #ifdef CL_PRECISION_IS_FLOAT
     if(points) free(points);
@@ -245,7 +245,7 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
 
     if(err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Couldn't issue evaluation command to the GPU.\n");
+        stablecl_log(log_err, "Couldn't issue evaluation command to the GPU.");
         return err;
     }
 
@@ -265,7 +265,7 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
 
     if (err)
     {
-        stablecl_log(log_err, "[Stable-OpenCl] Error reading results from the GPU: %s (%d)\n", opencl_strerr(err), err);
+        stablecl_log(log_err, "Error reading results from the GPU: %s (%d)", opencl_strerr(err), err);
         return err;
     }
 
@@ -277,22 +277,23 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
     for (size_t i = 0; i < num_points; i++)
     {
         pdf_results[i] = cli->h_kronrod[i];
+        char msg[500];
 
-        stablecl_log(log_message, "[Stable-OpenCl] Results set P%zu: gauss_sum = %.3g, kronrod_sum = %.3g", i, cli->h_gauss[i], cli->h_kronrod[i]);
+        snprintf(msg, 500, "Results set P%zu: gauss_sum = %.3g, kronrod_sum = %.3g", i, cli->h_gauss[i], cli->h_kronrod[i]);
         if (errs)
         {
             errs[i] = cli->h_kronrod[i] - cli->h_gauss[i];
-            stablecl_log(log_message, ", abserr = %.3g", errs[i]);
+            snprintf(msg + strlen(msg) -  1, 500 - strlen(msg), ", abserr = %.3g", errs[i]);
         }
 
-        stablecl_log(log_message, "\n");
+        stablecl_log(log_message, msg);
     }
 
     bench_end(cli->profiling.set_results, cli->profile_enabled);
 
 	cl_int retval = _stable_unmap_gk_buffers(cli);
 	if(retval)
-		stablecl_log(log_warning, "[Stable-OpenCl] Error unmapping buffers: %s (%d)", opencl_strerr(retval), retval);
+		stablecl_log(log_warning, "Error unmapping buffers: %s (%d)", opencl_strerr(retval), retval);
 
     return err;
 }

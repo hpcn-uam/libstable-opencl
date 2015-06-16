@@ -65,14 +65,14 @@ static void _opencl_kernel_info(cl_kernel kernel)
     max_dims /= sizeof(size_t);
     if(err)
     {
-        stablecl_log(log_err, "[Stable-OpenCL] Unable to get kernel info: %s (%d)\n", opencl_strerr(err), err);
+        stablecl_log(log_err, "Unable to get kernel info: %s (%d)", opencl_strerr(err), err);
         return;
     }
 
-    stablecl_log(log_message, "[Stable-OpenCL] Max dimensions for kernel: %zu.\n", max_dims);
+    stablecl_log(log_message, "Max dimensions for kernel: %zu.", max_dims);
 
     for (j = 0; j < max_dims; j++)
-        stablecl_log(log_message, "[Stable-OpenCL] Max kernel workgroup size for dimension %zu: %zu\n", j, wg_sizes[j]);
+        stablecl_log(log_message, "Max kernel workgroup size for dimension %zu: %zu", j, wg_sizes[j]);
 #endif
 }
 
@@ -87,13 +87,13 @@ static void _opencl_device_info(cl_device_id device)
     clGetDeviceInfo(device, CL_DEVICE_NAME, 128 * sizeof(char), dev_name, NULL);
     clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof wg_sizes, wg_sizes, &max_dims);
 
-    stablecl_log(log_message, "[Stable-OpenCL] Device obtained: %s\n", dev_name);
+    stablecl_log(log_message, "Device obtained: %s", dev_name);
 
     max_dims /= sizeof(size_t);
-    stablecl_log(log_message, "[Stable-OpenCL] Max dimensions: %zu.\n", max_dims);
+    stablecl_log(log_message, "Max dimensions: %zu.", max_dims);
 
     for (j = 0; j < max_dims; j++)
-        stablecl_log(log_message, "[Stable-OpenCL] Max workgroup size for dimension %zu: %zu\n", j, wg_sizes[j]);
+        stablecl_log(log_message, "Max workgroup size for dimension %zu: %zu", j, wg_sizes[j]);
 #endif
 }
 
@@ -104,7 +104,7 @@ static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_nu
     char version[500], name[500], vendor[500], extensions[500];
     cl_uint float_vecwidth = 0, double_vecwidth = 0;
 
-    stablecl_log(log_message, "[Stable-OpenCL] Available platforms (OPENCL_FORCE_CPU = %d): %d\n", OPENCL_FORCE_CPU, platform_num);
+    stablecl_log(log_message, "Available platforms (OPENCL_FORCE_CPU = %d): %d", OPENCL_FORCE_CPU, platform_num);
     for (i = 0; i < platform_num; i++)
     {
         clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
@@ -114,8 +114,8 @@ static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_nu
         clGetPlatformInfo(platforms[i], CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &double_vecwidth, NULL);
         clGetPlatformInfo(platforms[i], CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT, sizeof(cl_uint), &float_vecwidth, NULL);
 
-        stablecl_log(log_message, "[Stable-OpenCL] %d: %s, OpenCL version %s, vendor %s. Available extensions: %s\n", i, name, version, vendor, extensions);
-        stablecl_log(log_message, "[Stable-OpenCL] Preferred vector widths: double %zu, float %zu.\n", double_vecwidth, float_vecwidth);
+        stablecl_log(log_message, "%d: %s, OpenCL version %s, vendor %s. Available extensions: %s", i, name, version, vendor, extensions);
+        stablecl_log(log_message, "Preferred vector widths: double %zu, float %zu.", double_vecwidth, float_vecwidth);
 
     }
 #endif
@@ -196,14 +196,14 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    stablecl_log(log_message, "[Stable-OpenCL] Building program...\n");
+    stablecl_log(log_message, "Building program...");
     err = clBuildProgram(env->program, 1, &env->device, NULL, NULL, NULL);
 
     log_error = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &build_log_size);
 
     if (log_error)
     {
-        stablecl_log(log_err, "[Stable-OpenCL] Error retrieving build log size.\n");
+        stablecl_log(log_err, "Error retrieving build log size.");
     }
     else
     {
@@ -211,16 +211,16 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
 
         if (!build_log)
         {
-            stablecl_log(log_err, "[Stable-OpenCL] Couldn't allocate enough memory for build log.\n");
+            stablecl_log(log_err, "Couldn't allocate enough memory for build log.");
         }
         else
         {
             log_error = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, build_log_size, build_log, &build_log_size);
 
             if (log_error)
-                stablecl_log(log_err, "[Stable-OpenCL] Couldn't get build log: %s\n", opencl_strerr(log_err));
+                stablecl_log(log_err, "Couldn't get build log: %s", opencl_strerr(log_err));
             else if (err)
-                stablecl_log(log_err, "[Stable-OpenCL] Build log (size %zu):\n%s\n", build_log_size, build_log);
+                stablecl_log(log_err, "Build log (size %zu):\n%s", build_log_size, build_log);
 
 			free(build_log);
         }
@@ -244,7 +244,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
 
 error:
     if (err && err_msg)
-        stablecl_log(log_err, "[Stable-OpenCL] Init failed with error %d at %s: %s\n", err, err_msg, opencl_strerr(err));
+        stablecl_log(log_err, "Init failed with error %d at %s: %s", err, err_msg, opencl_strerr(err));
 
     return err;
 }
@@ -385,7 +385,9 @@ void stablecl_log(log_level level, const char *string, ...)
         return;
 
     va_start(ap, string);
+    fprintf(stderr, "[Stable-OpenCL] ");
     vfprintf(stderr, string, ap);
+    fprintf(stderr, "\n");
     va_end(ap);
 }
 
@@ -413,7 +415,7 @@ void stablecl_profileinfo(struct opencl_profile *prof, cl_event event)
                                       sizeof(cl_ulong), &prof->finished, NULL);
 
     if (retval != CL_SUCCESS)
-        fprintf(stderr, "[Stable-OpenCL] clGetEventProfilingInfo error %d: %s\n", retval, opencl_strerr(retval));
+        fprintf(stderr, "clGetEventProfilingInfo error %d: %s", retval, opencl_strerr(retval));
 
     prof->submit_acum = (double)(prof->submitted - prof->queued) / 1000000;
     prof->start_acum = (double)(prof->started - prof->queued) / 1000000;
