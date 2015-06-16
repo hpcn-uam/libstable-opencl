@@ -32,6 +32,9 @@ int main (void)
         return 1;
     }
 
+    stable_set_absTOL(1e-20);
+    stable_set_relTOL(1.2e-10);
+
     size_t ai, bi, i, j;
     double points[points_per_interval];
     size_t interval_count = (sizeof(intervals) / sizeof(double)) - 1;
