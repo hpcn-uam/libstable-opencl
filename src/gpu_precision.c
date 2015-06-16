@@ -9,7 +9,7 @@ int main (void)
 {
     double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
     double betas[] = { 0, 0.5, 1 };
-    double intervals[] = { -1000, -100, 100, 1000 };
+    double intervals[] = { -100, 100 };
     int points_per_interval = 1000;
     double cpu_pdf[points_per_interval], gpu_pdf[points_per_interval];
     double cpu_err[points_per_interval], gpu_err[points_per_interval];
@@ -42,6 +42,7 @@ int main (void)
     size_t beta_count = sizeof(betas) / sizeof(double);
     size_t in_cpu_bounds_count;
     double percentage_in_bounds;
+    FILE* f = fopen("precision.dat", "w");
 
     double abs_diff_sum, rel_diff_sum, gpu_err_sum, cpu_err_sum;
 
@@ -76,6 +77,7 @@ int main (void)
                     double cpu = cpu_pdf[j];
                     double gpu = gpu_pdf[j];
                     double diff = fabs(cpu - gpu);
+                    double rel_diff = 0;
 
                     gpu_err_sum += fabs(gpu_err[j]);
 
@@ -85,7 +87,10 @@ int main (void)
                     abs_diff_sum += diff;
 
                     if(cpu != 0)
-                        rel_diff_sum += diff / cpu;
+                        rel_diff = diff / cpu;
+
+                    rel_diff_sum += rel_diff;
+                    fprintf(f, "%g %g %g %g %g %g %g %g\n", alfas[ai], betas[bi], points[j], cpu_pdf[j], gpu_pdf[j], diff, rel_diff, fabs(gpu_err[j]));
 
                     if(diff < cpu_err[j] || diff == 0)
                         in_cpu_bounds_count++;
