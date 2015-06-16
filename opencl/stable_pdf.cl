@@ -22,7 +22,7 @@
 #define vec4(b) (cl_precision4)((b), (b), (b), (b))
 
 #define SUBINT_CONTRIB_TH 0.00001
-#define MIN_CONTRIBUTING_SUBINTS GK_SUBDIVISIONS / 3
+#define MIN_CONTRIBUTING_SUBINTS GK_SUBDIVISIONS / 4
 
 cl_precision4 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc, size_t subinterval_index, size_t gk_point)
 {
@@ -100,9 +100,11 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	size_t offset_subinterval_index = subinterval_index + GK_SUBDIVISIONS / 2;
 	struct stable_precalc precalc;
 	size_t offset;
+	size_t j;
 	local cl_precision2 sums[GK_SUBDIVISIONS][KRONROD_EVAL_POINTS];
 	local int min_contributing, max_contributing;
 	short reevaluate = 0;
+	cl_precision2 previous_integration_remainder = vec(0);
 
 	min_contributing = GK_SUBDIVISIONS;
 	max_contributing = 0;
@@ -206,6 +208,20 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 		if(!reevaluate && num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS)
 		{
+			if(gk_point == 0 && subinterval_index == 0)
+			{
+				for(j = 0; j < GK_SUBDIVISIONS; j++)
+				{
+					if(j < min_contributing || j > max_contributing)
+						previous_integration_remainder += sums[j][0];
+				}
+
+				if(stable->integrand == PDF_ALPHA_NEQ1)
+			    	previous_integration_remainder *= precalc.subinterval_length * stable->c2_part / (xxi * stable->sigma);
+				else
+					previous_integration_remainder *= precalc.subinterval_length * stable->c2_part / stable->sigma;
+			}
+
 			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subinterval_length;
 			precalc.iend = precalc.ibegin + num_contributing * precalc.subinterval_length;
 
@@ -232,6 +248,8 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	    	sums[0][0] *= precalc.subinterval_length * stable->c2_part / (xxi * stable->sigma);
     	else
     		sums[0][0] *= precalc.subinterval_length * stable->c2_part / stable->sigma;
+
+    	sums[0][0] += previous_integration_remainder;
 
 		gauss[point_index] = sums[0][0].x;
 		kronrod[point_index] = sums[0][0].y;
