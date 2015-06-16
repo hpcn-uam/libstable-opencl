@@ -78,7 +78,10 @@ int main (void)
                     double diff = fabs(cpu - gpu);
 
                     gpu_err_sum += fabs(gpu_err[j]);
-                    cpu_err_sum += fabs(cpu_err[j]);
+
+                    if(!isnan(cpu_err[j]))
+                        cpu_err_sum += fabs(cpu_err[j]);
+
                     abs_diff_sum += diff;
 
                     if(cpu != 0)
