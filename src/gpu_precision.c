@@ -10,7 +10,7 @@ int main (void)
     double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
     double betas[] = { 0, 0.5, 1 };
     double intervals[] = { -1000, -100, 100, 1000 };
-    int points_per_interval = 100;
+    int points_per_interval = 1000;
     double cpu_pdf[points_per_interval], gpu_pdf[points_per_interval];
     double cpu_err[points_per_interval], gpu_err[points_per_interval];
 
@@ -40,8 +40,10 @@ int main (void)
     size_t interval_count = (sizeof(intervals) / sizeof(double)) - 1;
     size_t alfa_count = sizeof(alfas) / sizeof(double);
     size_t beta_count = sizeof(betas) / sizeof(double);
+    size_t in_cpu_bounds_count;
+    double percentage_in_bounds;
 
-    double abs_diff_sum, rel_diff_sum, gpu_err_sum;
+    double abs_diff_sum, rel_diff_sum, gpu_err_sum, cpu_err_sum;
 
     for(i = 0; i < interval_count; i++)
     {
@@ -66,6 +68,8 @@ int main (void)
                 abs_diff_sum = 0;
                 rel_diff_sum = 0;
                 gpu_err_sum = 0;
+                cpu_err_sum = 0;
+                in_cpu_bounds_count = 0;
 
                 for(j = 0; j < points_per_interval; j++)
                 {
@@ -74,17 +78,28 @@ int main (void)
                     double diff = fabs(cpu - gpu);
 
                     gpu_err_sum += fabs(gpu_err[j]);
+                    cpu_err_sum += fabs(cpu_err[j]);
                     abs_diff_sum += diff;
 
                     if(cpu != 0)
                         rel_diff_sum += diff / cpu;
+
+                    if(diff < cpu_err[j] || diff == 0)
+                        in_cpu_bounds_count++;
                 }
 
                 abs_diff_sum /= points_per_interval;
                 rel_diff_sum /= points_per_interval;
                 gpu_err_sum /= points_per_interval;
+                cpu_err_sum /= points_per_interval;
 
-                printf("%.3lf %.3lf  %8.3g  %8.3g  %8.3g\n", alfas[ai], betas[bi], abs_diff_sum, rel_diff_sum, gpu_err_sum);
+                percentage_in_bounds = 100 * in_cpu_bounds_count / points_per_interval;
+
+                printf("%.3lf %.3lf  %8.3g  %8.3g  %8.3g  %8.3g  %8.1lf %%\n",
+                    alfas[ai], betas[bi],
+                    abs_diff_sum, rel_diff_sum,
+                    gpu_err_sum, cpu_err_sum,
+                    percentage_in_bounds);
             }
         }
     }
