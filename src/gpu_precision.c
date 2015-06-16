@@ -84,7 +84,7 @@ int main (void)
                 rel_diff_sum /= points_per_interval;
                 gpu_err_sum /= points_per_interval;
 
-                printf("%.3lf %.3lf %1.3g   \t%1.3g\t%1.3g\n", alfas[ai], betas[bi], abs_diff_sum, rel_diff_sum, gpu_err_sum);
+                printf("%.3lf %.3lf  %8.3g  %8.3g  %8.3g\n", alfas[ai], betas[bi], abs_diff_sum, rel_diff_sum, gpu_err_sum);
             }
         }
     }
