@@ -96,7 +96,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	size_t point_index = get_group_id(0);
 	size_t subinterval_index = get_local_id(1);
 	size_t points_count = get_num_groups(0);
-	size_t subinterval_count = get_local_size(1);
+	size_t half_subinterval_count = GK_SUBDIVISIONS / 2;
 	size_t offset_subinterval_index = subinterval_index + GK_SUBDIVISIONS / 2;
 	struct stable_precalc precalc;
 	size_t offset;
@@ -162,7 +162,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     do
     {
-	    precalc.subinterval_length = (precalc.iend - precalc.ibegin) / subinterval_count;
+	    precalc.subinterval_length = (precalc.iend - precalc.ibegin) / (half_subinterval_count * 2);
 	    precalc.half_subint_length = precalc.subinterval_length / 2;
 
 		if(gk_point < KRONROD_EVAL_POINTS)
@@ -177,7 +177,10 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		for(offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
 		{
 		    if (gk_point < offset)
+		    {
 		  		sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
+		  		sums[offset_subinterval_index][gk_point] += sums[offset_subinterval_index][gk_point + offset];
+		  	}
 
 		    barrier(CLK_LOCAL_MEM_FENCE);
 		}
@@ -215,7 +218,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 	} while(reevaluate);
 
-	for(offset = subinterval_count; offset > 0; offset >>= 1)
+	for(offset = half_subinterval_count; offset > 0; offset >>= 1)
 	{
 		if(subinterval_index < offset)
 			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];
