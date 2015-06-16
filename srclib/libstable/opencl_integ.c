@@ -283,7 +283,7 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
         if (errs)
         {
             errs[i] = cli->h_kronrod[i] - cli->h_gauss[i];
-            snprintf(msg + strlen(msg) -  1, 500 - strlen(msg), ", abserr = %.3g", errs[i]);
+            snprintf(msg + strlen(msg), 500 - strlen(msg), ", abserr = %.3g", errs[i]);
         }
 
         stablecl_log(log_message, msg);
