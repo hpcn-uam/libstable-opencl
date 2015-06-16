@@ -19,24 +19,26 @@
 
 #define anyf(a) any((int2) a)
 #define vec(b) (cl_precision2)((b), (b))
+#define vec4(b) (cl_precision4)((b), (b), (b), (b))
 
 #define SUBINT_CONTRIB_TH 0.00001
 #define MIN_CONTRIBUTING_SUBINTS GK_SUBDIVISIONS / 3
 
-cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc, size_t subinterval_index, size_t gk_point)
+cl_precision4 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc, size_t subinterval_index, size_t gk_point)
 {
-	const cl_precision center = precalc->ibegin + precalc->subinterval_length * subinterval_index + precalc->half_subint_length;
+	const cl_precision2 centers = vec(precalc->ibegin + precalc->half_subint_length) + precalc->subinterval_length * ((cl_precision2)(subinterval_index, subinterval_index + GK_SUBDIVISIONS / 2));
 	const cl_precision abscissa = precalc->half_subint_length * gk_absc[gk_point]; // Translated integrand evaluation
 
-	cl_precision2 val, res;
+	cl_precision4 val, res;
+	cl_precision4 final_gk;
 	cl_precision2 w = gk_weights[gk_point];
-	val = (cl_precision2)(center - abscissa, center + abscissa);
+	val = (cl_precision4)(centers.x - abscissa, centers.x + abscissa, centers.y - abscissa, centers.y + abscissa);
 
 	if(stable->integrand == PDF_ALPHA_EQ1)
 	{
-		cl_precision2 V, aux;
+		cl_precision4 V, aux;
 
-		aux = (precalc->beta_ * val + vec(M_PI_2)) / cos(val);
+		aux = (precalc->beta_ * val + vec4(M_PI_2)) / cos(val);
 		V = sin(val) * aux / precalc->beta_ + log(aux) + stable->k1;
 
 		res = exp(V + precalc->xxipow);
@@ -44,7 +46,7 @@ cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_pr
 	}
 	else if(stable->integrand == PDF_ALPHA_NEQ1)
 	{
-		cl_precision2 cos_theta, aux, V;
+		cl_precision4 cos_theta, aux, V;
 
 		cos_theta = cos(val);
 
@@ -70,10 +72,22 @@ cl_precision2 eval_gk_pair(constant struct stable_info* stable, struct stable_pr
 	if(!isnormal(res.y))
 		res.y = 0;
 
-	if(gk_point < KRONROD_EVAL_POINTS - 1)
-		res.x += res.y;
+	if(!isnormal(res.z))
+		res.z = 0;
 
-	return w * res.x;
+	if(!isnormal(res.w))
+		res.w = 0;
+
+	if(gk_point < KRONROD_EVAL_POINTS - 1)
+	{
+		res.x += res.y;
+		res.z += res.w;
+	}
+
+	final_gk.xy = w * res.x;
+	final_gk.zw = w * res.z;
+
+	return final_gk;
 }
 
 kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
@@ -83,6 +97,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	size_t subinterval_index = get_local_id(1);
 	size_t points_count = get_num_groups(0);
 	size_t subinterval_count = get_local_size(1);
+	size_t offset_subinterval_index = subinterval_index + GK_SUBDIVISIONS / 2;
 	struct stable_precalc precalc;
 	size_t offset;
 	local cl_precision2 sums[GK_SUBDIVISIONS][KRONROD_EVAL_POINTS];
@@ -151,7 +166,11 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	    precalc.half_subint_length = precalc.subinterval_length / 2;
 
 		if(gk_point < KRONROD_EVAL_POINTS)
-			sums[subinterval_index][gk_point] = eval_gk_pair(stable, &precalc, subinterval_index, gk_point);
+		{
+			cl_precision4 result = eval_gk_pair(stable, &precalc, subinterval_index, gk_point);
+			sums[subinterval_index][gk_point] = result.xy;
+			sums[offset_subinterval_index][gk_point] = result.zw;
+		}
 
 		barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -169,6 +188,12 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 			{
 				atomic_max(&max_contributing, subinterval_index);
 				atomic_min(&min_contributing, subinterval_index);
+			}
+
+			if(any(sums[offset_subinterval_index][gk_point] >= SUBINT_CONTRIB_TH))
+			{
+				atomic_max(&max_contributing, offset_subinterval_index);
+				atomic_min(&min_contributing, offset_subinterval_index);
 			}
 		}
 
@@ -190,7 +215,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 	} while(reevaluate);
 
-	for(offset = subinterval_count / 2; offset > 0; offset >>= 1)
+	for(offset = subinterval_count; offset > 0; offset >>= 1)
 	{
 		if(subinterval_index < offset)
 			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];
