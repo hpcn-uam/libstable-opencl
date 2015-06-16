@@ -59,8 +59,13 @@ static void _opencl_kernel_info(cl_kernel kernel)
     int j;
     cl_int err;
     size_t wg_sizes[3], max_dims;
+    cl_ulong local_memsize, priv_memsize;
 
-    err = clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_WORK_GROUP_SIZE, sizeof wg_sizes, wg_sizes, &max_dims);
+    err = clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_WORK_GROUP_SIZE, sizeof(wg_sizes), wg_sizes, &max_dims);
+    err |= clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_LOCAL_MEM_SIZE, sizeof(cl_ulong), &local_memsize, NULL);
+    err |= clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_PRIVATE_MEM_SIZE, sizeof(cl_ulong), &priv_memsize, NULL);
+
+    local_memsize /= 1024;
 
     max_dims /= sizeof(size_t);
     if(err)
@@ -73,6 +78,8 @@ static void _opencl_kernel_info(cl_kernel kernel)
 
     for (j = 0; j < max_dims; j++)
         stablecl_log(log_message, "Max kernel workgroup size for dimension %zu: %zu", j, wg_sizes[j]);
+
+    stablecl_log(log_message, "Kernel memory: %zu kB local, %zu B private", local_memsize, priv_memsize);
 #endif
 }
 
@@ -83,6 +90,7 @@ static void _opencl_device_info(cl_device_id device)
     char dev_name[128];
     int j;
     size_t wg_sizes[5], max_dims;
+    cl_ulong global_memsize, local_memsize, constant_memsize;
 
     clGetDeviceInfo(device, CL_DEVICE_NAME, 128 * sizeof(char), dev_name, NULL);
     clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof wg_sizes, wg_sizes, &max_dims);
@@ -94,6 +102,13 @@ static void _opencl_device_info(cl_device_id device)
 
     for (j = 0; j < max_dims; j++)
         stablecl_log(log_message, "Max workgroup size for dimension %zu: %zu", j, wg_sizes[j]);
+
+    clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &global_memsize, NULL);
+    clGetDeviceInfo(device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &local_memsize, NULL);
+    clGetDeviceInfo(device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(cl_ulong), &constant_memsize, NULL);
+
+    stablecl_log(log_message, "Memory: global %zu kB, local %zu kB, constant buffer %zu kB",
+        global_memsize / 1024, local_memsize / 1024, constant_memsize / 1024);
 #endif
 }
 
