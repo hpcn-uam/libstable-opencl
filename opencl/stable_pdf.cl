@@ -92,7 +92,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	struct stable_precalc precalc;
 	size_t offset;
 	size_t j;
-	local cl_precision4 sums[GK_SUBDIVISIONS][KRONROD_EVAL_POINTS];
+	local cl_precision2 sums[GK_SUBDIVISIONS][KRONROD_EVAL_POINTS];
 	local int min_contributing, max_contributing;
 	short reevaluate = 0;
 
