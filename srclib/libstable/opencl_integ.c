@@ -10,6 +10,8 @@
 #define max(a,b) (a < b ? b : a)
 #endif
 
+#define KERNIDX_ALPHA_NEQ1 0
+#define KERNIDX_ALPHA_EQ1 1
 
 static int _stable_set_results(struct stable_clinteg *cli);
 
@@ -93,9 +95,15 @@ int stable_clinteg_init(struct stable_clinteg *cli)
         return -1;
     }
 
-    if (opencl_initenv(&cli->env, "opencl/stable_pdf.cl", "stable_pdf_points"))
+    if (opencl_initenv(&cli->env))
     {
         stablecl_log(log_message, "OpenCL environment failure.");
+        return -1;
+    }
+
+    if(opencl_load_kernel(&cli->env, "opencl/stable_pdf.cl", "stable_pdf_points", KERNIDX_ALPHA_NEQ1))
+    {
+        stablecl_log(log_message, "OpenCL kernel load failure.");
         return -1;
     }
 
@@ -149,6 +157,7 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     size_t work_threads[2] = { KRONROD_EVAL_POINTS * num_points, GK_SUBDIVISIONS / 2 };
     size_t workgroup_size[2] = { KRONROD_EVAL_POINTS, GK_SUBDIVISIONS / 2 };
     cl_precision* points = NULL;
+    size_t kernel_index = KERNIDX_ALPHA_NEQ1;
 
     cli->h_args->k1 = dist->k1;
     cli->h_args->alfa = dist->alfa;
@@ -199,12 +208,14 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
         goto cleanup;
     }
 
+    opencl_set_current_kernel(&cli->env, kernel_index);
+
     bench_begin(cli->profiling.argset, cli->profile_enabled);
     int argc = 0;
-    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->args);
-    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->points);
-    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->gauss);
-    err |= clSetKernelArg(cli->env.kernel, argc++, sizeof(cl_mem), &cli->kronrod);
+    err |= clSetKernelArg(opencl_get_current_kernel(&cli->env), argc++, sizeof(cl_mem), &cli->args);
+    err |= clSetKernelArg(opencl_get_current_kernel(&cli->env), argc++, sizeof(cl_mem), &cli->points);
+    err |= clSetKernelArg(opencl_get_current_kernel(&cli->env), argc++, sizeof(cl_mem), &cli->gauss);
+    err |= clSetKernelArg(opencl_get_current_kernel(&cli->env), argc++, sizeof(cl_mem), &cli->kronrod);
     bench_end(cli->profiling.argset, cli->profile_enabled);
 
     if (err)
@@ -213,10 +224,11 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
         goto cleanup;
     }
 
-    stablecl_log(log_message, "Enqueing kernel - %zu × %zu work threads, %zu × %zu workgroup size", work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
+    stablecl_log(log_message, "Enqueing kernel %d - %zu × %zu work threads, %zu × %zu workgroup size",
+        kernel_index, work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
 
     bench_begin(cli->profiling.enqueue, cli->profile_enabled);
-    err = clEnqueueNDRangeKernel(opencl_get_queue(&cli->env), cli->env.kernel,
+    err = clEnqueueNDRangeKernel(opencl_get_queue(&cli->env), opencl_get_current_kernel(&cli->env),
                                  2, NULL, work_threads, workgroup_size, 0, NULL, event);
     bench_end(cli->profiling.enqueue, cli->profile_enabled);
 

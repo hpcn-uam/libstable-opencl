@@ -40,9 +40,9 @@ short test_instance(struct openclenv* ocl, size_t size, size_t dim,
     }
 
     int argc = 0;
-    err |= clSetKernelArg(ocl->kernel, argc++, sizeof(cl_mem), &array_ocl);
-    err |= clSetKernelArg(ocl->kernel, argc++, sizeof(testtype) * (*local_work_size), NULL);
-    err = clEnqueueNDRangeKernel(opencl_get_queue(ocl), ocl->kernel,
+    err |= clSetKernelArg(ocl->kernel[0], argc++, sizeof(cl_mem), &array_ocl);
+    err |= clSetKernelArg(ocl->kernel[0], argc++, sizeof(testtype) * (*local_work_size), NULL);
+    err = clEnqueueNDRangeKernel(opencl_get_queue(ocl), ocl->kernel[0],
                                 dim, NULL, global_work_size, local_work_size, 0, NULL, &event);
 
     if(err)
@@ -85,7 +85,7 @@ short test_kernel(const char* file, const char* kernel_name)
 
 	profile_f = fopen(profile_fname, "w");
 
-	if (opencl_initenv(&ocl, file, kernel_name))
+	if (opencl_initenv(&ocl) || opencl_load_kernel(&ocl, file, kernel_name, 0))
     {
         stablecl_log(log_message, "OpenCL environment failure.");
         return -1;

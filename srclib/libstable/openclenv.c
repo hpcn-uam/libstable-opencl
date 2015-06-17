@@ -138,13 +138,10 @@ static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_nu
 #endif
 }
 
-int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *kernname)
+int opencl_initenv(struct openclenv *env)
 {
     char *err_msg = NULL;
-    int err = 0, log_error;
-    size_t pathlen = strlen(bitcode_path);
-    char *build_log;
-    size_t build_log_size;
+    int err = 0;
     cl_platform_id platforms[MAX_OPENCL_PLATFORMS];
     cl_uint platform_num;
 
@@ -187,6 +184,25 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
     }
 
     opencl_set_current_queue(env, 0);
+    memset(env->enabled_kernels, 0, sizeof(env->enabled_kernels));
+    env->current_kernel = 0;
+    env->kernel_count = 0;
+
+error:
+    if (err && err_msg)
+        stablecl_log(log_err, "Init failed with error %d at %s: %s", err, err_msg, opencl_strerr(err));
+
+    return err;
+}
+
+short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const char *kernname, size_t index)
+{
+    char *err_msg = NULL;
+    int err = 0, log_error;
+    size_t pathlen = strlen(bitcode_path);
+    char *build_log;
+    size_t build_log_size;
+
 
 #ifdef __APPLE__
     env->program = clCreateProgramWithSource(env->context, 1, (const char **)&bitcode_path, &pathlen, &err);
@@ -213,7 +229,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    stablecl_log(log_message, "Building program...");
+    stablecl_log(log_message, "Building kernel %s from %s...", kernname, bitcode_path);
     err = clBuildProgram(env->program, 1, &env->device, OPENCL_BUILD_OPTIONS, NULL, NULL);
 
     log_error = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &build_log_size);
@@ -239,7 +255,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
             else if (err)
                 stablecl_log(log_err, "Build log (size %zu):\n%s", build_log_size, build_log);
 
-			free(build_log);
+            free(build_log);
         }
     }
 
@@ -249,7 +265,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    env->kernel = clCreateKernel(env->program, kernname, &err);
+    env->kernel[index] = clCreateKernel(env->program, kernname, &err);
 
     if (err)
     {
@@ -257,11 +273,16 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
         goto error;
     }
 
-    _opencl_kernel_info(env->kernel);
+    _opencl_kernel_info(env->kernel[index]);
+
+    env->enabled_kernels[index] = 1;
+    env->kernel_count++;
+
+    stablecl_log(log_message, "Kernel %s loaded successfully", kernname);
 
 error:
     if (err && err_msg)
-        stablecl_log(log_err, "Init failed with error %d at %s: %s", err, err_msg, opencl_strerr(err));
+        stablecl_log(log_err, "Kernel load failed with error %d at %s: %s", err, err_msg, opencl_strerr(err));
 
     return err;
 }
@@ -278,6 +299,11 @@ short opencl_set_current_queue(struct openclenv* env, size_t queue)
 inline cl_command_queue opencl_get_queue(struct openclenv* env)
 {
 	return env->queues[env->current_queue];
+}
+
+cl_kernel opencl_get_current_kernel(struct openclenv* env)
+{
+    return env->kernel[env->current_kernel];
 }
 
 short opencl_set_queues(struct openclenv* env, size_t new_count)
@@ -326,10 +352,14 @@ short opencl_remove_last_n_queues(struct openclenv* env, size_t n)
 
 int opencl_teardown(struct openclenv *env)
 {
+    size_t i;
+
     if (env->program)
         clReleaseProgram(env->program);
-    if (env->kernel)
-        clReleaseKernel(env->kernel);
+
+    for(i = 0; i < MAX_KERNELS; i++)
+        if(env->enabled_kernels[i])
+            clReleaseKernel(env->kernel[i]);
 
     if(env->queues)
 	    opencl_remove_last_n_queues(env, env->queue_count);
@@ -438,6 +468,11 @@ void stablecl_profileinfo(struct opencl_profile *prof, cl_event event)
     prof->start_acum = (double)(prof->started - prof->queued) / 1000000;
     prof->finish_acum = (double)(prof->finished - prof->queued) / 1000000;
     prof->exec_time = (double)(prof->finished - prof->started) / 1000000;
+}
+
+void opencl_set_current_kernel(struct openclenv* env, size_t kern_index)
+{
+    env->current_kernel = kern_index;
 }
 
 
