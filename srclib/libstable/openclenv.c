@@ -7,6 +7,8 @@
 #define OPENCL_FORCE_CPU 1
 #endif
 
+#define OPENCL_BUILD_OPTIONS "-cl-no-signed-zeros -cl-strict-aliasing"
+
 #define MAX_OPENCL_PLATFORMS 5
 
 #include <stdio.h>
@@ -212,7 +214,7 @@ int opencl_initenv(struct openclenv *env, const char *bitcode_path, const char *
     }
 
     stablecl_log(log_message, "Building program...");
-    err = clBuildProgram(env->program, 1, &env->device, NULL, NULL, NULL);
+    err = clBuildProgram(env->program, 1, &env->device, OPENCL_BUILD_OPTIONS, NULL, NULL);
 
     log_error = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &build_log_size);
 
