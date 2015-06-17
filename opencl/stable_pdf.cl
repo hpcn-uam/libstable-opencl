@@ -28,32 +28,27 @@ cl_precision4 eval_gk_pair(constant struct stable_info* stable, struct stable_pr
 {
 	const cl_precision2 centers = vec(precalc->ibegin + precalc->half_subint_length) + 2 * precalc->half_subint_length * ((cl_precision2)(subinterval_index, subinterval_index + GK_SUBDIVISIONS / 2));
 	const cl_precision abscissa = precalc->half_subint_length * gk_absc[gk_point]; // Translated integrand evaluation
+	cl_precision2 centers = vec(precalc->ibegin + precalc->subint_length / 2) + precalc->subint_length * ((cl_precision2)(subinterval_index, subinterval_index + GK_SUBDIVISIONS / 2));
+	cl_precision abscissa = precalc->subint_length * gk_absc[gk_point] / 2; // Translated integrand evaluation
 
-	cl_precision4 val;
-	cl_precision2 w = gk_weights[gk_point];
-	val = (cl_precision4)(centers.x - abscissa, centers.x + abscissa, centers.y - abscissa, centers.y + abscissa);
+	cl_precision4 val = (cl_precision4)(centers.x - abscissa, centers.x + abscissa, centers.y - abscissa, centers.y + abscissa);
+	cl_precision4 aux;
 
 	if(stable->integrand == PDF_ALPHA_EQ1)
 	{
-		cl_precision4 V, aux;
-
 		aux = (precalc->beta_ * val + vec4(M_PI_2)) / cos(val);
-		V = sin(val) * aux / precalc->beta_ + log(aux) + stable->k1;
+		val = sin(val) * aux / precalc->beta_ + log(aux) + stable->k1;
 
-		val = exp(V + precalc->xxipow);
+		val = exp(val + precalc->xxipow);
 		val = exp(-val) * val;
 	}
 	else if(stable->integrand == PDF_ALPHA_NEQ1)
 	{
-		cl_precision4 cos_theta, aux, V;
-
-		cos_theta = cos(val);
-
 		aux = (precalc->theta0_ + val) * stable->alfa;
-		V = log(cos_theta / sin(aux)) * stable->alfainvalfa1 +
-			+ log(cos(aux - val) / cos_theta) + stable->k1;
+		val = log(cos(val) / sin(aux)) * stable->alfainvalfa1 +
+			+ log(cos(aux - val) / cos(val)) + stable->k1;
 
-		val = exp(V + precalc->xxipow);
+		val = exp(val + precalc->xxipow);
 		val = exp(-val) * val;
 	}
 
@@ -75,8 +70,8 @@ cl_precision4 eval_gk_pair(constant struct stable_info* stable, struct stable_pr
 		val.z += val.w;
 	}
 
-	val.xy = w * val.x;
-	val.zw = w * val.z;
+	val.xy = gk_weights[gk_point] * val.x;
+	val.zw = gk_weights[gk_point] * val.z;
 
 	return val;
 }
