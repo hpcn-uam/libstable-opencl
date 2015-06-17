@@ -53,6 +53,7 @@ int main (void)
         double step = (end - begin) / points_per_interval;
 
         printf("\n=== Interval (%.0lf, %.0lf)\n", begin, end);
+        printf("alfa  beta   abserr    relerr    gpuerr    cpuerr    within bounds\n");
 
         for(j = 0; j < points_per_interval; j++)
             points[j] = j * step + begin;
