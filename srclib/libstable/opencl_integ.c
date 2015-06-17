@@ -170,7 +170,6 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     cli->h_args->sigma = dist->sigma;
     cli->h_args->xxi_th = stable_get_XXI_TH();
     cli->h_args->c2_part = dist->c2_part;
-    cli->h_args->S = dist->S;
     cli->h_args->xi_coef = (exp(lgamma(1 + 1 / dist->alfa))) / (M_PI * pow(1 + dist->xi * dist->xi, 1/(2*dist->alfa)));
 
     if (dist->ZONE == GPU_TEST_INTEGRAND)
