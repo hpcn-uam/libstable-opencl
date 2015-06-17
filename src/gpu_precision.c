@@ -7,7 +7,7 @@
 
 int main (void)
 {
-    double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
+    double alfas[] = { 0.25, 0.5, 0.75, 1, 1.25, 1.5 };
     double betas[] = { 0, 0.5, 1 };
     double intervals[] = { -100, 100 };
     int points_per_interval = 1000;
