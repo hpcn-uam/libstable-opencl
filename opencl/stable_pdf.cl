@@ -24,10 +24,10 @@
 #define SUBINT_CONTRIB_TH 0.00001
 #define MIN_CONTRIBUTING_SUBINTS GK_SUBDIVISIONS / 4
 
-cl_precision4 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc, size_t subinterval_index, size_t gk_point)
+cl_precision4 eval_gk_pair(constant struct stable_info* stable, local struct stable_precalc* precalc)
 {
-	const cl_precision2 centers = vec(precalc->ibegin + precalc->half_subint_length) + 2 * precalc->half_subint_length * ((cl_precision2)(subinterval_index, subinterval_index + GK_SUBDIVISIONS / 2));
-	const cl_precision abscissa = precalc->half_subint_length * gk_absc[gk_point]; // Translated integrand evaluation
+	size_t gk_point = get_local_id(0);
+	size_t subinterval_index = get_local_id(1);
 	cl_precision2 centers = vec(precalc->ibegin + precalc->subint_length / 2) + precalc->subint_length * ((cl_precision2)(subinterval_index, subinterval_index + GK_SUBDIVISIONS / 2));
 	cl_precision abscissa = precalc->subint_length * gk_absc[gk_point] / 2; // Translated integrand evaluation
 
@@ -155,7 +155,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 		if(gk_point < KRONROD_EVAL_POINTS)
 		{
-			cl_precision4 result = eval_gk_pair(stable, &precalc, subinterval_index, gk_point);
+			cl_precision4 result = eval_gk_pair(stable, &precalc);
 			sums[subinterval_index][gk_point] = result.xy;
 			sums[offset_subinterval_index][gk_point] = result.zw;
 		}
