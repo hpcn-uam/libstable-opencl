@@ -92,7 +92,7 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	{
 		if (fabs(xxi) <= stable->xxi_th)
 	    {
-	        precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0);
+	        precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0) / stable->sigma;
 	        return SET_TO_RESULT_AND_RETURN;
 	    }
 
