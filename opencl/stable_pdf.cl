@@ -204,7 +204,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	struct stable_precalc precalc;
 	size_t offset;
 	size_t j;
-	local cl_precision2 sums[GK_SUBDIVISIONS][KRONROD_EVAL_POINTS];
+	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS];
 	local int min_contributing, max_contributing;
 	short reevaluate = 0;
 
@@ -230,14 +230,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		{
 			cl_vec result = eval_gk_pair(stable, &precalc);
 
-			sums[subinterval_index][gk_point] = result.s01;
-#if POINTS_EVAL >= 2
-			sums[subinterval_index + MAX_WORKGROUPS][gk_point] = result.s23;
-#if POINTS_EVAL >= 4
-			sums[subinterval_index + 2 * MAX_WORKGROUPS][gk_point] = result.s45;
-			sums[subinterval_index + 3 * MAX_WORKGROUPS][gk_point] = result.s67;
-#endif
-#endif
+			sums[subinterval_index][gk_point] = result;
 		}
 
 		for(offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
@@ -245,20 +238,38 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		    barrier(CLK_LOCAL_MEM_FENCE);
 
 		    if (gk_point < offset)
-		    {
-		  		for(j = 0; j < POINTS_EVAL; j++)
-				{
-					size_t subint_index = subinterval_index + MAX_WORKGROUPS * j;
-					sums[subint_index][gk_point] += sums[subint_index][gk_point + offset];
+		    	sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
+		}
 
-					// Only check in the last iteration of the reduction loop.
-					if(offset == 1 && gk_point == 0 && any(sums[subint_index][0] >= SUBINT_CONTRIB_TH))
-					{
-						atomic_max(&max_contributing, subint_index);
-						atomic_min(&min_contributing, subint_index);
-					}
-				}
-		  	}
+		if(gk_point == 0)
+		{
+			if(any(sums[subinterval_index][0].s01 >= SUBINT_CONTRIB_TH))
+			{
+				atomic_max(&max_contributing, subinterval_index);
+				atomic_min(&min_contributing, subinterval_index);
+			}
+
+#if POINTS_EVAL >= 2
+			if(any(sums[subinterval_index][0].s23 >= SUBINT_CONTRIB_TH))
+			{
+				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS);
+				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS);
+			}
+
+#if POINTS_EVAL >= 4
+			if(any(sums[subinterval_index][0].s45 >= SUBINT_CONTRIB_TH))
+			{
+				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS * 2);
+				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS * 2);
+			}
+
+			if(any(sums[subinterval_index][0].s67 >= SUBINT_CONTRIB_TH))
+			{
+				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS * 3);
+				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS * 3);
+			}
+#endif
+#endif
 		}
 
 		barrier(CLK_LOCAL_MEM_FENCE);
@@ -269,10 +280,20 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		{
 			if(gk_point == 0 && subinterval_index == 0)
 			{
-				for(j = 0; j < GK_SUBDIVISIONS; j++)
+				for(j = 0; j < MAX_WORKGROUPS; j++)
 				{
 					if(j < min_contributing || j > max_contributing)
-						previous_integration_remainder += sums[j][0];
+						previous_integration_remainder += sums[j][0].s01;
+#if POINTS_EVAL >= 2
+					if(j + MAX_WORKGROUPS < min_contributing || j + MAX_WORKGROUPS > max_contributing)
+						previous_integration_remainder += sums[j][0].s23;
+#if POINTS_EVAL >= 4
+					if(j + 2 * MAX_WORKGROUPS < min_contributing || j + 2 * MAX_WORKGROUPS > max_contributing)
+						previous_integration_remainder += sums[j][0].s45;
+					if(j + 3 * MAX_WORKGROUPS < min_contributing || j + 3 * MAX_WORKGROUPS > max_contributing)
+						previous_integration_remainder += sums[j][0].s67;
+#endif
+#endif
 				}
 
 				previous_integration_remainder *= precalc.subint_length * stable->c2_part / stable->sigma;
@@ -293,19 +314,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 	} while(reevaluate);
 
-#if POINTS_EVAL >= 4
-	// We don't have enough threads to do the first iteration of the reduction as usual, so
-	// we do it manually.
-	sums[subinterval_index + MAX_WORKGROUPS][gk_point] +=
-		sums[subinterval_index + MAX_WORKGROUPS * 2][gk_point] + sums[subinterval_index + MAX_WORKGROUPS * 3][gk_point];
-
-	offset = GK_SUBDIVISIONS / 4;
-#else
-	// In this case, iterate as usual.
-	offset = GK_SUBDIVISIONS / 2;
-#endif
-
-	for(; offset > 0; offset >>= 1)
+	for(offset = MAX_WORKGROUPS / 2; offset > 0; offset >>= 1)
 	{
 		if(subinterval_index < offset)
 			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];
@@ -315,14 +324,22 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     if(gk_point == 0 && subinterval_index == 0)
     {
-    	sums[subinterval_index][gk_point] *= precalc.subint_length * stable->c2_part / stable->sigma;
+  		cl_precision2 final = sums[0][0].s01;
+#if POINTS_EVAL >= 2
+  		final += sums[0][0].s23;
+#if POINTS_EVAL >= 4
+  		final += sums[0][0].s45 + sums[0][0].s67;
+#endif
+#endif
+
+    	final *= precalc.subint_length * stable->c2_part / stable->sigma;
 
     	if(stable->integrand == PDF_ALPHA_NEQ1)
-	    	sums[subinterval_index][gk_point] /= precalc.xxi;
+	    	final /= precalc.xxi;
 
-    	sums[subinterval_index][gk_point] += previous_integration_remainder;
+    	final += previous_integration_remainder;
 
-		gauss[point_index] = sums[0][0].x;
-		kronrod[point_index] = sums[0][0].y;
+		gauss[point_index] = final.x;
+		kronrod[point_index] = final.y;
 	}
 }

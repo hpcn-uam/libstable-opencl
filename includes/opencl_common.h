@@ -11,7 +11,7 @@
 #define GK_POINTS 61
 #endif
 
-#define POINTS_EVAL 1
+#define POINTS_EVAL 2
 
 #define MAX_WORKGROUPS 8
 #define GK_SUBDIVISIONS (POINTS_EVAL * MAX_WORKGROUPS)
