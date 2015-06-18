@@ -55,7 +55,9 @@ struct stable_precalc {
     cl_precision xxipow;
     cl_precision ibegin;
     cl_precision iend;
-    cl_precision half_subint_length;
+    cl_precision subint_length;
+    cl_precision xxi;
+    cl_precision pdf_precalc;
 };
 
 #endif

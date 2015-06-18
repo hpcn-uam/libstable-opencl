@@ -23,8 +23,10 @@
 
 #define SUBINT_CONTRIB_TH 0.00001
 #define MIN_CONTRIBUTING_SUBINTS GK_SUBDIVISIONS / 4
+#define SET_TO_RESULT_AND_RETURN 1
+#define CONTINUE_CALC 0
 
-cl_precision4 eval_gk_pair(constant struct stable_info* stable, local struct stable_precalc* precalc)
+cl_precision4 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc)
 {
 	size_t gk_point = get_local_id(0);
 	size_t subinterval_index = get_local_id(1);
@@ -76,6 +78,57 @@ cl_precision4 eval_gk_pair(constant struct stable_info* stable, local struct sta
 	return val;
 }
 
+
+short precalculate_values(cl_precision x, constant struct stable_info* stable, struct stable_precalc* precalc)
+{
+	cl_precision x_, xxi;
+
+    x_ = (x - stable->mu_0) / stable->sigma;
+   	xxi = x_ - stable->xi;
+
+	precalc->iend = M_PI_2;
+
+	if(stable->integrand == PDF_ALPHA_NEQ1)
+	{
+		if (fabs(xxi) <= stable->xxi_th)
+	    {
+	        precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0);
+	        return SET_TO_RESULT_AND_RETURN;
+	    }
+
+	    precalc->theta0_ = stable->theta0;
+	    precalc->beta_ = stable->beta;
+
+	   	if (xxi < 0)
+	    {
+	        xxi = -xxi;
+	        precalc->theta0_ = - precalc->theta0_;
+	        precalc->beta_ = - precalc->beta_;
+	    }
+
+		precalc->ibegin = -precalc->theta0_;
+
+		precalc->xxipow = stable->alfainvalfa1 * log(fabs(xxi));
+	}
+	else
+	{
+		precalc->ibegin = - M_PI_2;
+
+		precalc->beta_ = fabs(stable->beta);
+		precalc->xxipow = (-M_PI * x_ * stable->c2_part);
+	}
+
+	if (fabs(precalc->theta0_ + M_PI_2) < 2 * stable->THETA_TH)
+	{
+		precalc->pdf_precalc = 0;
+	    return SET_TO_RESULT_AND_RETURN;
+	}
+
+	precalc->xxi = xxi;
+
+	return CONTINUE_CALC;
+}
+
 kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
 {
 	size_t gk_point = get_local_id(0);
@@ -91,67 +144,23 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	local int min_contributing, max_contributing;
 	short reevaluate = 0;
 
-	cl_precision subinterval_length;
 	cl_precision2 previous_integration_remainder = vec(0);
 
 	min_contributing = GK_SUBDIVISIONS;
 	max_contributing = 0;
 
 	cl_precision pdf = 0;
-    cl_precision x_, xxi;
 
-
-    x_ = (x[point_index] - stable->mu_0) / stable->sigma;
-   	xxi = x_ - stable->xi;
-
-    if(stable->integrand == PDF_ALPHA_NEQ1)
-    {
-    	if (fabs(xxi) <= stable->xxi_th)
-	    {
-	        pdf = stable->xi_coef * cos(stable->theta0);
-
-	        gauss[point_index] = pdf / stable->sigma;
-	        kronrod[point_index] = pdf / stable->sigma;
-	        return;
-	    }
-
-	   	if (xxi < 0)
-	    {
-	        xxi = -xxi;
-	        precalc.theta0_ = -stable->theta0;
-	        precalc.beta_ = -stable->beta;
-	    }
-	    else
-	    {
-	        precalc.theta0_ = stable->theta0;
-	        precalc.beta_ = stable->beta;
-	    }
-
-    	precalc.ibegin = -precalc.theta0_;
-    	precalc.iend = M_PI_2;
-
-    	precalc.xxipow = stable->alfainvalfa1 * log(fabs(xxi));
-	}
-	else
+   	if(precalculate_values(x[point_index], stable, &precalc) == SET_TO_RESULT_AND_RETURN)
 	{
-    	precalc.ibegin = - M_PI_2;
-    	precalc.iend = M_PI_2;
-
-    	precalc.beta_ = fabs(stable->beta);
-    	precalc.xxipow = (-M_PI * x_ * stable->c2_part);
+		gauss[point_index] = precalc.pdf_precalc;
+		kronrod[point_index] = precalc.pdf_precalc;
+		return;
 	}
-
-    if (fabs(precalc.theta0_ + M_PI_2) < 2 * stable->THETA_TH)
-    {
-    	gauss[point_index] = 0;
-        kronrod[point_index] = 0;
-        return;
-    }
 
     do
     {
-	    subinterval_length = (precalc.iend - precalc.ibegin) / (half_subinterval_count * 2);
-	    precalc.half_subint_length = subinterval_length / 2;
+	    precalc.subint_length = (precalc.iend - precalc.ibegin) / (half_subinterval_count * 2);
 
 		if(gk_point < KRONROD_EVAL_POINTS)
 		{
@@ -202,14 +211,14 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 						previous_integration_remainder += sums[j][0];
 				}
 
-				previous_integration_remainder *= subinterval_length * stable->c2_part / stable->sigma;
+				previous_integration_remainder *= precalc.subint_length * stable->c2_part / stable->sigma;
 
 				if(stable->integrand == PDF_ALPHA_NEQ1)
-			    	previous_integration_remainder /= xxi;
+			    	previous_integration_remainder /= precalc.xxi;
 			}
 
-			precalc.ibegin = precalc.ibegin + min_contributing * subinterval_length;
-			precalc.iend = precalc.ibegin + num_contributing * subinterval_length;
+			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subint_length;
+			precalc.iend = precalc.ibegin + num_contributing * precalc.subint_length;
 
 			reevaluate = 1;
 		}
@@ -230,10 +239,10 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     if(gk_point == 0 && subinterval_index == 0)
     {
-    	sums[subinterval_index][gk_point] *= subinterval_length * stable->c2_part / stable->sigma;
+    	sums[subinterval_index][gk_point] *= precalc.subint_length * stable->c2_part / stable->sigma;
 
     	if(stable->integrand == PDF_ALPHA_NEQ1)
-	    	sums[subinterval_index][gk_point] /= xxi;
+	    	sums[subinterval_index][gk_point] /= precalc.xxi;
 
     	sums[subinterval_index][gk_point] += previous_integration_remainder;
 
