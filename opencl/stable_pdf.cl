@@ -6,6 +6,12 @@
 #warning "Double precision floating point not supported by OpenCL implementation."
 #endif
 
+#if defined(cl_nv_pragma_unroll)
+#pragma OPENCL EXTENSION cl_nv_pragma_unroll : enable
+#else
+#warning "Loop unrolling is disabled"
+#endif
+
 #ifndef M_PI_2
 #define M_PI_2     1.57079632679489661923132169163975144      // Pi/2
 #endif
@@ -280,6 +286,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		{
 			if(gk_point == 0 && subinterval_index == 0)
 			{
+				#pragma unroll
 				for(j = 0; j < MAX_WORKGROUPS; j++)
 				{
 					if(j < min_contributing || j > max_contributing)
