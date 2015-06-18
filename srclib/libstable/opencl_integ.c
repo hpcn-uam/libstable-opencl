@@ -154,8 +154,8 @@ static void _stable_print_profileinfo(struct opencl_profile *prof)
 short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t num_points, struct StableDistStruct *dist, cl_event* event)
 {
     cl_int err = 0;
-    size_t work_threads[2] = { KRONROD_EVAL_POINTS * num_points, GK_SUBDIVISIONS / 2 };
-    size_t workgroup_size[2] = { KRONROD_EVAL_POINTS, GK_SUBDIVISIONS / 2 };
+    size_t work_threads[2] = { KRONROD_EVAL_POINTS * num_points, MAX_WORKGROUPS };
+    size_t workgroup_size[2] = { KRONROD_EVAL_POINTS, MAX_WORKGROUPS };
     cl_precision* points = NULL;
     size_t kernel_index = KERNIDX_ALPHA_NEQ1;
 

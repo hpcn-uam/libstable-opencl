@@ -11,7 +11,10 @@
 #define GK_POINTS 61
 #endif
 
-#define GK_SUBDIVISIONS 16
+#define POINTS_EVAL 1
+
+#define MAX_WORKGROUPS 8
+#define GK_SUBDIVISIONS (POINTS_EVAL * MAX_WORKGROUPS)
 #define KRONROD_EVAL_POINTS (GK_POINTS / 2 + 1)
 
 #define PDF_ALPHA_EQ1 1
@@ -23,12 +26,14 @@
 #define cl_precision float
 #define cl_precision2 float2
 #define cl_precision4 float4
+#define cl_precision8 float8
 #define cl_precision_type "float"
 #define CL_PRECISION_IS_FLOAT
 #else
 #define cl_precision double
 #define cl_precision2 double2
 #define cl_precision4 double4
+#define cl_precision8 double8
 #define cl_precision_type "double"
 #endif
 

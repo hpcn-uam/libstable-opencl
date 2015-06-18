@@ -18,27 +18,78 @@
 #include "includes/gk_points.h"
 
 #define anyf(a) any((int2) a)
-#define vec(b) (cl_precision2)((b), (b))
+#define vec2(b) (cl_precision2)((b), (b))
 #define vec4(b) (cl_precision4)((b), (b), (b), (b))
+#define vec8(b) (cl_precision8)((b), (b), (b), (b), (b), (b), (b), (b))
+
+#if POINTS_EVAL == 4
+#define cl_vec cl_precision8
+#define cl_halfvec cl_precision4
+#define vec vec8
+#define vech vec4
+#elif POINTS_EVAL == 2
+#define cl_vec cl_precision4
+#define cl_halfvec cl_precision2
+#define vec vec4
+#define vech vec2
+#elif POINTS_EVAL == 1
+#define cl_vec cl_precision2
+#define cl_halfvec cl_precision
+#define vec vec2
+#define vech
+#endif
 
 #define SUBINT_CONTRIB_TH 0.00001
 #define MIN_CONTRIBUTING_SUBINTS GK_SUBDIVISIONS / 4
 #define SET_TO_RESULT_AND_RETURN 1
 #define CONTINUE_CALC 0
 
-cl_precision4 eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc)
+cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc)
 {
 	size_t gk_point = get_local_id(0);
 	size_t subinterval_index = get_local_id(1);
-	cl_precision2 centers = vec(precalc->ibegin + precalc->subint_length / 2) + precalc->subint_length * ((cl_precision2)(subinterval_index, subinterval_index + GK_SUBDIVISIONS / 2));
-	cl_precision abscissa = precalc->subint_length * gk_absc[gk_point] / 2; // Translated integrand evaluation
 
-	cl_precision4 val = (cl_precision4)(centers.x - abscissa, centers.x + abscissa, centers.y - abscissa, centers.y + abscissa);
-	cl_precision4 aux;
+	cl_halfvec centers = vech(precalc->ibegin + precalc->subint_length / 2);
+	cl_halfvec subd_offsets;
+	cl_precision abscissa = precalc->subint_length * gk_absc[gk_point] / 2; // Translated integrand evaluation
+	cl_precision2 abscissa_vec = (cl_precision2)(- abscissa, abscissa);
+	cl_precision2 w = gk_weights[gk_point];
+
+	subd_offsets = vech(subinterval_index);
+
+#if POINTS_EVAL >= 2
+	subd_offsets.s1 += 1 * GK_SUBDIVISIONS / POINTS_EVAL;
+#if POINTS_EVAL >= 4
+	subd_offsets.s2 += 2 * GK_SUBDIVISIONS / POINTS_EVAL;
+	subd_offsets.s3 += 3 * GK_SUBDIVISIONS / POINTS_EVAL;
+#endif
+#endif
+
+	subd_offsets *= precalc->subint_length;
+	centers += subd_offsets;
+
+	cl_vec val;
+
+#if POINTS_EVAL == 1
+	val.s01 = vec2(centers) + abscissa_vec;
+#else
+	val.s01 = centers.s00 + abscissa_vec;
+#if POINTS_EVAL >= 2
+	val.s23 = centers.s11 + abscissa_vec;
+#if POINTS_EVAL >= 4
+	val.s45 = centers.s22 + abscissa_vec;
+	val.s67 = centers.s33 + abscissa_vec;
+#endif
+#endif
+#endif
+
+	cl_vec aux, aux2;
+	cl_vec cosval = cos(val);
+	cl_vec sinval = sin(val);
 
 	if(stable->integrand == PDF_ALPHA_EQ1)
 	{
-		aux = (precalc->beta_ * val + vec4(M_PI_2)) / cos(val);
+		aux = (precalc->beta_ * val + vec(M_PI_2)) / cos(val);
 		val = sin(val) * aux / precalc->beta_ + log(aux) + stable->k1;
 
 		val = exp(val + precalc->xxipow);
@@ -54,26 +105,40 @@ cl_precision4 eval_gk_pair(constant struct stable_info* stable, struct stable_pr
 		val = exp(-val) * val;
 	}
 
-	if(!isnormal(val.x))
-		val.x = 0;
-
-	if(!isnormal(val.y))
-		val.y = 0;
-
-	if(!isnormal(val.z))
-		val.z = 0;
-
-	if(!isnormal(val.w))
-		val.w = 0;
+	if(!isnormal(val.s0)) val.s0 = 0;
+	if(!isnormal(val.s1)) val.s1 = 0;
+#if POINTS_EVAL >= 2
+	if(!isnormal(val.s2)) val.s2 = 0;
+	if(!isnormal(val.s3)) val.s3 = 0;
+#if POINTS_EVAL >= 4
+	if(!isnormal(val.s4)) val.s4 = 0;
+	if(!isnormal(val.s5)) val.s5 = 0;
+	if(!isnormal(val.s6)) val.s6 = 0;
+	if(!isnormal(val.s7)) val.s7 = 0;
+#endif
+#endif
 
 	if(gk_point < KRONROD_EVAL_POINTS - 1)
 	{
-		val.x += val.y;
-		val.z += val.w;
+		val.s0 += val.s1;
+#if POINTS_EVAL >= 2
+		val.s2 += val.s3;
+#if POINTS_EVAL >= 4
+		val.s4 += val.s5;
+		val.s6 += val.s7;
+#endif
+#endif
 	}
 
-	val.xy = gk_weights[gk_point] * val.x;
-	val.zw = gk_weights[gk_point] * val.z;
+	val.s01 = w * val.s0;
+#if POINTS_EVAL >= 2
+	val.s23 = w * val.s2;
+#if POINTS_EVAL >= 4
+	val.s45 = w * val.s4;
+	val.s67 = w * val.s6;
+#endif
+#endif
+
 
 	return val;
 }
@@ -143,7 +208,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	local int min_contributing, max_contributing;
 	short reevaluate = 0;
 
-	cl_precision2 previous_integration_remainder = vec(0);
+	cl_precision2 previous_integration_remainder = vec2(0);
 
 	min_contributing = GK_SUBDIVISIONS;
 	max_contributing = 0;
@@ -163,9 +228,16 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 		if(gk_point < KRONROD_EVAL_POINTS)
 		{
-			cl_precision4 result = eval_gk_pair(stable, &precalc);
-			sums[subinterval_index][gk_point] = result.xy;
-			sums[offset_subinterval_index][gk_point] = result.zw;
+			cl_vec result = eval_gk_pair(stable, &precalc);
+
+			sums[subinterval_index][gk_point] = result.s01;
+#if POINTS_EVAL >= 2
+			sums[subinterval_index + MAX_WORKGROUPS][gk_point] = result.s23;
+#if POINTS_EVAL >= 4
+			sums[subinterval_index + 2 * MAX_WORKGROUPS][gk_point] = result.s45;
+			sums[subinterval_index + 3 * MAX_WORKGROUPS][gk_point] = result.s67;
+#endif
+#endif
 		}
 
 		for(offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
@@ -174,24 +246,19 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 		    if (gk_point < offset)
 		    {
-		  		sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
-		  		sums[offset_subinterval_index][gk_point] += sums[offset_subinterval_index][gk_point + offset];
+		  		for(j = 0; j < POINTS_EVAL; j++)
+				{
+					size_t subint_index = subinterval_index + MAX_WORKGROUPS * j;
+					sums[subint_index][gk_point] += sums[subint_index][gk_point + offset];
+
+					// Only check in the last iteration of the reduction loop.
+					if(offset == 1 && gk_point == 0 && any(sums[subint_index][0] >= SUBINT_CONTRIB_TH))
+					{
+						atomic_max(&max_contributing, subint_index);
+						atomic_min(&min_contributing, subint_index);
+					}
+				}
 		  	}
-		}
-
-		if(gk_point == 0)
-		{
-			if(any(sums[subinterval_index][0] >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index);
-				atomic_min(&min_contributing, subinterval_index);
-			}
-
-			if(any(sums[offset_subinterval_index][0] >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, offset_subinterval_index);
-				atomic_min(&min_contributing, offset_subinterval_index);
-			}
 		}
 
 		barrier(CLK_LOCAL_MEM_FENCE);
@@ -226,7 +293,19 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 	} while(reevaluate);
 
-	for(offset = GK_SUBDIVISIONS / 2; offset > 0; offset >>= 1)
+#if POINTS_EVAL >= 4
+	// We don't have enough threads to do the first iteration of the reduction as usual, so
+	// we do it manually.
+	sums[subinterval_index + MAX_WORKGROUPS][gk_point] +=
+		sums[subinterval_index + MAX_WORKGROUPS * 2][gk_point] + sums[subinterval_index + MAX_WORKGROUPS * 3][gk_point];
+
+	offset = GK_SUBDIVISIONS / 4;
+#else
+	// In this case, iterate as usual.
+	offset = GK_SUBDIVISIONS / 2;
+#endif
+
+	for(; offset > 0; offset >>= 1)
 	{
 		if(subinterval_index < offset)
 			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];

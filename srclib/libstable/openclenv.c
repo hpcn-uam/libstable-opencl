@@ -7,7 +7,7 @@
 #define OPENCL_FORCE_CPU 1
 #endif
 
-#define OPENCL_BUILD_OPTIONS "-cl-no-signed-zeros -cl-strict-aliasing"
+#define OPENCL_BUILD_OPTIONS "-cl-no-signed-zeros"
 
 #define MAX_OPENCL_PLATFORMS 5
 

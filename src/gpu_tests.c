@@ -35,7 +35,7 @@
 
 int main (void)
 {
-    double alfa = 0.25, beta = 0, sigma = 1.0, mu = 0.0;
+    double alfa = 1.75, beta = 1, sigma = 1.0, mu = 0.0;
     int param = 0;
     double x[] = { 1 };
     double pdf[3] = { 0,0,0 }, gpu_pdf[3] = { 0,0,0 };
@@ -44,7 +44,7 @@ int main (void)
     int i;
 
     printf("=== GPU tests for libstable:\n");
-    printf("Using %d points GK rule with %d subdivisions.\n", GK_POINTS, GK_SUBDIVISIONS);
+    printf("Using %d points GK rule with %d subdivisions, %d points per thread.\n", GK_POINTS, GK_SUBDIVISIONS, POINTS_EVAL);
     printf("Precision used: %s.\n\n", cl_precision_type);
 
     StableDist *dist = stable_create(alfa, beta, sigma, mu, param);
@@ -68,13 +68,14 @@ int main (void)
     stable_clinteg_points(&dist->cli, x, gpu_pdf, gpu_err, num_points, dist);
     for(i = 0; i < sizeof x / sizeof(double); i++)
     {
+        double abserr = fabs(gpu_pdf[i] - pdf[i]);
         printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e ± %1.2e\n",
            x[i], alfa, beta, sigma, mu, pdf[i], err[i]);
         printf("CPU relative error is %1.2e %%.\n\n", 100 * err[i] / pdf[i]);
         printf("GPU PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e ± %1.2e\n",
                x[i], alfa, beta, sigma, mu, gpu_pdf[i], gpu_err[i]);
         printf("GPU relative error is %1.2e %%.\n\n", 100 * fabs(gpu_err[i] / gpu_pdf[i]));
-        printf("GPU / CPU difference: %3.3g\n\n", fabs(gpu_pdf[i] - pdf[i]));
+        printf("GPU / CPU difference: %3.3g abs, %3.3g rel\n\n", abserr, abserr / pdf[i]);
     }
 
     stable_free(dist);
