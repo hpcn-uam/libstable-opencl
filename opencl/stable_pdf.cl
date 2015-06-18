@@ -135,7 +135,6 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	size_t point_index = get_group_id(0);
 	size_t subinterval_index = get_local_id(1);
 	size_t points_count = get_num_groups(0);
-	size_t half_subinterval_count = GK_SUBDIVISIONS / 2;
 	size_t offset_subinterval_index = subinterval_index + GK_SUBDIVISIONS / 2;
 	struct stable_precalc precalc;
 	size_t offset;
@@ -160,7 +159,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     do
     {
-	    precalc.subint_length = (precalc.iend - precalc.ibegin) / (half_subinterval_count * 2);
+	    precalc.subint_length = (precalc.iend - precalc.ibegin) / GK_SUBDIVISIONS;
 
 		if(gk_point < KRONROD_EVAL_POINTS)
 		{
@@ -227,7 +226,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 	} while(reevaluate);
 
-	for(offset = half_subinterval_count; offset > 0; offset >>= 1)
+	for(offset = GK_SUBDIVISIONS / 2; offset > 0; offset >>= 1)
 	{
 		if(subinterval_index < offset)
 			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];
