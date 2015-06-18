@@ -43,9 +43,7 @@ int main (void)
     size_t num_points = sizeof x / sizeof(double);
     int i;
 
-    printf("=== GPU tests for libstable:\n");
-    printf("Using %d points GK rule with %d subdivisions, %d points per thread.\n", GK_POINTS, GK_SUBDIVISIONS, POINTS_EVAL);
-    printf("Precision used: %s.\n\n", cl_precision_type);
+    stable_clinteg_printinfo();
 
     StableDist *dist = stable_create(alfa, beta, sigma, mu, param);
 

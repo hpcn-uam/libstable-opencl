@@ -335,4 +335,11 @@ void stable_clinteg_teardown(struct stable_clinteg *cli)
     opencl_teardown(&cli->env);
 }
 
+void stable_clinteg_printinfo()
+{
+    printf("Libstable - OpenCL parallel integration details:\n");
+    printf(" %d points Gauss - Kronrod quadrature.\n", GK_POINTS);
+    printf(" %d subdivisions, %d points per thread.\n", GK_SUBDIVISIONS, POINTS_EVAL);
+    printf(" Precision used: %s.\n\n", cl_precision_type);
+}
 

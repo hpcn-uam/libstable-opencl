@@ -117,8 +117,8 @@ int main (int argc, char** argv)
 
     dist = stable_create(0.5, 0.0, 1, 0, 0);
     bzero(&profile, sizeof profile);
-    printf("=== GPU/CPU performance tests for libstable ===\n");
-    printf("\nUsing %d points GK rule with %d subdivisions.\n\n", GK_POINTS, GK_SUBDIVISIONS);
+
+    stable_clinteg_printinfo();
 
     stable_set_relTOL(1.2e-20);
     stable_set_absTOL(1e-10);

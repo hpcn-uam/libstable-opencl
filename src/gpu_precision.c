@@ -14,9 +14,7 @@ int main (void)
     double cpu_pdf[points_per_interval], gpu_pdf[points_per_interval];
     double cpu_err[points_per_interval], gpu_err[points_per_interval];
 
-    printf("=== GPU tests for libstable:\n");
-    printf("Using %d points GK rule with %d subdivisions, %d points per thread.\n", GK_POINTS, GK_SUBDIVISIONS, POINTS_EVAL);
-    printf("Precision used: %s.\n\n", cl_precision_type);
+    stable_clinteg_printinfo();
 
     StableDist *dist = stable_create(0.5, 0, 1, 0, 0);
 
