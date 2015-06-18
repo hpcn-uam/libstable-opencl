@@ -63,12 +63,10 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 
 	subd_offsets = vech(subinterval_index);
 
-#if POINTS_EVAL >= 2
-	subd_offsets.s1 += 1 * GK_SUBDIVISIONS / POINTS_EVAL;
-#if POINTS_EVAL >= 4
-	subd_offsets.s2 += 2 * GK_SUBDIVISIONS / POINTS_EVAL;
-	subd_offsets.s3 += 3 * GK_SUBDIVISIONS / POINTS_EVAL;
-#endif
+#if POINTS_EVAL == 2
+	subd_offsets += ((cl_halfvec)(0, 1)) * GK_SUBDIVISIONS / POINTS_EVAL;
+#elif POINTS_EVAL == 4
+	subd_offsets += ((cl_halfvec)(0, 1, 2, 3)) * GK_SUBDIVISIONS / POINTS_EVAL;
 #endif
 
 	subd_offsets *= precalc->subint_length;
@@ -89,13 +87,12 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 #endif
 #endif
 
-	cl_vec aux, aux2;
+	cl_vec aux;
 	cl_vec cosval = cos(val);
-	cl_vec sinval = sin(val);
 
 	if(stable->integrand == PDF_ALPHA_EQ1)
 	{
-		aux = (precalc->beta_ * val + vec(M_PI_2)) / cos(val);
+		aux = (precalc->beta_ * val + vec(M_PI_2)) / cosval;
 		val = sin(val) * aux / precalc->beta_ + log(aux) + stable->k1;
 
 		val = exp(val + precalc->xxipow);
@@ -104,8 +101,8 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 	else if(stable->integrand == PDF_ALPHA_NEQ1)
 	{
 		aux = (precalc->theta0_ + val) * stable->alfa;
-		val = log(cos(val) / sin(aux)) * stable->alfainvalfa1 +
-			+ log(cos(aux - val) / cos(val)) + stable->k1;
+		val = log(cosval / sin(aux)) * stable->alfainvalfa1 +
+			+ log(cos(aux - val) / cosval) + stable->k1;
 
 		val = exp(val + precalc->xxipow);
 		val = exp(-val) * val;
