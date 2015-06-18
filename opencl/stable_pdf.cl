@@ -206,7 +206,6 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	size_t point_index = get_group_id(0);
 	size_t subinterval_index = get_local_id(1);
 	size_t points_count = get_num_groups(0);
-	size_t offset_subinterval_index = subinterval_index + GK_SUBDIVISIONS / 2;
 	struct stable_precalc precalc;
 	size_t offset;
 	size_t j;
