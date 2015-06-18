@@ -288,16 +288,24 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
     for (size_t i = 0; i < num_points; i++)
     {
         pdf_results[i] = cli->h_kronrod[i];
-        char msg[500];
 
+#if STABLE_MIN_LOG <= 0
+        char msg[500];
         snprintf(msg, 500, "Results set P%zu: gauss_sum = %.3g, kronrod_sum = %.3g", i, cli->h_gauss[i], cli->h_kronrod[i]);
+#endif
+
         if (errs)
         {
             errs[i] = cli->h_kronrod[i] - cli->h_gauss[i];
+
+#if STABLE_MIN_LOG <= 0
             snprintf(msg + strlen(msg), 500 - strlen(msg), ", abserr = %.3g", errs[i]);
+#endif
         }
 
+#if STABLE_MIN_LOG <= 0
         stablecl_log(log_message, msg);
+#endif
     }
 
     bench_end(cli->profiling.set_results, cli->profile_enabled);
