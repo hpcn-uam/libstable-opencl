@@ -169,17 +169,15 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 			sums[offset_subinterval_index][gk_point] = result.zw;
 		}
 
-		barrier(CLK_LOCAL_MEM_FENCE);
-
 		for(offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
 		{
+		    barrier(CLK_LOCAL_MEM_FENCE);
+
 		    if (gk_point < offset)
 		    {
 		  		sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
 		  		sums[offset_subinterval_index][gk_point] += sums[offset_subinterval_index][gk_point + offset];
 		  	}
-
-		    barrier(CLK_LOCAL_MEM_FENCE);
 		}
 
 		if(gk_point == 0)
