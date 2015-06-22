@@ -108,16 +108,16 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 		val = exp(-val) * val;
 	}
 
-	if(!isnormal(val.s0)) val.s0 = 0;
-	if(!isnormal(val.s1)) val.s1 = 0;
+	if(!isnormal(val.s0) || val.s0 < 0) val.s0 = 0;
+	if(!isnormal(val.s1) || val.s1 < 0) val.s1 = 0;
 #if POINTS_EVAL >= 2
-	if(!isnormal(val.s2)) val.s2 = 0;
-	if(!isnormal(val.s3)) val.s3 = 0;
+	if(!isnormal(val.s2) || val.s2 < 0) val.s2 = 0;
+	if(!isnormal(val.s3) || val.s3 < 0) val.s3 = 0;
 #if POINTS_EVAL >= 4
-	if(!isnormal(val.s4)) val.s4 = 0;
-	if(!isnormal(val.s5)) val.s5 = 0;
-	if(!isnormal(val.s6)) val.s6 = 0;
-	if(!isnormal(val.s7)) val.s7 = 0;
+	if(!isnormal(val.s4) || val.s4 < 0) val.s4 = 0;
+	if(!isnormal(val.s5) || val.s5 < 0) val.s5 = 0;
+	if(!isnormal(val.s6) || val.s6 < 0) val.s6 = 0;
+	if(!isnormal(val.s7) || val.s7 < 0) val.s7 = 0;
 #endif
 #endif
 
