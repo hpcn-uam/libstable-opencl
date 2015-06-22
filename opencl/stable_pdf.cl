@@ -342,7 +342,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     	final += previous_integration_remainder;
 
-		gauss[point_index] = final.x;
-		kronrod[point_index] = final.y;
+		gauss[point_index] = final.y;
+		kronrod[point_index] = final.x;
 	}
 }
