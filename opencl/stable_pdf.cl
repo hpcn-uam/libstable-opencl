@@ -317,12 +317,22 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 	} while(reevaluate);
 
+	local cl_vec compensation[MAX_WORKGROUPS];
+	compensation[subinterval_index] = 0;
+
 	for(offset = MAX_WORKGROUPS / 2; offset > 0; offset >>= 1)
 	{
-		if(subinterval_index < offset)
-			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];
-
 		barrier(CLK_LOCAL_MEM_FENCE);
+
+		if(subinterval_index < offset && gk_point == 0)
+		{
+			cl_vec corrected = sums[subinterval_index + offset][0] + compensation[subinterval_index] + compensation[subinterval_index + offset];
+			cl_vec temp_sum = sums[subinterval_index][0] + corrected;
+			compensation[subinterval_index] = corrected;
+			compensation[subinterval_index] -= (temp_sum - sums[subinterval_index][0]);
+
+			sums[subinterval_index][0] = temp_sum;
+		}
 	}
 
     if(gk_point == 0 && subinterval_index == 0)
