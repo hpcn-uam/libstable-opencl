@@ -64,9 +64,9 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 	subd_offsets = vech(subinterval_index);
 
 #if POINTS_EVAL == 2
-	subd_offsets += ((cl_halfvec)(0, 1)) * GK_SUBDIVISIONS / POINTS_EVAL;
+	subd_offsets += ((cl_halfvec)(0, 1)) * MAX_WORKGROUPS;
 #elif POINTS_EVAL == 4
-	subd_offsets += ((cl_halfvec)(0, 1, 2, 3)) * GK_SUBDIVISIONS / POINTS_EVAL;
+	subd_offsets += ((cl_halfvec)(0, 1, 2, 3)) * MAX_WORKGROUPS;
 #endif
 
 	subd_offsets *= precalc->subint_length;
@@ -243,42 +243,53 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		    	sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
 		}
 
-		if(gk_point == 0)
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		if(gk_point == 0 && subinterval_index == 0)
 		{
-			if(any(sums[subinterval_index][0].s01 >= SUBINT_CONTRIB_TH))
+			int max_subinterval = -1;
+			cl_precision max_value = - 100;
+
+			for(j = 0; j < MAX_WORKGROUPS; j++)
 			{
-				atomic_max(&max_contributing, subinterval_index);
-				atomic_min(&min_contributing, subinterval_index);
-			}
+				if(sums[j][0].s0 > max_value)
+				{
+					max_value = sums[j][0].s0;
+					max_subinterval = j;
+				}
 
 #if POINTS_EVAL >= 2
-			if(any(sums[subinterval_index][0].s23 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS);
-				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS);
-			}
+				if(sums[j][0].s2 > max_value)
+				{
+					max_value = sums[j][0].s2;
+					max_subinterval = j + MAX_WORKGROUPS;
+				}
 
 #if POINTS_EVAL >= 4
-			if(any(sums[subinterval_index][0].s45 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS * 2);
-				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS * 2);
+				if(sums[j][0].s4 > max_value)
+				{
+					max_value = sums[j][0].s4;
+					max_subinterval = j + MAX_WORKGROUPS * 2;
+				}
+
+				if(sums[j][0].s6 > max_value)
+				{
+					max_value = sums[j][0].s6;
+					max_subinterval = j + MAX_WORKGROUPS * 3;
+				}
+#endif
+#endif
 			}
 
-			if(any(sums[subinterval_index][0].s67 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS * 3);
-				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS * 3);
-			}
-#endif
-#endif
+			max_contributing = max_subinterval + 1 >= GK_SUBDIVISIONS ? GK_SUBDIVISIONS - 1 : max_subinterval + 1;
+			min_contributing = max_subinterval - 1 < 0 ? 0 : max_subinterval - 1;
 		}
 
 		barrier(CLK_LOCAL_MEM_FENCE);
 
 		int num_contributing = max_contributing - min_contributing + 1;
 
-		if(!reevaluate && num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS)
+		if(!reevaluate && num_contributing > 0)
 		{
 			if(gk_point == 0 && subinterval_index == 0)
 			{
@@ -337,7 +348,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     	final *= precalc.subint_length * stable->c2_part / stable->sigma;
 
-    	if(stable->integrand == PDF_ALPHA_NEQ1)
+  		if(stable->integrand == PDF_ALPHA_NEQ1)
 	    	final /= precalc.xxi;
 
     	final += previous_integration_remainder;
