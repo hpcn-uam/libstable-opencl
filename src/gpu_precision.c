@@ -40,6 +40,7 @@ int main (void)
     size_t beta_count = sizeof(betas) / sizeof(double);
     size_t in_cpu_bounds_count;
     double percentage_in_bounds;
+    ssize_t total_in_cpu_bounds_count = 0;
     FILE* f = fopen("precision.dat", "w");
 
     double abs_diff_sum, rel_diff_sum, gpu_err_sum, cpu_err_sum;
@@ -100,6 +101,7 @@ int main (void)
                 gpu_err_sum /= points_per_interval;
                 cpu_err_sum /= points_per_interval;
 
+                total_in_cpu_bounds_count += in_cpu_bounds_count;
                 percentage_in_bounds = 100 * ((double)in_cpu_bounds_count) / points_per_interval;
 
                 printf("%.3lf %.3lf  %8.3g  %8.3g  %8.3g  %8.3g  %8.1lf %%\n",
@@ -111,6 +113,9 @@ int main (void)
         }
     }
 
+    percentage_in_bounds = 100 * ((double)total_in_cpu_bounds_count) / (points_per_interval * interval_count * alfa_count * beta_count);
+
+    printf("\nTotal percentage of points within bounds: %.3lf %%\n", percentage_in_bounds);
     stable_free(dist);
     return 0;
 }
