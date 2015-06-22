@@ -100,7 +100,7 @@ int main (void)
                 gpu_err_sum /= points_per_interval;
                 cpu_err_sum /= points_per_interval;
 
-                percentage_in_bounds = 100 * in_cpu_bounds_count / points_per_interval;
+                percentage_in_bounds = 100 * ((double)in_cpu_bounds_count) / points_per_interval;
 
                 printf("%.3lf %.3lf  %8.3g  %8.3g  %8.3g  %8.3g  %8.1lf %%\n",
                     alfas[ai], betas[bi],
