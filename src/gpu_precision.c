@@ -7,7 +7,7 @@
 
 int main (void)
 {
-    double alfas[] = { 0.25, 0.5, 0.75, 1, 1.25, 1.5 };
+    double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
     double betas[] = { 0, 0.5, 1 };
     double intervals[] = { -100, 100 };
     int points_per_interval = 1000;
@@ -89,7 +89,7 @@ int main (void)
                         rel_diff = diff / cpu;
 
                     rel_diff_sum += rel_diff;
-                    fprintf(f, "%g %g %g %g %g %g %g %g\n", alfas[ai], betas[bi], points[j], cpu_pdf[j], gpu_pdf[j], diff, rel_diff, fabs(gpu_err[j]));
+                    fprintf(f, "%.2lf %.2lf %5.2g %9.5g %9.5g %9.5g %9.5g %9.5g\n", alfas[ai], betas[bi], points[j], cpu_pdf[j], gpu_pdf[j], diff, rel_diff, fabs(gpu_err[j]));
 
                     if(diff < cpu_err[j] || diff == 0)
                         in_cpu_bounds_count++;
