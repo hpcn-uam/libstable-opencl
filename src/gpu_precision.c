@@ -41,6 +41,8 @@ int main (void)
     size_t in_cpu_bounds_count;
     double percentage_in_bounds;
     ssize_t total_in_cpu_bounds_count = 0;
+    double total_relerr = 0, total_abserr = 0;
+    ssize_t total_points;
     FILE* f = fopen("precision.dat", "w");
 
     double abs_diff_sum, rel_diff_sum, gpu_err_sum, cpu_err_sum;
@@ -96,6 +98,9 @@ int main (void)
                         in_cpu_bounds_count++;
                 }
 
+                total_relerr += rel_diff_sum;
+                total_abserr += abs_diff_sum;
+
                 abs_diff_sum /= points_per_interval;
                 rel_diff_sum /= points_per_interval;
                 gpu_err_sum /= points_per_interval;
@@ -113,9 +118,13 @@ int main (void)
         }
     }
 
-    percentage_in_bounds = 100 * ((double)total_in_cpu_bounds_count) / (points_per_interval * interval_count * alfa_count * beta_count);
+    total_points = points_per_interval * interval_count * alfa_count * beta_count;
+    percentage_in_bounds = 100 * ((double)total_in_cpu_bounds_count / total_points);
+    total_relerr /= total_points;
+    total_abserr /= total_points;
 
     printf("\nTotal percentage of points within bounds: %.3lf %%\n", percentage_in_bounds);
+    printf("Average relerr: %g, abserr: %g\n", total_relerr, total_abserr);
     stable_free(dist);
     return 0;
 }
