@@ -281,8 +281,8 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 #endif
 			}
 
-			max_contributing = max_subinterval + 1 >= GK_SUBDIVISIONS ? GK_SUBDIVISIONS - 1 : max_subinterval + 1;
-			min_contributing = max_subinterval - 1 < 0 ? 0 : max_subinterval - 1;
+			max_contributing = max_subinterval;
+			min_contributing = max_subinterval;
 		}
 
 		barrier(CLK_LOCAL_MEM_FENCE);
