@@ -332,10 +332,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		}
 
 		if(reevaluate)
-		{
-			reevaluate = 0;
-			continue;
-		}
+			break;
 
 		scan_for_contributing_intervals(sums, &min_contributing, &max_contributing);
 
