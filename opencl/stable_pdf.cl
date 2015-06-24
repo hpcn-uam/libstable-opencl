@@ -207,6 +207,8 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 
 		precalc->xxipow = stable->alfainvalfa1 * log(fabs(xxi));
 		precalc->final_factor /= xxi;
+
+		precalc->max_reevaluations = stable->alfa > 1 ? 2 : 1;
 	}
 	else
 	{
@@ -311,6 +313,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS];
 	local int min_contributing, max_contributing;
 	short reevaluate = 0;
+	size_t reevaluations = 0;
 
 	cl_precision2 previous_integration_remainder = vec2(0);
 
@@ -344,7 +347,9 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		    	sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
 		}
 
-		if(reevaluate)
+		reevaluations++;
+
+		if(reevaluations > precalc.max_reevaluations)
 			break;
 
 		if(stable->alfa <= 0.3)
