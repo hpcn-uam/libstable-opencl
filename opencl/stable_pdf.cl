@@ -265,7 +265,7 @@ short scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	int num_contributing = max_contributing - min_contributing + 1;
+	int num_contributing = *max_contributing - *min_contributing + 1;
 
 	return num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS;
 }
