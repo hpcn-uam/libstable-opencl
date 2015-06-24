@@ -224,7 +224,7 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	return CONTINUE_CALC;
 }
 
-void scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], local int* min_contributing, local int* max_contributing)
+short scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], local int* min_contributing, local int* max_contributing)
 {
 	size_t subinterval_index = get_local_id(1);
 	size_t gk_point = get_local_id(0);
@@ -259,20 +259,21 @@ void scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_E
 #endif
 #endif
 	}
-}
 
-short needs_reevaluation(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], int min_contributing, int max_contributing, cl_precision2* previous_integration_remainder)
-{
-	size_t subinterval_index = get_local_id(1);
-	size_t gk_point = get_local_id(0);
-	short reevaluate;
-	size_t j;
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	int num_contributing = max_contributing - min_contributing + 1;
 
-	reevaluate = num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS;
+	return num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS;
+}
 
-	if(reevaluate && gk_point == 0 && subinterval_index == 0)
+void calculate_integration_remainder(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], struct stable_precalc* precalc, int min_contributing, int max_contributing, cl_precision2* previous_integration_remainder, constant struct stable_info* stable)
+{
+	size_t subinterval_index = get_local_id(1);
+	size_t gk_point = get_local_id(0);
+	size_t j;
+
+	if(gk_point == 0 && subinterval_index == 0)
 	{
 		#pragma unroll
 		for(j = 0; j < MAX_WORKGROUPS; j++)
@@ -290,9 +291,12 @@ short needs_reevaluation(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS],
 #endif
 #endif
 		}
-	}
 
-	return reevaluate;
+		*previous_integration_remainder *= precalc->subint_length * stable->c2_part / stable->sigma;
+
+		if(stable->integrand == PDF_ALPHA_NEQ1)
+	    	*previous_integration_remainder /= precalc->xxi;
+	}
 }
 
 kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
@@ -349,27 +353,21 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 			// Reevaluate there to achieve more precision.
 			min_contributing = 0;
 			max_contributing = 0;
+
+			reevaluate = 1;
 		}
 		else
 		{
-			scan_for_contributing_intervals(sums, &min_contributing, &max_contributing);
+			reevaluate = scan_for_contributing_intervals(sums, &min_contributing, &max_contributing);
 		}
 
 		barrier(CLK_LOCAL_MEM_FENCE);
-
-		reevaluate = needs_reevaluation(sums, min_contributing, max_contributing, &previous_integration_remainder);
 
 		if(reevaluate)
 		{
 			int num_contributing = max_contributing - min_contributing + 1;
 
-			if(gk_point == 0)
-			{
-				previous_integration_remainder *= precalc.subint_length * stable->c2_part / stable->sigma;
-
-				if(stable->integrand == PDF_ALPHA_NEQ1)
-			    	previous_integration_remainder /= precalc.xxi;
-		    }
+			calculate_integration_remainder(sums, &precalc, min_contributing, max_contributing, &previous_integration_remainder, stable);
 
 			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subint_length;
 			precalc.iend = precalc.ibegin + num_contributing * precalc.subint_length;
