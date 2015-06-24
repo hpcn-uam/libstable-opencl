@@ -63,6 +63,8 @@ struct stable_precalc {
     cl_precision subint_length;
     cl_precision xxi;
     cl_precision pdf_precalc;
+    cl_precision final_factor;
+    size_t max_reevaluations;
 };
 
 #endif
