@@ -47,33 +47,57 @@
 
 #define SUBINT_CONTRIB_TH 0.00001
 #define MIN_CONTRIBUTING_SUBINTS GK_SUBDIVISIONS / 4
+
 #define SET_TO_RESULT_AND_RETURN 1
 #define CONTINUE_CALC 0
 
+void remove_incorrect_values(cl_vec* val)
+{
+	if(!isnormal(val->s0) || val->s0 < 0) val->s0 = 0;
+	if(!isnormal(val->s1) || val->s1 < 0) val->s1 = 0;
+#if POINTS_EVAL >= 2
+	if(!isnormal(val->s2) || val->s2 < 0) val->s2 = 0;
+	if(!isnormal(val->s3) || val->s3 < 0) val->s3 = 0;
+#if POINTS_EVAL >= 4
+	if(!isnormal(val->s4) || val->s4 < 0) val->s4 = 0;
+	if(!isnormal(val->s5) || val->s5 < 0) val->s5 = 0;
+	if(!isnormal(val->s6) || val->s6 < 0) val->s6 = 0;
+	if(!isnormal(val->s7) || val->s7 < 0) val->s7 = 0;
+#endif
+#endif
+}
+
+// Evaluate the function in the corresponding Gauss-Kronrod POINT_EVAL points (i.e., in
+// one, two or four points) and return a vector of 2 * POINT_EVAL values, where each pair
+// is the Gauss and Kronrod results of the evaluation at the corresponding point.
 cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc)
 {
 	size_t gk_point = get_local_id(0);
 	size_t subinterval_index = get_local_id(1);
 
-	cl_halfvec centers = vech(precalc->ibegin + precalc->subint_length / 2);
-	cl_halfvec subd_offsets;
-	cl_precision abscissa = precalc->subint_length * gk_absc[gk_point] / 2; // Translated integrand evaluation
-	cl_precision2 abscissa_vec = (cl_precision2)(- abscissa, abscissa);
 	cl_precision2 w = gk_weights[gk_point];
 
-	subd_offsets = vech(subinterval_index);
+	cl_halfvec centers = vech(precalc->ibegin + precalc->subint_length / 2); // Prepare the vector that defines the center of each interval.
+	cl_precision abscissa = precalc->subint_length * gk_absc[gk_point] / 2; // Get the abscissa for this point, scale to our subinterval (half) length.
+	cl_precision2 abscissa_vec = (cl_precision2)(- abscissa, abscissa); // GK quadrature is symmetric, we evaluate in +- abscissa.
+	cl_halfvec subd_offsets = vech(subinterval_index); // Prepare the calculation of the offsets
 
+	// Set the subinterval offsets. If we are evaluating, say, 2 points per interval, we have to
+	// evaluate in the intervals indexed by subinterval_index and subinterval_index + MAX_WORKGROUPS.
+	// We use vectors to reduce the number of operations.
 #if POINTS_EVAL == 2
-	subd_offsets += ((cl_halfvec)(0, 1)) * GK_SUBDIVISIONS / POINTS_EVAL;
+	subd_offsets += ((cl_halfvec)(0, 1)) * MAX_WORKGROUPS;
 #elif POINTS_EVAL == 4
-	subd_offsets += ((cl_halfvec)(0, 1, 2, 3)) * GK_SUBDIVISIONS / POINTS_EVAL;
+	subd_offsets += ((cl_halfvec)(0, 1, 2, 3)) * MAX_WORKGROUPS;
 #endif
 
+	// Scale the lengths and set the final centers of the intervals.
 	subd_offsets *= precalc->subint_length;
 	centers += subd_offsets;
 
 	cl_vec val;
 
+	// Calculate the points of evaluation: add each center to our two abscissae.
 #if POINTS_EVAL == 1
 	val.s01 = vec2(centers) + abscissa_vec;
 #else
@@ -87,6 +111,7 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 #endif
 #endif
 
+	// Now evaluate the function.
 	cl_vec aux;
 	cl_vec cosval = cos(val);
 
@@ -108,19 +133,11 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 		val = exp(-val) * val;
 	}
 
-	if(!isnormal(val.s0) || val.s0 < 0) val.s0 = 0;
-	if(!isnormal(val.s1) || val.s1 < 0) val.s1 = 0;
-#if POINTS_EVAL >= 2
-	if(!isnormal(val.s2) || val.s2 < 0) val.s2 = 0;
-	if(!isnormal(val.s3) || val.s3 < 0) val.s3 = 0;
-#if POINTS_EVAL >= 4
-	if(!isnormal(val.s4) || val.s4 < 0) val.s4 = 0;
-	if(!isnormal(val.s5) || val.s5 < 0) val.s5 = 0;
-	if(!isnormal(val.s6) || val.s6 < 0) val.s6 = 0;
-	if(!isnormal(val.s7) || val.s7 < 0) val.s7 = 0;
-#endif
-#endif
+	remove_incorrect_values(&val);
 
+	// GK quadrature is symmetric, so just add them in one quantity.
+	// Just avoid the 0 (last evaluation point) because it's the only
+	// point being evaluated once.
 	if(gk_point < KRONROD_EVAL_POINTS - 1)
 	{
 		val.s0 += val.s1;
@@ -133,6 +150,7 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 #endif
 	}
 
+	// Now multiply the result by the corresponding weight and return.
 	val.s01 = w * val.s0;
 #if POINTS_EVAL >= 2
 	val.s23 = w * val.s2;
