@@ -361,8 +361,6 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 			reevaluate = scan_for_contributing_intervals(sums, &min_contributing, &max_contributing);
 		}
 
-		barrier(CLK_LOCAL_MEM_FENCE);
-
 		if(reevaluate)
 		{
 			int num_contributing = max_contributing - min_contributing + 1;
