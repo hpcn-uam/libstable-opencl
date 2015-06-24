@@ -183,6 +183,8 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 
 	precalc->iend = M_PI_2;
 
+	precalc->final_factor = stable->c2_part / stable->sigma;
+
 	if(stable->integrand == PDF_ALPHA_NEQ1)
 	{
 		if (fabs(xxi) <= stable->xxi_th)
@@ -204,6 +206,7 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 		precalc->ibegin = -precalc->theta0_;
 
 		precalc->xxipow = stable->alfainvalfa1 * log(fabs(xxi));
+		precalc->final_factor /= xxi;
 	}
 	else
 	{
@@ -267,7 +270,7 @@ short scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_
 	return num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS;
 }
 
-void calculate_integration_remainder(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], struct stable_precalc* precalc, int min_contributing, int max_contributing, cl_precision2* previous_integration_remainder, constant struct stable_info* stable)
+void calculate_integration_remainder(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], struct stable_precalc* precalc, int min_contributing, int max_contributing, cl_precision2* previous_integration_remainder)
 {
 	size_t subinterval_index = get_local_id(1);
 	size_t gk_point = get_local_id(0);
@@ -292,10 +295,7 @@ void calculate_integration_remainder(local cl_vec sums[MAX_WORKGROUPS][KRONROD_E
 #endif
 		}
 
-		*previous_integration_remainder *= precalc->subint_length * stable->c2_part / stable->sigma;
-
-		if(stable->integrand == PDF_ALPHA_NEQ1)
-	    	*previous_integration_remainder /= precalc->xxi;
+		*previous_integration_remainder *= precalc->subint_length * precalc->final_factor;
 	}
 }
 
@@ -367,7 +367,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		{
 			int num_contributing = max_contributing - min_contributing + 1;
 
-			calculate_integration_remainder(sums, &precalc, min_contributing, max_contributing, &previous_integration_remainder, stable);
+			calculate_integration_remainder(sums, &precalc, min_contributing, max_contributing, &previous_integration_remainder);
 
 			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subint_length;
 			precalc.iend = precalc.ibegin + num_contributing * precalc.subint_length;
@@ -392,10 +392,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 #endif
 #endif
 
-    	final *= precalc.subint_length * stable->c2_part / stable->sigma;
-
-    	if(stable->integrand == PDF_ALPHA_NEQ1)
-	    	final /= precalc.xxi;
+    	final *= precalc.subint_length * precalc.final_factor;
 
     	final += previous_integration_remainder;
 
