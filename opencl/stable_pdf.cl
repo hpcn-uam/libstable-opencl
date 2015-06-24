@@ -197,6 +197,77 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	return CONTINUE_CALC;
 }
 
+void scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], local int* min_contributing, local int* max_contributing)
+{
+	size_t subinterval_index = get_local_id(1);
+	size_t gk_point = get_local_id(0);
+
+	if(gk_point == 0)
+	{
+		if(any(sums[subinterval_index][0].s01 >= SUBINT_CONTRIB_TH))
+		{
+			atomic_max(max_contributing, subinterval_index);
+			atomic_min(min_contributing, subinterval_index);
+		}
+
+#if POINTS_EVAL >= 2
+		if(any(sums[subinterval_index][0].s23 >= SUBINT_CONTRIB_TH))
+		{
+			atomic_max(max_contributing, subinterval_index + MAX_WORKGROUPS);
+			atomic_min(min_contributing, subinterval_index + MAX_WORKGROUPS);
+		}
+
+#if POINTS_EVAL >= 4
+		if(any(sums[subinterval_index][0].s45 >= SUBINT_CONTRIB_TH))
+		{
+			atomic_max(max_contributing, subinterval_index + MAX_WORKGROUPS * 2);
+			atomic_min(min_contributing, subinterval_index + MAX_WORKGROUPS * 2);
+		}
+
+		if(any(sums[subinterval_index][0].s67 >= SUBINT_CONTRIB_TH))
+		{
+			atomic_max(max_contributing, subinterval_index + MAX_WORKGROUPS * 3);
+			atomic_min(min_contributing, subinterval_index + MAX_WORKGROUPS * 3);
+		}
+#endif
+#endif
+	}
+}
+
+short needs_reevaluation(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], int min_contributing, int max_contributing, cl_precision2* previous_integration_remainder)
+{
+	size_t subinterval_index = get_local_id(1);
+	size_t gk_point = get_local_id(0);
+	short reevaluate;
+	size_t j;
+
+	int num_contributing = max_contributing - min_contributing + 1;
+
+	reevaluate = num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS;
+
+	if(reevaluate && gk_point == 0 && subinterval_index == 0)
+	{
+		#pragma unroll
+		for(j = 0; j < MAX_WORKGROUPS; j++)
+		{
+			if(j < min_contributing || j > max_contributing)
+				*previous_integration_remainder += sums[j][0].s01;
+#if POINTS_EVAL >= 2
+			if(j + MAX_WORKGROUPS < min_contributing || j + MAX_WORKGROUPS > max_contributing)
+				*previous_integration_remainder += sums[j][0].s23;
+#if POINTS_EVAL >= 4
+			if(j + 2 * MAX_WORKGROUPS < min_contributing || j + 2 * MAX_WORKGROUPS > max_contributing)
+				*previous_integration_remainder += sums[j][0].s45;
+			if(j + 3 * MAX_WORKGROUPS < min_contributing || j + 3 * MAX_WORKGROUPS > max_contributing)
+				*previous_integration_remainder += sums[j][0].s67;
+#endif
+#endif
+		}
+	}
+
+	return reevaluate;
+}
+
 kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
 {
 	size_t gk_point = get_local_id(0);
@@ -231,7 +302,6 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		if(gk_point < KRONROD_EVAL_POINTS)
 		{
 			cl_vec result = eval_gk_pair(stable, &precalc);
-
 			sums[subinterval_index][gk_point] = result;
 		}
 
@@ -243,78 +313,33 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		    	sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
 		}
 
-		if(gk_point == 0)
+		if(reevaluate)
 		{
-			if(any(sums[subinterval_index][0].s01 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index);
-				atomic_min(&min_contributing, subinterval_index);
-			}
-
-#if POINTS_EVAL >= 2
-			if(any(sums[subinterval_index][0].s23 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS);
-				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS);
-			}
-
-#if POINTS_EVAL >= 4
-			if(any(sums[subinterval_index][0].s45 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS * 2);
-				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS * 2);
-			}
-
-			if(any(sums[subinterval_index][0].s67 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS * 3);
-				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS * 3);
-			}
-#endif
-#endif
+			reevaluate = 0;
+			continue;
 		}
+
+		scan_for_contributing_intervals(sums, &min_contributing, &max_contributing);
 
 		barrier(CLK_LOCAL_MEM_FENCE);
 
-		int num_contributing = max_contributing - min_contributing + 1;
+		reevaluate = needs_reevaluation(sums, min_contributing, max_contributing, &previous_integration_remainder);
 
-		if(!reevaluate && num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS)
+		if(reevaluate)
 		{
-			if(gk_point == 0 && subinterval_index == 0)
-			{
-				#pragma unroll
-				for(j = 0; j < MAX_WORKGROUPS; j++)
-				{
-					if(j < min_contributing || j > max_contributing)
-						previous_integration_remainder += sums[j][0].s01;
-#if POINTS_EVAL >= 2
-					if(j + MAX_WORKGROUPS < min_contributing || j + MAX_WORKGROUPS > max_contributing)
-						previous_integration_remainder += sums[j][0].s23;
-#if POINTS_EVAL >= 4
-					if(j + 2 * MAX_WORKGROUPS < min_contributing || j + 2 * MAX_WORKGROUPS > max_contributing)
-						previous_integration_remainder += sums[j][0].s45;
-					if(j + 3 * MAX_WORKGROUPS < min_contributing || j + 3 * MAX_WORKGROUPS > max_contributing)
-						previous_integration_remainder += sums[j][0].s67;
-#endif
-#endif
-				}
+			int num_contributing = max_contributing - min_contributing + 1;
 
+			if(gk_point == 0)
+			{
 				previous_integration_remainder *= precalc.subint_length * stable->c2_part / stable->sigma;
 
 				if(stable->integrand == PDF_ALPHA_NEQ1)
 			    	previous_integration_remainder /= precalc.xxi;
-			}
+		    }
 
 			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subint_length;
 			precalc.iend = precalc.ibegin + num_contributing * precalc.subint_length;
-
-			reevaluate = 1;
 		}
-		else
-		{
-			reevaluate = 0;
-		}
-
 	} while(reevaluate);
 
 	for(offset = MAX_WORKGROUPS / 2; offset > 0; offset >>= 1)
