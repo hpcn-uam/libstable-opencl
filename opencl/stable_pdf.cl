@@ -343,7 +343,17 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		if(reevaluate)
 			break;
 
-		scan_for_contributing_intervals(sums, &min_contributing, &max_contributing);
+		if(stable->alfa <= 0.3)
+		{
+			// When alpha < 0.3, there's a big slope at the beginning of the subinterval
+			// Reevaluate there to achieve more precision.
+			min_contributing = 0;
+			max_contributing = 0;
+		}
+		else
+		{
+			scan_for_contributing_intervals(sums, &min_contributing, &max_contributing);
+		}
 
 		barrier(CLK_LOCAL_MEM_FENCE);
 
