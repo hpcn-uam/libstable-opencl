@@ -51,6 +51,15 @@
 #define SET_TO_RESULT_AND_RETURN 1
 #define CONTINUE_CALC 0
 
+// Just a debug macro to report to values out
+// in gauss[point_index] and kronrod[point_index]
+// and exit the kernel.
+#define report_and_exit(g, k) do { \
+	gauss[point_index] = g; \
+	kronrod[point_index] = k; \
+	return; \
+} while (0)
+
 void remove_incorrect_values(cl_vec* val)
 {
 	if(!isnormal(val->s0) || val->s0 < 0) val->s0 = 0;
