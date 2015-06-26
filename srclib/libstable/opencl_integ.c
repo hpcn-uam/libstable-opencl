@@ -296,10 +296,13 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
 
         if (errs)
         {
-            errs[i] = cli->h_kronrod[i] - cli->h_gauss[i];
+            if(cli->h_kronrod[i] != 0)
+                errs[i] = fabs(cli->h_kronrod[i] - cli->h_gauss[i]) / cli->h_kronrod[i];
+            else
+                errs[i] = fabs(cli->h_kronrod[i] - cli->h_gauss[i]);
 
 #if STABLE_MIN_LOG <= 0
-            snprintf(msg + strlen(msg), 500 - strlen(msg), ", abserr = %.3g", errs[i]);
+            snprintf(msg + strlen(msg), 500 - strlen(msg), ", relerr = %.3g", errs[i]);
 #endif
         }
 

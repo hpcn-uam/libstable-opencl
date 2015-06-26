@@ -33,7 +33,7 @@
 #include "opencl_integ.h"
 
 
-int main (void)
+int main (int argc, char** argv)
 {
     double alfa = 1.75, beta = 1, sigma = 1.0, mu = 0.0;
     int param = 0;
@@ -45,6 +45,17 @@ int main (void)
 
     stable_clinteg_printinfo();
 
+    if(argc >= 3)
+    {
+        alfa = strtod(argv[1], NULL);
+        beta = strtod(argv[2], NULL);
+    }
+
+    if(argc >= 4)
+    {
+        x[0] = strtod(argv[3], NULL);
+    }
+
     StableDist *dist = stable_create(alfa, beta, sigma, mu, param);
 
     if (!dist)
@@ -52,6 +63,8 @@ int main (void)
         fprintf(stderr, "StableDist creation failure. Aborting.\n");
         return 1;
     }
+
+    printf("Evaluating at α = %.3lf, β = %.3lf\n", alfa, beta);
 
     for(i = 0; i < num_points; i++)
         pdf[i] = stable_pdf_point(dist, x[i], err + i);

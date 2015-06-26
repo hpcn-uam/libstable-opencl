@@ -47,33 +47,66 @@
 
 #define SUBINT_CONTRIB_TH 0.00001
 #define MIN_CONTRIBUTING_SUBINTS GK_SUBDIVISIONS / 4
+
 #define SET_TO_RESULT_AND_RETURN 1
 #define CONTINUE_CALC 0
 
+// Just a debug macro to report to values out
+// in gauss[point_index] and kronrod[point_index]
+// and exit the kernel.
+#define report_and_exit(g, k) do { \
+	gauss[point_index] = g; \
+	kronrod[point_index] = k; \
+	return; \
+} while (0)
+
+void remove_incorrect_values(cl_vec* val)
+{
+	if(!isnormal(val->s0) || val->s0 < 0) val->s0 = 0;
+	if(!isnormal(val->s1) || val->s1 < 0) val->s1 = 0;
+#if POINTS_EVAL >= 2
+	if(!isnormal(val->s2) || val->s2 < 0) val->s2 = 0;
+	if(!isnormal(val->s3) || val->s3 < 0) val->s3 = 0;
+#if POINTS_EVAL >= 4
+	if(!isnormal(val->s4) || val->s4 < 0) val->s4 = 0;
+	if(!isnormal(val->s5) || val->s5 < 0) val->s5 = 0;
+	if(!isnormal(val->s6) || val->s6 < 0) val->s6 = 0;
+	if(!isnormal(val->s7) || val->s7 < 0) val->s7 = 0;
+#endif
+#endif
+}
+
+// Evaluate the function in the corresponding Gauss-Kronrod POINT_EVAL points (i.e., in
+// one, two or four points) and return a vector of 2 * POINT_EVAL values, where each pair
+// is the Gauss and Kronrod results of the evaluation at the corresponding point.
 cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* precalc)
 {
 	size_t gk_point = get_local_id(0);
 	size_t subinterval_index = get_local_id(1);
 
-	cl_halfvec centers = vech(precalc->ibegin + precalc->subint_length / 2);
-	cl_halfvec subd_offsets;
-	cl_precision abscissa = precalc->subint_length * gk_absc[gk_point] / 2; // Translated integrand evaluation
-	cl_precision2 abscissa_vec = (cl_precision2)(- abscissa, abscissa);
 	cl_precision2 w = gk_weights[gk_point];
 
-	subd_offsets = vech(subinterval_index);
+	cl_halfvec centers = vech(precalc->ibegin + precalc->subint_length / 2); // Prepare the vector that defines the center of each interval.
+	cl_precision abscissa = precalc->subint_length * gk_absc[gk_point] / 2; // Get the abscissa for this point, scale to our subinterval (half) length.
+	cl_precision2 abscissa_vec = (cl_precision2)(- abscissa, abscissa); // GK quadrature is symmetric, we evaluate in +- abscissa.
+	cl_halfvec subd_offsets = vech(subinterval_index); // Prepare the calculation of the offsets
 
+	// Set the subinterval offsets. If we are evaluating, say, 2 points per interval, we have to
+	// evaluate in the intervals indexed by subinterval_index and subinterval_index + MAX_WORKGROUPS.
+	// We use vectors to reduce the number of operations.
 #if POINTS_EVAL == 2
-	subd_offsets += ((cl_halfvec)(0, 1)) * GK_SUBDIVISIONS / POINTS_EVAL;
+	subd_offsets += ((cl_halfvec)(0, 1)) * MAX_WORKGROUPS;
 #elif POINTS_EVAL == 4
-	subd_offsets += ((cl_halfvec)(0, 1, 2, 3)) * GK_SUBDIVISIONS / POINTS_EVAL;
+	subd_offsets += ((cl_halfvec)(0, 1, 2, 3)) * MAX_WORKGROUPS;
 #endif
 
+	// Scale the lengths and set the final centers of the intervals.
 	subd_offsets *= precalc->subint_length;
 	centers += subd_offsets;
 
 	cl_vec val;
 
+	// Calculate the points of evaluation: add each center to our two abscissae.
 #if POINTS_EVAL == 1
 	val.s01 = vec2(centers) + abscissa_vec;
 #else
@@ -87,6 +120,7 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 #endif
 #endif
 
+	// Now evaluate the function.
 	cl_vec aux;
 	cl_vec cosval = cos(val);
 
@@ -108,19 +142,11 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 		val = exp(-val) * val;
 	}
 
-	if(!isnormal(val.s0)) val.s0 = 0;
-	if(!isnormal(val.s1)) val.s1 = 0;
-#if POINTS_EVAL >= 2
-	if(!isnormal(val.s2)) val.s2 = 0;
-	if(!isnormal(val.s3)) val.s3 = 0;
-#if POINTS_EVAL >= 4
-	if(!isnormal(val.s4)) val.s4 = 0;
-	if(!isnormal(val.s5)) val.s5 = 0;
-	if(!isnormal(val.s6)) val.s6 = 0;
-	if(!isnormal(val.s7)) val.s7 = 0;
-#endif
-#endif
+	remove_incorrect_values(&val);
 
+	// GK quadrature is symmetric, so just add them in one quantity.
+	// Just avoid the 0 (last evaluation point) because it's the only
+	// point being evaluated once.
 	if(gk_point < KRONROD_EVAL_POINTS - 1)
 	{
 		val.s0 += val.s1;
@@ -133,6 +159,7 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 #endif
 	}
 
+	// Now multiply the result by the corresponding weight and return.
 	val.s01 = w * val.s0;
 #if POINTS_EVAL >= 2
 	val.s23 = w * val.s2;
@@ -156,6 +183,8 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 
 	precalc->iend = M_PI_2;
 
+	precalc->final_factor = stable->c2_part / stable->sigma;
+
 	if(stable->integrand == PDF_ALPHA_NEQ1)
 	{
 		if (fabs(xxi) <= stable->xxi_th)
@@ -177,6 +206,9 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 		precalc->ibegin = -precalc->theta0_;
 
 		precalc->xxipow = stable->alfainvalfa1 * log(fabs(xxi));
+		precalc->final_factor /= xxi;
+
+		precalc->max_reevaluations = stable->alfa > 1 ? 2 : 1;
 	}
 	else
 	{
@@ -197,6 +229,78 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	return CONTINUE_CALC;
 }
 
+short scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], local int* min_contributing, local int* max_contributing)
+{
+	size_t subinterval_index = get_local_id(1);
+	size_t gk_point = get_local_id(0);
+
+	if(gk_point == 0)
+	{
+		if(any(sums[subinterval_index][0].s01 >= SUBINT_CONTRIB_TH))
+		{
+			atomic_max(max_contributing, subinterval_index);
+			atomic_min(min_contributing, subinterval_index);
+		}
+
+#if POINTS_EVAL >= 2
+		if(any(sums[subinterval_index][0].s23 >= SUBINT_CONTRIB_TH))
+		{
+			atomic_max(max_contributing, subinterval_index + MAX_WORKGROUPS);
+			atomic_min(min_contributing, subinterval_index + MAX_WORKGROUPS);
+		}
+
+#if POINTS_EVAL >= 4
+		if(any(sums[subinterval_index][0].s45 >= SUBINT_CONTRIB_TH))
+		{
+			atomic_max(max_contributing, subinterval_index + MAX_WORKGROUPS * 2);
+			atomic_min(min_contributing, subinterval_index + MAX_WORKGROUPS * 2);
+		}
+
+		if(any(sums[subinterval_index][0].s67 >= SUBINT_CONTRIB_TH))
+		{
+			atomic_max(max_contributing, subinterval_index + MAX_WORKGROUPS * 3);
+			atomic_min(min_contributing, subinterval_index + MAX_WORKGROUPS * 3);
+		}
+#endif
+#endif
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	int num_contributing = *max_contributing - *min_contributing + 1;
+
+	return num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS;
+}
+
+void calculate_integration_remainder(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], struct stable_precalc* precalc, int min_contributing, int max_contributing, cl_precision2* previous_integration_remainder)
+{
+	size_t subinterval_index = get_local_id(1);
+	size_t gk_point = get_local_id(0);
+	size_t j;
+
+	if(gk_point == 0 && subinterval_index == 0)
+	{
+		#pragma unroll
+		for(j = 0; j < MAX_WORKGROUPS; j++)
+		{
+			if(j < min_contributing || j > max_contributing)
+				*previous_integration_remainder += sums[j][0].s01;
+#if POINTS_EVAL >= 2
+			if(j + MAX_WORKGROUPS < min_contributing || j + MAX_WORKGROUPS > max_contributing)
+				*previous_integration_remainder += sums[j][0].s23;
+#if POINTS_EVAL >= 4
+			if(j + 2 * MAX_WORKGROUPS < min_contributing || j + 2 * MAX_WORKGROUPS > max_contributing)
+				*previous_integration_remainder += sums[j][0].s45;
+			if(j + 3 * MAX_WORKGROUPS < min_contributing || j + 3 * MAX_WORKGROUPS > max_contributing)
+				*previous_integration_remainder += sums[j][0].s67;
+#endif
+#endif
+		}
+
+		*previous_integration_remainder *= precalc->subint_length * precalc->final_factor;
+	}
+}
+
 kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
 {
 	size_t gk_point = get_local_id(0);
@@ -209,6 +313,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS];
 	local int min_contributing, max_contributing;
 	short reevaluate = 0;
+	size_t reevaluations = 0;
 
 	cl_precision2 previous_integration_remainder = vec2(0);
 
@@ -231,7 +336,6 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		if(gk_point < KRONROD_EVAL_POINTS)
 		{
 			cl_vec result = eval_gk_pair(stable, &precalc);
-
 			sums[subinterval_index][gk_point] = result;
 		}
 
@@ -243,78 +347,34 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		    	sums[subinterval_index][gk_point] += sums[subinterval_index][gk_point + offset];
 		}
 
-		if(gk_point == 0)
+		reevaluations++;
+
+		if(reevaluations > precalc.max_reevaluations)
+			break;
+
+		if(stable->alfa <= 0.3)
 		{
-			if(any(sums[subinterval_index][0].s01 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index);
-				atomic_min(&min_contributing, subinterval_index);
-			}
-
-#if POINTS_EVAL >= 2
-			if(any(sums[subinterval_index][0].s23 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS);
-				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS);
-			}
-
-#if POINTS_EVAL >= 4
-			if(any(sums[subinterval_index][0].s45 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS * 2);
-				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS * 2);
-			}
-
-			if(any(sums[subinterval_index][0].s67 >= SUBINT_CONTRIB_TH))
-			{
-				atomic_max(&max_contributing, subinterval_index + MAX_WORKGROUPS * 3);
-				atomic_min(&min_contributing, subinterval_index + MAX_WORKGROUPS * 3);
-			}
-#endif
-#endif
-		}
-
-		barrier(CLK_LOCAL_MEM_FENCE);
-
-		int num_contributing = max_contributing - min_contributing + 1;
-
-		if(!reevaluate && num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS)
-		{
-			if(gk_point == 0 && subinterval_index == 0)
-			{
-				#pragma unroll
-				for(j = 0; j < MAX_WORKGROUPS; j++)
-				{
-					if(j < min_contributing || j > max_contributing)
-						previous_integration_remainder += sums[j][0].s01;
-#if POINTS_EVAL >= 2
-					if(j + MAX_WORKGROUPS < min_contributing || j + MAX_WORKGROUPS > max_contributing)
-						previous_integration_remainder += sums[j][0].s23;
-#if POINTS_EVAL >= 4
-					if(j + 2 * MAX_WORKGROUPS < min_contributing || j + 2 * MAX_WORKGROUPS > max_contributing)
-						previous_integration_remainder += sums[j][0].s45;
-					if(j + 3 * MAX_WORKGROUPS < min_contributing || j + 3 * MAX_WORKGROUPS > max_contributing)
-						previous_integration_remainder += sums[j][0].s67;
-#endif
-#endif
-				}
-
-				previous_integration_remainder *= precalc.subint_length * stable->c2_part / stable->sigma;
-
-				if(stable->integrand == PDF_ALPHA_NEQ1)
-			    	previous_integration_remainder /= precalc.xxi;
-			}
-
-			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subint_length;
-			precalc.iend = precalc.ibegin + num_contributing * precalc.subint_length;
+			// When alpha < 0.3, there's a big slope at the beginning of the subinterval
+			// Reevaluate there to achieve more precision.
+			min_contributing = 0;
+			max_contributing = 0;
 
 			reevaluate = 1;
 		}
 		else
 		{
-			reevaluate = 0;
+			reevaluate = scan_for_contributing_intervals(sums, &min_contributing, &max_contributing);
 		}
 
+		if(reevaluate)
+		{
+			int num_contributing = max_contributing - min_contributing + 1;
+
+			calculate_integration_remainder(sums, &precalc, min_contributing, max_contributing, &previous_integration_remainder);
+
+			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subint_length;
+			precalc.iend = precalc.ibegin + num_contributing * precalc.subint_length;
+		}
 	} while(reevaluate);
 
 	for(offset = MAX_WORKGROUPS / 2; offset > 0; offset >>= 1)
@@ -335,14 +395,11 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 #endif
 #endif
 
-    	final *= precalc.subint_length * stable->c2_part / stable->sigma;
-
-    	if(stable->integrand == PDF_ALPHA_NEQ1)
-	    	final /= precalc.xxi;
+    	final *= precalc.subint_length * precalc.final_factor;
 
     	final += previous_integration_remainder;
 
-		gauss[point_index] = final.x;
-		kronrod[point_index] = final.y;
+		gauss[point_index] = final.y;
+		kronrod[point_index] = final.x;
 	}
 }

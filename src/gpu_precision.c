@@ -7,9 +7,9 @@
 
 int main (void)
 {
-    double alfas[] = { 0.25, 0.5, 0.75, 1, 1.25, 1.5 };
+    double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
     double betas[] = { 0, 0.5, 1 };
-    double intervals[] = { -100, 100 };
+    double intervals[] = { -1000, -10, 10, 1000 };
     int points_per_interval = 1000;
     double cpu_pdf[points_per_interval], gpu_pdf[points_per_interval];
     double cpu_err[points_per_interval], gpu_err[points_per_interval];
@@ -40,6 +40,9 @@ int main (void)
     size_t beta_count = sizeof(betas) / sizeof(double);
     size_t in_cpu_bounds_count;
     double percentage_in_bounds;
+    ssize_t total_in_cpu_bounds_count = 0;
+    double total_relerr = 0, total_abserr = 0;
+    ssize_t total_points;
     FILE* f = fopen("precision.dat", "w");
 
     double abs_diff_sum, rel_diff_sum, gpu_err_sum, cpu_err_sum;
@@ -89,18 +92,22 @@ int main (void)
                         rel_diff = diff / cpu;
 
                     rel_diff_sum += rel_diff;
-                    fprintf(f, "%g %g %g %g %g %g %g %g\n", alfas[ai], betas[bi], points[j], cpu_pdf[j], gpu_pdf[j], diff, rel_diff, fabs(gpu_err[j]));
+                    fprintf(f, "%.2lf %.2lf %5.2g %9.5g %9.5g %9.5g %9.5g %9.5g\n", alfas[ai], betas[bi], points[j], cpu_pdf[j], gpu_pdf[j], diff, rel_diff, fabs(gpu_err[j]));
 
                     if(diff < cpu_err[j] || diff == 0)
                         in_cpu_bounds_count++;
                 }
+
+                total_relerr += rel_diff_sum;
+                total_abserr += abs_diff_sum;
 
                 abs_diff_sum /= points_per_interval;
                 rel_diff_sum /= points_per_interval;
                 gpu_err_sum /= points_per_interval;
                 cpu_err_sum /= points_per_interval;
 
-                percentage_in_bounds = 100 * in_cpu_bounds_count / points_per_interval;
+                total_in_cpu_bounds_count += in_cpu_bounds_count;
+                percentage_in_bounds = 100 * ((double)in_cpu_bounds_count) / points_per_interval;
 
                 printf("%.3lf %.3lf  %8.3g  %8.3g  %8.3g  %8.3g  %8.1lf %%\n",
                     alfas[ai], betas[bi],
@@ -111,6 +118,13 @@ int main (void)
         }
     }
 
+    total_points = points_per_interval * interval_count * alfa_count * beta_count;
+    percentage_in_bounds = 100 * ((double)total_in_cpu_bounds_count / total_points);
+    total_relerr /= total_points;
+    total_abserr /= total_points;
+
+    printf("\nTotal percentage of points within bounds: %.3lf %%\n", percentage_in_bounds);
+    printf("Average relerr: %g, abserr: %g\n", total_relerr, total_abserr);
     stable_free(dist);
     return 0;
 }
