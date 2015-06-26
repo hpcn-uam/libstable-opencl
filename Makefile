@@ -60,7 +60,7 @@ FMT_NORM := $(shell tput sgr0)
 
 TAR_EXCLUDES = bin obj doc .tar.gz .git tasks \
 		cscope.out $(PROJECT_NAME).sublime-project $(PROJECT_NAME).sublime-workspace \
-		*.dat callgrind.* gmon.out
+		*.dat callgrind.* gmon.out uva*
 TAR_EXCLUDES_ARG = $(addprefix --exclude=, $(TAR_EXCLUDES))
 
 include Makefile.$(shell uname)
@@ -206,7 +206,7 @@ $(BINDIR)/%: | $(BINDIR) depend configs
 
 ## Packing
 
-pack: $(DOC_PDFS) codeclean
-	@cd ..; tar $(TAR_EXCLUDES_ARG) -czf $(PROJECT_NAME).tar.gz $(lastword $(notdir $(CURDIR)))
+pack: codeclean
+	@cd ..; tar $(TAR_EXCLUDES_ARG) -czvf $(PROJECT_NAME).tar.gz $(lastword $(notdir $(CURDIR)))
 	@echo "Packed $(PROJECT_NAME).tar.gz in parent directory."
 
