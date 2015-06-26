@@ -1,12 +1,6 @@
 #include "openclenv.h"
 #include <stdarg.h>
 
-#ifndef OPENCL_FORCE_CPU
-#define OPENCL_FORCE_CPU 0
-#else
-#define OPENCL_FORCE_CPU 1
-#endif
-
 #define OPENCL_BUILD_OPTIONS "-cl-no-signed-zeros"
 
 #define MAX_OPENCL_PLATFORMS 5
@@ -121,7 +115,7 @@ static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_nu
     char version[500], name[500], vendor[500], extensions[500];
     cl_uint float_vecwidth = 0, double_vecwidth = 0;
 
-    stablecl_log(log_message, "Available platforms (OPENCL_FORCE_CPU = %d): %d", OPENCL_FORCE_CPU, platform_num);
+    stablecl_log(log_message, "Available platforms: %d", platform_num);
     for (i = 0; i < platform_num; i++)
     {
         clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
@@ -155,7 +149,7 @@ int opencl_initenv(struct openclenv *env)
 
     _opencl_platform_info(platforms, platform_num);
 
-    err = clGetDeviceIDs(platforms[0], OPENCL_FORCE_CPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU, 1, &(env->device), NULL);
+    err = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL, 1, &(env->device), NULL);
 
     if (err)
     {
