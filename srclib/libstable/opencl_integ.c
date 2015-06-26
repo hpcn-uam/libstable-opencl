@@ -75,7 +75,7 @@ static int  _stable_unmap_gk_buffers(struct stable_clinteg* cli)
     return 0;
 }
 
-int stable_clinteg_init(struct stable_clinteg *cli)
+int stable_clinteg_init(struct stable_clinteg *cli, size_t platform_index)
 {
     int err;
 
@@ -95,7 +95,7 @@ int stable_clinteg_init(struct stable_clinteg *cli)
         return -1;
     }
 
-    if (opencl_initenv(&cli->env))
+    if (opencl_initenv(&cli->env, platform_index))
     {
         stablecl_log(log_message, "OpenCL environment failure.");
         return -1;

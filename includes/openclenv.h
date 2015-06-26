@@ -52,7 +52,7 @@ typedef enum {
 #define STABLE_MIN_LOG 0
 #endif
 
-int opencl_initenv(struct openclenv* env);
+int opencl_initenv(struct openclenv* env, size_t platform_index);
 short opencl_load_kernel(struct openclenv* env, const char* bitcode_path, const char* kernname, size_t index);
 short opencl_set_current_queue(struct openclenv* env, size_t queue);
 short opencl_set_queues(struct openclenv* env, size_t new_count);

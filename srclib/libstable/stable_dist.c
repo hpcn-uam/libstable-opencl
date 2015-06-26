@@ -365,6 +365,7 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
   dist->gslworkspace = gsl_integration_workspace_alloc(IT_MAX);
   dist->gslrand = gsl_rng_alloc (gsl_rng_default);
   dist->gpu_enabled = 0;
+  dist->gpu_platform = 0;
 
   //Allow the distribution to use THREADS threads.
   stable_set_THREADS(THREADS);
@@ -377,7 +378,7 @@ short stable_activate_gpu(StableDist* dist)
   if(dist->gpu_enabled)
     return 0;
 
-  short error = stable_clinteg_init(&dist->cli);
+  short error = stable_clinteg_init(&dist->cli, dist->gpu_platform);
 
   if(!error)
     dist->gpu_enabled = 1;

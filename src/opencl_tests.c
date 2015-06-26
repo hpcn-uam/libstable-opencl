@@ -85,7 +85,7 @@ short test_kernel(const char* file, const char* kernel_name)
 
 	profile_f = fopen(profile_fname, "w");
 
-	if (opencl_initenv(&ocl) || opencl_load_kernel(&ocl, file, kernel_name, 0))
+	if (opencl_initenv(&ocl, 0) || opencl_load_kernel(&ocl, file, kernel_name, 0))
     {
         stablecl_log(log_message, "OpenCL environment failure.");
         return -1;

@@ -132,7 +132,7 @@ static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_nu
 #endif
 }
 
-int opencl_initenv(struct openclenv *env)
+int opencl_initenv(struct openclenv *env, size_t platform_index)
 {
     char *err_msg = NULL;
     int err = 0;
@@ -149,7 +149,7 @@ int opencl_initenv(struct openclenv *env)
 
     _opencl_platform_info(platforms, platform_num);
 
-    err = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL, 1, &(env->device), NULL);
+    err = clGetDeviceIDs(platforms[platform_index], CL_DEVICE_TYPE_ALL, 1, &(env->device), NULL);
 
     if (err)
     {

@@ -175,6 +175,7 @@ struct StableDistStruct
     struct stable_clinteg cli;
     short gpu_enabled;
     short parallel_gridfit;
+    size_t gpu_platform;
   };
 
 typedef struct StableDistStruct StableDist;
