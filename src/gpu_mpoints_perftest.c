@@ -9,7 +9,7 @@ int main (void)
 {
 	double alfa = 1.25, beta = 0.5, sigma = 1.0, mu = 0.0;
 	int param = 0;
-	int max_test_size = 10000;
+	int max_test_size = 6000;
 	int num_tests_per_size = 4;
 	int test_size_step = 10;
 	int test_size;
@@ -21,7 +21,7 @@ int main (void)
 	int max_x_range = -min_x_range;
 	double x_step_size = ((double)(max_x_range - min_x_range)) / (double) max_test_size;
 	double start, end, duration;
-	double cpu_duration;
+	double cpu_duration, cpu_parallel_duration;
 
 	dist = stable_create(alfa, beta, sigma, mu, param);
 	x = calloc(max_test_size, sizeof(double));
@@ -46,6 +46,7 @@ int main (void)
 	{
 		duration = 0;
 		cpu_duration = 0;
+		cpu_parallel_duration = 0;
 
 		for (i = 0; i < num_tests_per_size; i++)
 		{
@@ -54,16 +55,29 @@ int main (void)
 			end = get_ms_time();
 			duration += end - start;
 
+			stable_set_THREADS(1);
+
 			start = get_ms_time();
 			stable_pdf(dist, x, test_size, pdf, NULL);
 			end = get_ms_time();
 			cpu_duration += end - start;
+
+			stable_set_THREADS(0);
+
+			start = get_ms_time();
+			stable_pdf(dist, x, test_size, pdf, NULL);
+			end = get_ms_time();
+			cpu_parallel_duration += end - start;
 		}
 
 		duration /= num_tests_per_size;
 		cpu_duration /= num_tests_per_size;
+		cpu_parallel_duration /= num_tests_per_size;
 
-        printf("%d\t%.4lf\t%.4lf\t%4lf\t%4lf\n", test_size, duration, duration / test_size, cpu_duration, cpu_duration / test_size);
+        printf("%d\t%.4lf\t%.4lf\t%4lf\t%4lf\t%4lf\t%4lf\n", test_size,
+        	duration, duration / test_size,
+        	cpu_duration, cpu_duration / test_size,
+        	cpu_parallel_duration, cpu_parallel_duration / test_size);
 	}
 
 	stable_free(dist);
