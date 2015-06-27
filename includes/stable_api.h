@@ -176,6 +176,7 @@ struct StableDistStruct
     short gpu_enabled;
     short parallel_gridfit;
     size_t gpu_platform;
+    size_t gpu_queues;
   };
 
 typedef struct StableDistStruct StableDist;

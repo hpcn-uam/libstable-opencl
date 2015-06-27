@@ -13,6 +13,8 @@
 #define KERNIDX_ALPHA_NEQ1 0
 #define KERNIDX_ALPHA_EQ1 1
 
+#define MIN_POINTS_PER_QUEUE 200
+
 static int _stable_set_results(struct stable_clinteg *cli);
 
 static int _stable_can_overflow(struct stable_clinteg *cli)
@@ -320,6 +322,65 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
     return err;
 }
 
+short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, double *pdf_results, double *errs, size_t num_points, struct StableDistStruct *dist, size_t queues)
+{
+    cl_int err = 0;
+    size_t i;
+    size_t points_per_queue, processed_points, required_queues, points_for_current_queue;
+
+    // Ensure we have enough queues
+    if(cli->env.queue_count < queues)
+        opencl_set_queues(&cli->env, queues);
+
+    required_queues = num_points / MIN_POINTS_PER_QUEUE + 1;
+    required_queues = required_queues > queues ? queues : required_queues;
+
+    points_per_queue = num_points / required_queues;
+    processed_points = 0;
+
+    for(i = 0; i < required_queues; i++)
+    {
+        if(i == required_queues - 1)
+            points_for_current_queue = num_points - processed_points; // Process remaining points. We don't want to leave anything because of rounding errors.
+        else
+            points_for_current_queue = points_per_queue;
+
+        opencl_set_current_queue(&cli->env, i);
+        err = stable_clinteg_points_async(cli, x + processed_points, points_for_current_queue, dist, NULL);
+
+        if(err)
+            goto cleanup;
+
+        processed_points += points_for_current_queue;
+    }
+
+    if(processed_points != num_points)
+        stablecl_log(log_err, "QQQQQ");
+
+    processed_points = 0;
+
+    for(i = 0; i < required_queues; i++)
+    {
+        if(i == required_queues - 1)
+            points_for_current_queue = num_points - processed_points; // Process remaining points. We don't want to leave anything because of rounding errors.
+        else
+            points_for_current_queue = points_per_queue;
+
+        opencl_set_current_queue(&cli->env, i);
+        err = stable_clinteg_points_end(cli, pdf_results + processed_points, errs ? errs + processed_points : NULL, points_for_current_queue, dist, NULL);
+
+        if(err)
+            goto cleanup;
+
+        processed_points += points_for_current_queue;
+    }
+
+cleanup:
+    if(err)
+        stablecl_log(log_err, "Error on parallel evaluation.");
+
+    return err;
+}
 
 void stable_clinteg_teardown(struct stable_clinteg *cli)
 {

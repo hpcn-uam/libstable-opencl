@@ -575,7 +575,12 @@ void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
     if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
         stable_pdf(dist, x, Nx, pdf, err); // Rely on analytical formulae where possible
     else
-        stable_clinteg_points(&dist->cli, (double*) x, pdf, err, Nx, dist);
+    {
+        if(dist->gpu_queues == 1)
+            stable_clinteg_points(&dist->cli, (double*) x, pdf, err, Nx, dist);
+        else
+            stable_clinteg_points_parallel(&dist->cli, (double*) x, pdf, err, Nx, dist, dist->gpu_queues);
+    }
 }
 
 /******************************************************************************/

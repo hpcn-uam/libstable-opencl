@@ -50,6 +50,8 @@ int main (void)
 
 		for (i = 0; i < num_tests_per_size; i++)
 		{
+			dist->gpu_queues = 1;
+
 			start = get_ms_time();
 			stable_pdf_gpu(dist, x, test_size, pdf, NULL);
 			end = get_ms_time();
@@ -74,7 +76,7 @@ int main (void)
 		cpu_duration /= num_tests_per_size;
 		cpu_parallel_duration /= num_tests_per_size;
 
-        printf("%d\t%.4lf\t%.4lf\t%4lf\t%4lf\t%4lf\t%4lf\n", test_size,
+        printf("%d  %.4lf %.4lf  %4lf %4lf  %4lf %4lf\n", test_size,
         	duration, duration / test_size,
         	cpu_duration, cpu_duration / test_size,
         	cpu_parallel_duration, cpu_parallel_duration / test_size);
