@@ -7,7 +7,7 @@
 
 int main (void)
 {
-	double alfa = 1.25, beta = 0.5, sigma = 1.0, mu = 0.0;
+	double alfa = 0.5, beta = 0.5, sigma = 1.0, mu = 0.0;
 	int param = 0;
 	int max_test_size = 6000;
 	int num_tests_per_size = 4;
