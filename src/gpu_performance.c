@@ -88,18 +88,27 @@ static void _measure_cpu_performance(StableDist *dist, double* x, size_t nx, dou
 
     general_profile->total += gpu_end - gpu_start;
 
-    printf("%.3f %.3f\t| %.3f |\n", alfa, beta, (gpu_end - gpu_start) / NUMTESTS);
- }
+    printf("%.3f %.3f\t| %.3f |\n", alfa, beta, (gpu_end - gpu_start) / (NUMTESTS * nx));
+}
+
+static void fill(double* array, double begin, double end, size_t size)
+{
+    size_t i;
+    double step = (end - begin) / size;
+
+    for(i = 0; i < size; i++)
+        array[i] = begin + i * step;
+}
 
 int main (int argc, char** argv)
 {
-    double alfas[] = { 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75 };
-    double betas[] = { 0.0, 0.25, 0.5, 0.75, 1.0, -0.25, -0.5, -0.75, -1.0 };
-    double ev_points[] = { -1, 0, 1, -2, 2, 3, 4, 5, 6, 10, 100, 1000, -1000 };
+    size_t alfas_len = 20;
+    size_t betas_len = 10;
+    size_t evpoints_len = 500;
+    double alfas[alfas_len];
+    double betas[betas_len];
+    double ev_points[evpoints_len];
     double sigma = 1.0, mu = 0.0;
-    size_t alfas_len = sizeof alfas / sizeof(double);
-    size_t betas_len = sizeof betas / sizeof(double);
-    size_t evpoints_len = sizeof ev_points / sizeof(double);
     long test_num;
     StableDist *dist;
     int ai, bi;
@@ -112,6 +121,10 @@ int main (int argc, char** argv)
         alfas_len = 1;
         betas_len = 1;
     }
+
+    fill(alfas, 0, 2, alfas_len);
+    fill(betas, 0, 1, betas_len);
+    fill(ev_points, -100, 100, evpoints_len);
 
     test_num = alfas_len * betas_len * evpoints_len * NUMTESTS;
 
@@ -130,7 +143,7 @@ int main (int argc, char** argv)
         for (bi = 0; bi < betas_len; bi++)
         {
             stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
-            _measure_cpu_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile);
+            // _measure_cpu_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile);
         }
     }
 
