@@ -64,7 +64,7 @@ int main (void)
 			end = get_ms_time();
 			cpu_duration += end - start;
 
-			stable_set_THREADS(4);
+			stable_set_THREADS(0);
 
 			start = get_ms_time();
 			stable_pdf(dist, x, test_size, pdf, NULL);
