@@ -40,7 +40,7 @@ function remote_make()
 
 echo "Target: $host"
 echob "Syncing files..."
-rsync -avzPt --exclude=.git --exclude=data --exclude=results \
+rsync -avzP --no-t --exclude=.git --exclude=data --exclude=results \
 	--exclude=obj --exclude=bin --exclude=lib --exclude="*pdf" \
 	--exclude="*.dat" --exclude="*.results" --exclude="*.txt" \
 	--exclude="*.out" \
