@@ -26,9 +26,8 @@ static short set_params_to_dist(StableDist* dist, double* params, size_t params_
 	for(size_t dim = 0; dim < params_count; dim++)
 		dist_current_params[dim] = params[dim];
 
-
 	return stable_setparams(dist, dist_current_params[DIM_ALPHA], dist_current_params[DIM_BETA],
-		dist_current_params[DIM_MU], dist_current_params[DIM_SIGMA], 0) == NOVALID;
+		dist_current_params[DIM_SIGMA], dist_current_params[DIM_MU], 0) == NOVALID;
 }
 
 static void calculate_upperleft_corner_point(struct stable_gridfit* gridfit)
