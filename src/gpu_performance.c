@@ -55,15 +55,15 @@ static void _measure_gpu_performance(StableDist *gpu_dist, double* x, size_t nx,
 
     profile_sum(general_profile, &current_prof_info);
 
-    current_prof_info.total /= NUMTESTS;
-    current_prof_info.submit_acum /= NUMTESTS;
-    current_prof_info.start_acum /= NUMTESTS;
-    current_prof_info.finish_acum /= NUMTESTS;
-    current_prof_info.exec_time /= NUMTESTS;
-    current_prof_info.argset /= NUMTESTS;
-    current_prof_info.enqueue /= NUMTESTS;
-    current_prof_info.buffer_read /= NUMTESTS;
-    current_prof_info.set_results /= NUMTESTS;
+    current_prof_info.total /= NUMTESTS * nx;
+    current_prof_info.submit_acum /= NUMTESTS * nx;
+    current_prof_info.start_acum /= NUMTESTS * nx;
+    current_prof_info.finish_acum /= NUMTESTS * nx;
+    current_prof_info.exec_time /= NUMTESTS * nx;
+    current_prof_info.argset /= NUMTESTS * nx;
+    current_prof_info.enqueue /= NUMTESTS * nx;
+    current_prof_info.buffer_read /= NUMTESTS * nx;
+    current_prof_info.set_results /= NUMTESTS * nx;
 
     fprintf(stdout, "%.3f %.3f\t| %.3f | %.5f %.5f %.5f %.5f | %.5f %.5f %.5f %.5f\n", alfa, beta, current_prof_info.total,
           current_prof_info.submit_acum, current_prof_info.start_acum, current_prof_info.finish_acum, current_prof_info.exec_time,
