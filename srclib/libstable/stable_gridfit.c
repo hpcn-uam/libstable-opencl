@@ -6,8 +6,8 @@
 #define DIM_MU 2
 #define DIM_SIGMA 3
 
-static double initial_point_separation[] = { 0.2, 0.2, 0.2, 0.4 };
-static double initial_contracting_coefs[] = { 0.7, 0.8, 0.6, 0.2 };
+static double initial_point_separation[] = { 0.25, 0.25, 0.2, 0.4 };
+static double initial_contracting_coefs[] = { 0.75, 0.85, 0.6, 0.2 };
 
 static void get_params_from_dist(StableDist* dist, double params[4])
 {
@@ -82,6 +82,11 @@ static void sort_data(struct stable_gridfit* gridfit, const double* data)
 	gridfit->data = sorted;
 }
 
+static void prepare_mcculloch_statistics(struct stable_gridfit* gridfit)
+{
+	cztab(gridfit->data, gridfit->data_length, &gridfit->mc_c, &gridfit->mc_z);
+}
+
 static void gridfit_init(struct stable_gridfit* gridfit, StableDist *dist, const double *data, const unsigned int length)
 {
 	gridfit->data_length = length;
@@ -105,6 +110,9 @@ static void gridfit_init(struct stable_gridfit* gridfit, StableDist *dist, const
 
 	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
 		gridfit->fitter_dists[i] = stable_create(1, 0.5, 1, 1, 0);
+
+	if(ESTIMATING_PARAMS < 4)
+		prepare_mcculloch_statistics(gridfit);
 
 	stable_activate_gpu(dist);
 	gridfit->cli = &dist->cli;
@@ -139,10 +147,8 @@ static void estimate_remaining_parameters(struct stable_gridfit* gridfit)
 
 	double alfa = gridfit->centers[DIM_ALPHA];
 	double beta = gridfit->centers[DIM_BETA];
-	double current_sigma = gridfit->centers[DIM_SIGMA];
-	double current_mu = gridfit->centers[DIM_MU];
 
-	czab(alfa, beta, current_mu, current_sigma,
+	czab(alfa, beta, gridfit->mc_c, gridfit->mc_z,
 		gridfit->centers + DIM_MU, gridfit->centers + DIM_SIGMA);
 }
 

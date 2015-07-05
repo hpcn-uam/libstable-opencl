@@ -4,11 +4,11 @@
 #include "stable_api.h"
 #include "opencl_integ.h"
 
-#define GRIDFIT_TEST_PER_DIM 2
+#define GRIDFIT_TEST_PER_DIM 4
 #define MAX_STABLE_PARAMS 4
 #define ESTIMATING_PARAMS 2
-#define MAX_ITERATIONS 200 // Tip: Use the iterations_calc script in scripts folder
-#define WANTED_PRECISION 0.2
+#define MAX_ITERATIONS 300 // Tip: Use the iterations_calc script in scripts folder
+#define WANTED_PRECISION 0.1
 
 struct stable_gridfit {
 	StableDist* initial_dist;
@@ -30,6 +30,8 @@ struct stable_gridfit {
 	size_t min_fitter;
 	struct stable_clinteg* cli;
 	short parallel;
+	double mc_c;
+	double mc_z;
 };
 
 int stable_fit_grid(StableDist *dist, const double *data, const unsigned int length);
