@@ -22,10 +22,10 @@ set grid xtics ytics ztics
 
 set yrange [0:1]
 
-splot data using 1:2:(abs($6-$1)) with lines title "$\\alpha$ estimation bias",\
-	data using 1:2:(abs($8-$2)) with lines title "$\\beta$ estimation bias", \
-	data using 1:2:(abs($10-$4)) with lines title "$\\sigma$ estimation bias", \
-	data using 1:2:(abs($12-$3)) with lines title "$\\mu$ estimation bias"
+splot data using 1:2:($6-$1) with lines title "$\\alpha$ estimation bias",\
+	data using 1:2:($8-$2) with lines title "$\\beta$ estimation bias", \
+	data using 1:2:($10-$4) with lines title "$\\sigma$ estimation bias", \
+	data using 1:2:($12-$3) with lines title "$\\mu$ estimation bias"
 
 pause -1
 
