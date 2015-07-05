@@ -53,15 +53,15 @@ struct fitresult
 } while(0)
 
 #define ALFA_START 0.5
-#define ALFA_END 1.9
+#define ALFA_END 1.95
 #define ALPHA_INCR 0.05
 #define BETA_START 0
-#define BETA_END 0.9
+#define BETA_END 0.95
 #define BETA_INCR 0.05
-#define MU_START -10
-#define MU_END 10
-#define MU_INCR 1
-#define SIGMA_END 30
+#define MU_START -1
+#define MU_END 1
+#define MU_INCR 0.5
+#define SIGMA_END 3
 #define SIGMA_INCR 0.5
 #define SIGMA_START SIGMA_INCR
 
@@ -77,9 +77,9 @@ int main (int argc, char *argv[])
 	{
 		//{ stable_fit_mle, 0, "MLE" },
 		//{ stable_fit_mle2d, 0, "M2D"},
-		{ stable_fit_koutrouvelis, 0, "KTR"},
+		//{ stable_fit_koutrouvelis, 0, "KTR"},
 		//{ stable_fit_koutrouvelis, 1, "KTR"},
-		{ stable_fit_mle, 1, "MLE" },
+		//{ stable_fit_mle, 1, "MLE" },
 		// { stable_fit_mle2d, 1, "M2D"},
 		{ stable_fit_grid, 1, "GRD" },
 		// { stable_fit_grid, 0, "GRD" }
@@ -93,7 +93,7 @@ int main (int argc, char *argv[])
 	beta = 0.75;
 	sigma = 5.0;
 	mu_0 = 15.0;
-	N = 400;
+	N = 1000;
 	Nexp = 20;
 	seed = -1;
 
@@ -149,9 +149,9 @@ int main (int argc, char *argv[])
 			{
 				mu_0 = 0;
 				sigma = 1;
-				//for(mu_0 = MU_START; mu_0 <= MU_END; mu_0 += MU_INCR)
+				for(mu_0 = MU_START; mu_0 <= MU_END; mu_0 += MU_INCR)
 				{
-				//	for(sigma = SIGMA_START; sigma <= SIGMA_END; sigma += SIGMA_INCR)
+					for(sigma = SIGMA_START; sigma <= SIGMA_END; sigma += SIGMA_INCR)
 					{
 						double alfa_est = 0, beta_est = 0, mu_0_est = 0, sigma_est = 0;
 						double alfa_est_err = 0, beta_est_err = 0, mu_0_est_err = 0, sigma_est_err = 0;
