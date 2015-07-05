@@ -1,19 +1,31 @@
 #!/usr/bin/gnuplot
 
-set term pngcairo size 800,600
-set output "fit_eval_bias.png"
+set term wxt
 
-set xlabel "α"
-set ylabel "β"
+set title "Grid fit bias"
 
-set view 77, 30
+set xlabel "$\\alpha$" offset 0,-1
+set ylabel "$\\beta$" offset 0,-1
+set zlabel "Bias" rotate
+
+set view 75, 30
 set ticslevel 0
 
 set hidden3d
 set dgrid3d 50,50 qnorm 1.4
 
-set xtics border out
-set ytics border out
+set xtics border out offset 0,-0.5
+set ytics border out offset 0,-1
+set ztics border out
 
-splot data using 1:2:(abs($6-$1)) with lines title "alpha estimation bias",\
-	data using 1:2:(abs($8-$2)) with lines title "beta estimation bias"
+set grid xtics ytics ztics
+
+set yrange [0:1]
+
+splot data using 1:2:(abs($6-$1)) with lines title "$\\alpha$ estimation bias",\
+	data using 1:2:(abs($8-$2)) with lines title "$\\beta$ estimation bias", \
+	data using 1:2:(abs($10-$4)) with lines title "$\\sigma$ estimation bias", \
+	data using 1:2:(abs($12-$3)) with lines title "$\\mu$ estimation bias"
+
+pause -1
+
