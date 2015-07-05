@@ -143,15 +143,15 @@ int main (int argc, char *argv[])
 
 		printf("Estimation evaluation for %s...\n", testname);
 
-		for(alfa = ALFA_START; alfa <= ALFA_END; alfa += ALPHA_INCR)
+		for(alfa = ALFA_START; alfa <= ALFA_END + 2 * DBL_EPSILON; alfa += ALPHA_INCR)
 		{
-			for(beta = BETA_START; beta <= BETA_END; beta += BETA_INCR)
+			for(beta = BETA_START; beta <= BETA_END + 2 * DBL_EPSILON; beta += BETA_INCR)
 			{
 				mu_0 = 0;
 				sigma = 1;
-				for(mu_0 = MU_START; mu_0 <= MU_END; mu_0 += MU_INCR)
+				for(mu_0 = MU_START; mu_0 <= MU_END + 2 * DBL_EPSILON; mu_0 += MU_INCR)
 				{
-					for(sigma = SIGMA_START; sigma <= SIGMA_END; sigma += SIGMA_INCR)
+					for(sigma = SIGMA_START; sigma <= SIGMA_END + 2 * DBL_EPSILON; sigma += SIGMA_INCR)
 					{
 						double alfa_est = 0, beta_est = 0, mu_0_est = 0, sigma_est = 0;
 						double alfa_est_err = 0, beta_est_err = 0, mu_0_est_err = 0, sigma_est_err = 0;
