@@ -6,8 +6,8 @@
 #define DIM_MU 2
 #define DIM_SIGMA 3
 
-static double initial_point_separation[] = { 0.25, 0.25, 0.2, 0.4 };
-static double initial_contracting_coefs[] = { 0.75, 0.85, 0.6, 0.2 };
+static double initial_point_separation[] = { 0.025, 0.025, 0.2, 0.4 };
+static double initial_contracting_coefs[] = { 0.8, 0.9, 0.6, 0.2 };
 
 static void get_params_from_dist(StableDist* dist, double params[4])
 {
@@ -225,7 +225,10 @@ static void gridfit_iterate_parallel(struct stable_gridfit* gridfit)
 			gridfit->likelihoods[i] += -log(pdf[point]);
 
 		if(gridfit->likelihoods[i] > gridfit->max_likelihood)
+		{
 			gridfit->max_likelihood = gridfit->likelihoods[i];
+			gridfit->max_fitter = i;
+		}
 
 		if(gridfit->likelihoods[i] < gridfit->min_likelihood)
 		{
@@ -235,17 +238,35 @@ static void gridfit_iterate_parallel(struct stable_gridfit* gridfit)
 	}
 }
 
+static double calculate_params_distance(struct stable_gridfit* gridfit)
+{
+	double dst = 0;
+	double min_point[MAX_STABLE_PARAMS];
+	double max_point[MAX_STABLE_PARAMS];
+
+	get_params_from_dist(gridfit->fitter_dists[gridfit->min_fitter], min_point);
+	get_params_from_dist(gridfit->fitter_dists[gridfit->max_fitter], max_point);
+
+	for(size_t i = 0; i < MAX_STABLE_PARAMS; i++)
+		dst += pow(max_point[i] - min_point[i], 2);
+
+	return sqrt(dst);
+}
+
 int stable_fit_grid(StableDist *dist, const double *data, const unsigned int length)
 {
 	struct stable_gridfit gridfit;
 	double likelihood_diff = DBL_MAX;
+	double params_distance = DBL_MAX;
 	double best_params[MAX_STABLE_PARAMS];
 
 	gridfit_init(&gridfit, dist, data, length);
 	get_params_from_dist(dist, gridfit.centers);
 	gridfit.min_fitter = 0;
 
-	while(gridfit.current_iteration < MAX_ITERATIONS && likelihood_diff > WANTED_PRECISION)
+	while(gridfit.current_iteration < MAX_ITERATIONS
+			&& params_distance > WANTED_PRECISION
+			&& likelihood_diff > MIN_LIKELIHOOD_DIFF)
 	{
 		calculate_upperleft_corner_point(&gridfit);
 
@@ -258,9 +279,12 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 		set_new_center(&gridfit, best_params);
 		estimate_remaining_parameters(&gridfit);
 
+		params_distance = calculate_params_distance(&gridfit);
+
 		point_sep_iterate(&gridfit);
 
 		likelihood_diff = (gridfit.max_likelihood - gridfit.min_likelihood) / length;
+		printf("%u: %lf | %lf\n", gridfit.current_iteration, params_distance, likelihood_diff);
 		gridfit.current_iteration++;
 	}
 
