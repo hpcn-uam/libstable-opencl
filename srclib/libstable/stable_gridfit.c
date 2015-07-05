@@ -284,7 +284,6 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 		point_sep_iterate(&gridfit);
 
 		likelihood_diff = (gridfit.max_likelihood - gridfit.min_likelihood) / length;
-		printf("%u: %lf | %lf\n", gridfit.current_iteration, params_distance, likelihood_diff);
 		gridfit.current_iteration++;
 	}
 
