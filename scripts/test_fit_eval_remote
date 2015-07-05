@@ -1,0 +1,11 @@
+#!/bin/bash
+
+host=gjulian@azufre.ii.uam.es
+path=/home/gjulian/libstable
+datafile=GRD_GPU.dat
+
+./transfer_compile $host $path
+ssh -t $host "cd $path; bin/release/fit_eval"
+scp $host:$path/$datafile .
+./fit_eval.R
+# gnuplot -e "data='$datafile'" gnuplot/fit_eval.gp
