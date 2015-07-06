@@ -72,6 +72,7 @@ int main (int argc, char *argv[])
 	int i = 1, iexp, N, Nexp;
 	int seed;
 	char testname[100];
+	size_t test_count = 0;
 	double total_duration, start, end;
 	struct fittest tests[] =
 	{
@@ -143,6 +144,11 @@ int main (int argc, char *argv[])
 
 		printf("Estimation evaluation for %s...\n", testname);
 
+		if (test->gpu_enabled)
+			stable_activate_gpu(dist);
+		else
+			stable_deactivate_gpu(dist);
+
 		for(alfa = ALFA_START; alfa <= ALFA_END + 2 * DBL_EPSILON; alfa += ALPHA_INCR)
 		{
 			for(beta = BETA_START; beta <= BETA_END + 2 * DBL_EPSILON; beta += BETA_INCR)
@@ -162,11 +168,6 @@ int main (int argc, char *argv[])
 						stable_rnd(dist, data, N * Nexp);
 
 						double ms_duration = 0;
-
-						if (test->gpu_enabled)
-							stable_activate_gpu(dist);
-						else
-							stable_deactivate_gpu(dist);
 
 						dist->parallel_gridfit = test->gpu_enabled; // Temporary.
 
@@ -210,6 +211,8 @@ int main (int argc, char *argv[])
 
 						fflush(out);
 						fflush(stdout);
+
+						test_count++;
 					}
 
 				}
@@ -217,7 +220,8 @@ int main (int argc, char *argv[])
 		}
 
 		fclose(out);
-		printf("Eval finished.\n");
+		printf("Eval finished: %zu sample points.\n", test_count);
+		test_count = 0;
 	}
 
 	printf("Done\n");
