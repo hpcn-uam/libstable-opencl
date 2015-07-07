@@ -8,6 +8,7 @@ BENCHMARK_CFLAGS =  $(RELEASE_CFLAGS) -DBENCHMARK
 RELEASE_CFLAGS = -O3 -march=native -DSTABLE_MIN_LOG=1
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -ggdb -pg
 E_LIBS = $(shell pkg-config --libs gsl) -pthread
+LIBDIRS =
 
 PROJECT_NAME = libstable
 
@@ -202,7 +203,7 @@ $(OBJDIR)/%.bc: $(CLDIR)/%.cl Makefile
 
 $(BINDIR)/%: | $(BINDIR) depend configs
 	@echo "$(FMT_BOLD)Building final target: $* $(FMT_NORM)"
-	@$(CC) $(CFLAGS) $(INCLUDES) $^ $(E_LIBS) -o $@
+	@$(CC) $(CFLAGS) $(INCLUDES) $^ $(LIBDIRS) $(E_LIBS) -o $@
 
 ## Packing
 
