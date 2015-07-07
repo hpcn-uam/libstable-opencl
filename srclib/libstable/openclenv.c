@@ -137,6 +137,7 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
     char *err_msg = NULL;
     int err = 0;
     cl_platform_id platforms[MAX_OPENCL_PLATFORMS];
+    cl_device_id devices[MAX_OPENCL_PLATFORMS];
     cl_uint platform_num;
 
     err = clGetPlatformIDs(MAX_OPENCL_PLATFORMS, platforms, &platform_num);
@@ -149,13 +150,15 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
 
     _opencl_platform_info(platforms, platform_num);
 
-    err = clGetDeviceIDs(platforms[platform_index], CL_DEVICE_TYPE_ALL, 1, &(env->device), NULL);
+    err = clGetDeviceIDs(platforms[platform_index], CL_DEVICE_TYPE_ALL, MAX_OPENCL_PLATFORMS, devices, NULL);
 
     if (err)
     {
         err_msg = "clGetDeviceIDs - group creation";
         goto error;
     }
+
+    env->device = devices[platform_index];
 
     _opencl_device_info(env->device);
 
