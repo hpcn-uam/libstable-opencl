@@ -221,7 +221,7 @@ static void _opencl_generate_build_opts(char* build_opts, size_t build_opts_len)
     char cwd[300];
 
     if(getcwd(cwd, sizeof(cwd)) != NULL)
-        snprintf(build_opts, build_opts_len, "%s -I%s/", OPENCL_BUILD_OPTIONS, cwd);
+        snprintf(build_opts, build_opts_len, "%s -I%s/ -DAMD_GPU", OPENCL_BUILD_OPTIONS, cwd);
     else
     {
         stablecl_log(log_warning, "warning: getcwd failed with error %d: kernel compilation will probably fail", errno);
