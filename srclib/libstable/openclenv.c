@@ -153,7 +153,7 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
     cl_platform_id platforms[MAX_OPENCL_PLATFORMS];
     cl_device_id devices[MAX_OPENCL_PLATFORMS];
     cl_uint platform_num, device_num;
-    size_t device_index = 0;
+    size_t device_index = platform_index;
 
     err = clGetPlatformIDs(MAX_OPENCL_PLATFORMS, platforms, &platform_num);
 
