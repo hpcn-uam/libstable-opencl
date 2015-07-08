@@ -5,6 +5,8 @@
 #include <time.h>
 #include <stdlib.h>
 
+#define COMPLETE_TEST
+
 typedef int (*fitter)(StableDist *, const double *, const unsigned int);
 
 struct fittest
@@ -52,6 +54,7 @@ struct fitresult
 	variable ## _init += dist->variable; \
 } while(0)
 
+#ifdef COMPLETE_TEST
 #define ALFA_START 0.5
 #define ALFA_END 1.95
 #define ALPHA_INCR 0.05
@@ -64,6 +67,20 @@ struct fitresult
 #define SIGMA_END 3
 #define SIGMA_INCR 0.5
 #define SIGMA_START SIGMA_INCR
+#else
+#define ALFA_START 0.5
+#define ALFA_END 1.95
+#define ALPHA_INCR 0.15
+#define BETA_START 0
+#define BETA_END 0.95
+#define BETA_INCR 0.1
+#define MU_START 0
+#define MU_END 0
+#define MU_INCR 0.5
+#define SIGMA_END 1
+#define SIGMA_INCR 1
+#define SIGMA_START SIGMA_INCR
+#endif
 
 int main (int argc, char *argv[])
 {
