@@ -4,10 +4,12 @@
 #define OPENCL_BUILD_OPTIONS "-cl-no-signed-zeros"
 
 #define MAX_OPENCL_PLATFORMS 5
+#define MAX_BUILD_OPTS_LENGTH 1000
 
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 char *_read_file(const char *filename, size_t *contents_len)
 {
@@ -210,6 +212,26 @@ error:
     return err;
 }
 
+static void _opencl_generate_build_opts(char* build_opts, size_t build_opts_len)
+{
+#ifdef AMD_GPU
+    // AMD's OpenCL compiler doesn't know to search for includes in the current working
+    // directory, so we have to set that option explicitly.
+
+    char cwd[300];
+
+    if(getcwd(cwd, sizeof(cwd)) != NULL)
+        snprintf(build_opts, build_opts_len, "%s -I%s/", OPENCL_BUILD_OPTIONS, cwd);
+    else
+    {
+        stablecl_log(log_warning, "warning: getcwd failed with error %d: kernel compilation will probably fail", errno);
+        snprintf(build_opts, build_opts_len, OPENCL_BUILD_OPTIONS);
+    }
+#else
+    snprintf(build_opts, build_opts_len, OPENCL_BUILD_OPTIONS);
+#endif
+}
+
 short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const char *kernname, size_t index)
 {
     char *err_msg = NULL;
@@ -217,6 +239,7 @@ short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const 
     size_t pathlen = strlen(bitcode_path);
     char *build_log;
     size_t build_log_size;
+    char build_opts[MAX_BUILD_OPTS_LENGTH];
 
 
 #ifdef __APPLE__
@@ -244,8 +267,12 @@ short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const 
         goto error;
     }
 
+    _opencl_generate_build_opts(build_opts, MAX_BUILD_OPTS_LENGTH);
+
     stablecl_log(log_message, "Building kernel %s from %s...", kernname, bitcode_path);
-    err = clBuildProgram(env->program, 1, &env->device, OPENCL_BUILD_OPTIONS, NULL, NULL);
+    stablecl_log(log_message, "Build options: %s", build_opts);
+
+    err = clBuildProgram(env->program, 1, &env->device, build_opts, NULL, NULL);
 
     log_error = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &build_log_size);
 
