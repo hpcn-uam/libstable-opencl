@@ -49,7 +49,7 @@ error:
     return NULL;
 }
 
-static void _opencl_kernel_info(cl_kernel kernel)
+static void _opencl_kernel_info(struct openclenv* env, cl_kernel kernel)
 {
 #if STABLE_MIN_LOG <= 0
     int j;
@@ -57,9 +57,9 @@ static void _opencl_kernel_info(cl_kernel kernel)
     size_t wg_sizes[3], max_dims;
     cl_ulong local_memsize, priv_memsize;
 
-    err = clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_WORK_GROUP_SIZE, sizeof(wg_sizes), wg_sizes, &max_dims);
-    err |= clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_LOCAL_MEM_SIZE, sizeof(cl_ulong), &local_memsize, NULL);
-    err |= clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_PRIVATE_MEM_SIZE, sizeof(cl_ulong), &priv_memsize, NULL);
+    err = clGetKernelWorkGroupInfo(kernel, env->device, CL_KERNEL_WORK_GROUP_SIZE, sizeof(wg_sizes), wg_sizes, &max_dims);
+    err |= clGetKernelWorkGroupInfo(kernel, env->device, CL_KERNEL_LOCAL_MEM_SIZE, sizeof(cl_ulong), &local_memsize, NULL);
+    err |= clGetKernelWorkGroupInfo(kernel, env->device, CL_KERNEL_PRIVATE_MEM_SIZE, sizeof(cl_ulong), &priv_memsize, NULL);
 
     local_memsize /= 1024;
 
@@ -288,7 +288,7 @@ short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const 
         goto error;
     }
 
-    _opencl_kernel_info(env->kernel[index]);
+    _opencl_kernel_info(env, env->kernel[index]);
 
     env->enabled_kernels[index] = 1;
     env->kernel_count++;
