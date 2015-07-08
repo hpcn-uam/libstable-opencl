@@ -76,7 +76,12 @@ int main (int argc, char** argv)
         return 1;
     }
 
-    stable_clinteg_points(&dist->cli, x, gpu_pdf, gpu_err, num_points, dist);
+    if(stable_clinteg_points(&dist->cli, x, gpu_pdf, gpu_err, num_points, dist))
+    {
+        fprintf(stderr, "Stable-OpenCL error. Aborting.\n");
+        return 1;
+    }
+
     for(i = 0; i < sizeof x / sizeof(double); i++)
     {
         double abserr = fabs(gpu_pdf[i] - pdf[i]);
