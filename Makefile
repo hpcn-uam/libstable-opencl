@@ -65,6 +65,7 @@ TAR_EXCLUDES = bin obj doc .tar.gz .git tasks \
 TAR_EXCLUDES_ARG = $(addprefix --exclude=, $(TAR_EXCLUDES))
 
 include Makefile.$(shell uname)
+-include Makefile.$(shell hostname)
 
 ### Makefile plugins
 
