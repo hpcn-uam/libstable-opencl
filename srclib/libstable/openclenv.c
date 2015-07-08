@@ -91,7 +91,7 @@ static void _opencl_device_info(cl_device_id device)
     clGetDeviceInfo(device, CL_DEVICE_NAME, 128 * sizeof(char), dev_name, NULL);
     clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof wg_sizes, wg_sizes, &max_dims);
 
-    stablecl_log(log_message, "Device obtained: %s", dev_name);
+    stablecl_log(log_message, "Device name: %s", dev_name);
 
     max_dims /= sizeof(size_t);
     stablecl_log(log_message, "Max dimensions: %zu.", max_dims);
@@ -132,14 +132,28 @@ static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_nu
 #endif
 }
 
+static void _opencl_devices_info(cl_device_id* devices, cl_uint device_num)
+{
+#if STABLE_MIN_LOG <= 0
+    int i;
+
+    stablecl_log(log_message, "Available devices: %d", device_num);
+    for (i = 0; i < device_num; i++)
+    {
+        stablecl_log(log_message, "Information for device %d", i);
+        _opencl_device_info(devices[i]);
+    }
+#endif
+}
+
 int opencl_initenv(struct openclenv *env, size_t platform_index)
 {
     char *err_msg = NULL;
     int err = 0;
     cl_platform_id platforms[MAX_OPENCL_PLATFORMS];
     cl_device_id devices[MAX_OPENCL_PLATFORMS];
-    cl_uint platform_num;
-    size_t device_index = platform_index;
+    cl_uint platform_num, device_num;
+    size_t device_index = 0;
 
     err = clGetPlatformIDs(MAX_OPENCL_PLATFORMS, platforms, &platform_num);
 
@@ -151,9 +165,8 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
 
     _opencl_platform_info(platforms, platform_num);
 
-    stablecl_log(log_message, "Retrieving device %zu from platform %zu", device_index, platform_index);
 
-    err = clGetDeviceIDs(platforms[platform_index], CL_DEVICE_TYPE_ALL, MAX_OPENCL_PLATFORMS, devices, NULL);
+    err = clGetDeviceIDs(platforms[platform_index], CL_DEVICE_TYPE_ALL, MAX_OPENCL_PLATFORMS, devices, &device_num);
 
     if (err)
     {
@@ -163,7 +176,9 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
 
     env->device = devices[device_index];
 
-    _opencl_device_info(env->device);
+    _opencl_devices_info(devices, device_num);
+
+    stablecl_log(log_message, "Chosen device %zu from platform %zu", device_index, platform_index);
 
     env->context = clCreateContext(0, 1, &env->device, NULL, NULL, &err);
     if (!env->context)
