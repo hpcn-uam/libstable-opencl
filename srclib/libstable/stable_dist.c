@@ -365,8 +365,13 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
   dist->gslworkspace = gsl_integration_workspace_alloc(IT_MAX);
   dist->gslrand = gsl_rng_alloc (gsl_rng_default);
   dist->gpu_enabled = 0;
-  dist->gpu_platform = 0;
   dist->gpu_queues = 1;
+
+#ifdef DEFAULT_ACCELERATOR
+  dist->gpu_platform = DEFAULT_ACCELERATOR;
+#else
+  dist->gpu_platform = 0;
+#endif
 
   //Allow the distribution to use THREADS threads.
   stable_set_THREADS(THREADS);
