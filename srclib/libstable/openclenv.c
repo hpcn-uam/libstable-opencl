@@ -125,8 +125,8 @@ static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_nu
         clGetPlatformInfo(platforms[i], CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &double_vecwidth, NULL);
         clGetPlatformInfo(platforms[i], CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT, sizeof(cl_uint), &float_vecwidth, NULL);
 
-        stablecl_log(log_message, "%d: %s, OpenCL version %s, vendor %s. Available extensions: %s", i, name, version, vendor, extensions);
-        stablecl_log(log_message, "Preferred vector widths: double %zu, float %zu.", double_vecwidth, float_vecwidth);
+        stablecl_log(log_message, "%d: %s, OpenCL version %s, vendor %s. Available extensions: %s. Vector widths: double %zu, float %zu.",
+         i, name, version, vendor, extensions, double_vecwidth, float_vecwidth);
 
     }
 #endif
@@ -139,6 +139,7 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
     cl_platform_id platforms[MAX_OPENCL_PLATFORMS];
     cl_device_id devices[MAX_OPENCL_PLATFORMS];
     cl_uint platform_num;
+    size_t device_index = platform_index;
 
     err = clGetPlatformIDs(MAX_OPENCL_PLATFORMS, platforms, &platform_num);
 
@@ -150,6 +151,8 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
 
     _opencl_platform_info(platforms, platform_num);
 
+    stablecl_log(log_message, "Retrieving device %zu from platform %zu", device_index, platform_index);
+
     err = clGetDeviceIDs(platforms[platform_index], CL_DEVICE_TYPE_ALL, MAX_OPENCL_PLATFORMS, devices, NULL);
 
     if (err)
@@ -158,7 +161,7 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
         goto error;
     }
 
-    env->device = devices[platform_index];
+    env->device = devices[device_index];
 
     _opencl_device_info(env->device);
 
