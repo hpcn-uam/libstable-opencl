@@ -13,7 +13,12 @@
 
 #define POINTS_EVAL 2
 
+#ifdef AMD_GPU
+#define MAX_WORKGROUPS 4
+#else
 #define MAX_WORKGROUPS 8
+#endif
+
 #define GK_SUBDIVISIONS (POINTS_EVAL * MAX_WORKGROUPS)
 #define KRONROD_EVAL_POINTS (GK_POINTS / 2 + 1)
 
