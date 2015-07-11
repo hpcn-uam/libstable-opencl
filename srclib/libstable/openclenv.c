@@ -53,7 +53,7 @@ error:
 
 static void _opencl_kernel_info(struct openclenv* env, cl_kernel kernel)
 {
-#if STABLE_MIN_LOG <= 0
+#if STABLE_MIN_LOG <= 0 && !defined(SIMULATOR_BUILD)
     int j;
     cl_int err;
     size_t wg_sizes[3], max_dims;

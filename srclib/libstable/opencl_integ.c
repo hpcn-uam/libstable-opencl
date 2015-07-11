@@ -63,6 +63,7 @@ static int _stable_map_gk_buffers(struct stable_clinteg *cli, size_t points)
 
 static int  _stable_unmap_gk_buffers(struct stable_clinteg* cli)
 {
+#ifndef SIMULATOR_BUILD
 	int err;
     err = clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
 
@@ -73,6 +74,7 @@ static int  _stable_unmap_gk_buffers(struct stable_clinteg* cli)
 
 	if(err) return err;
     cli->h_kronrod = NULL;
+#endif
 
     return 0;
 }
@@ -384,6 +386,7 @@ cleanup:
 
 void stable_clinteg_teardown(struct stable_clinteg *cli)
 {
+#ifndef SIMULATOR_BUILD
     if(cli->h_gauss)
         clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
 
@@ -391,6 +394,7 @@ void stable_clinteg_teardown(struct stable_clinteg *cli)
         clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
 
     clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->args, cli->h_args, 0, NULL, NULL);
+#endif
 
     clReleaseMemObject(cli->gauss);
     clReleaseMemObject(cli->kronrod);
