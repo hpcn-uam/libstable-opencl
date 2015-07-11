@@ -7,12 +7,13 @@ DEBUG_CFLAGS = -ggdb -DSTABLE_MIN_LOG=0
 BENCHMARK_CFLAGS =  $(RELEASE_CFLAGS) -DBENCHMARK
 RELEASE_CFLAGS = -O3 -march=native -DSTABLE_MIN_LOG=1
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -ggdb -pg
+SIMULATOR_CFLAGS = $(DEBUG_CFLAGS) -DSIMULATOR_BUILD
 E_LIBS = $(shell pkg-config --libs gsl) -pthread
 LIBDIRS =
 
 PROJECT_NAME = libstable
 
-CONFS = debug release benchmark profile
+CONFS = debug release benchmark profile simulator
 DEFAULT_CONF = debug
 
 OBJDIR = obj

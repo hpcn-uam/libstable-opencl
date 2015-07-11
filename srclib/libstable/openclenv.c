@@ -274,6 +274,7 @@ short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const 
 
     err = clBuildProgram(env->program, 1, &env->device, build_opts, NULL, NULL);
 
+#ifndef SIMULATOR_BUILD
     log_error = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &build_log_size);
 
     if (log_error)
@@ -300,6 +301,7 @@ short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const 
             free(build_log);
         }
     }
+#endif
 
     if (err)
     {
