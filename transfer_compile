@@ -26,7 +26,7 @@ function remote_make()
 	path=$1
 	name=$2
 
-	out=$(ssh -t $host "cd $path; make -j 8" 2>&1)
+	out=$(ssh -t $host "cd $path; make -j 8 full" 2>&1)
 	retval=$?
 	echo "$out" | ./hilite.sh -f red [Ee]rror | ./hilite.sh -f yellow warning
 
