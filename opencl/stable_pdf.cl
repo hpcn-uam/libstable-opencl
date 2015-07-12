@@ -178,39 +178,37 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 
 	precalc->iend = M_PI_2;
 
-	precalc->final_factor = stable->c2_part / stable->sigma;
+	precalc->final_factor = stable->final_factor;
 
 	if(stable->integrand == PDF_ALPHA_NEQ1)
 	{
-		if (fabs(xxi) <= stable->xxi_th)
+		if (xxi < 0)
+	    {
+	        xxi = -xxi;
+	        precalc->theta0_ = - stable->theta0;
+	        precalc->beta_ = - stable->beta;
+	    }
+	    else
+		{
+	    	precalc->theta0_ = stable->theta0;
+	    	precalc->beta_ = stable->beta;
+		}
+
+	    if (xxi <= stable->xxi_th)
 	    {
 	        precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0) / stable->sigma;
 	        return SET_TO_RESULT_AND_RETURN;
 	    }
 
-	    precalc->theta0_ = stable->theta0;
-	    precalc->beta_ = stable->beta;
-
-	   	if (xxi < 0)
-	    {
-	        xxi = -xxi;
-	        precalc->theta0_ = - precalc->theta0_;
-	        precalc->beta_ = - precalc->beta_;
-	    }
-
-		precalc->ibegin = -precalc->theta0_;
+		precalc->ibegin = - precalc->theta0_;
 
 		precalc->xxipow = stable->alfainvalfa1 * log(fabs(xxi));
 		precalc->final_factor /= xxi;
-
-		precalc->max_reevaluations = stable->alfa > 1 ? 2 : 1;
 	}
 	else
 	{
-		precalc->ibegin = - M_PI_2;
-
-		precalc->beta_ = fabs(stable->beta);
 		precalc->xxipow = (-M_PI * x_ * stable->c2_part);
+		precalc->ibegin = - M_PI_2;
 	}
 
 	if (fabs(precalc->theta0_ + M_PI_2) < 2 * stable->THETA_TH)
@@ -354,7 +352,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 		reevaluations++;
 
-		if(reevaluations > precalc.max_reevaluations)
+		if(reevaluations > stable->max_reevaluations)
 			break;
 
 		if(stable->alfa <= 0.3)
