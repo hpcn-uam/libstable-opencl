@@ -308,6 +308,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS];
 	local int min_contributing, max_contributing;
 	short reevaluate = 0;
+	cl_vec result = vec(0);
 	size_t reevaluations = 0;
 
 	cl_precision2 previous_integration_remainder = vec2(0);
@@ -328,13 +329,22 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
     {
 	    precalc.subint_length = (precalc.iend - precalc.ibegin) / GK_SUBDIVISIONS;
 
+		offset = KRONROD_EVAL_POINTS / 2;
+
 		if(gk_point < KRONROD_EVAL_POINTS)
 		{
-			cl_vec result = eval_gk_pair(stable, &precalc);
-			sums[subinterval_index][gk_point] = result;
+			result = eval_gk_pair(stable, &precalc);
+
+			if(gk_point >= offset)
+				sums[subinterval_index][gk_point] = result;
 		}
 
-		for(offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		if(gk_point < offset)
+			sums[subinterval_index][gk_point] = result + sums[subinterval_index][gk_point + offset];
+
+		for(offset >>= 1; offset > 0; offset >>= 1)
 		{
 		    barrier(CLK_LOCAL_MEM_FENCE);
 
