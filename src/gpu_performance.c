@@ -118,8 +118,17 @@ int main (int argc, char** argv)
 
     if(argc > 1)
     {
-        alfas_len = 1;
-        betas_len = 1;
+        if(strcmp(argv[1], "fast") == 0)
+        {
+            alfas_len = 10;
+            betas_len = 5;
+            evpoints_len = 80;
+        }
+        else if (strcmp(argv[1], "flash") == 0)
+        {
+            alfas_len = 1;
+            betas_len = 1;
+        }
     }
 
     fill(alfas, 0, 2, alfas_len);
