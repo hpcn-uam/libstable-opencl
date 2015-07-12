@@ -380,21 +380,21 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		}
 	} while(reevaluate);
 
-	for(offset = MAX_WORKGROUPS / 2; offset > 0; offset >>= 1)
-	{
-		if(subinterval_index < offset)
-			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];
-
-		barrier(CLK_LOCAL_MEM_FENCE);
-	}
-
-    if(gk_point == 0 && subinterval_index == 0)
+	if(gk_point == 0 && subinterval_index == 0)
     {
-  		cl_precision2 final = sums[0][0].s01;
+    	// This is not a mistake: I measured it, this is faster than the other reduction.
+    	// Probably due to the fact that for few workgroups the barriers and increased
+    	// thread usage offset the advantage of the coalesced memory accesses.
+    	cl_vec total = sums[0][0];
+
+    	for(offset = 1; offset < MAX_WORKGROUPS; offset++)
+    		total += sums[offset][0];
+
+  		cl_precision2 final = total.s01;
 #if POINTS_EVAL >= 2
-  		final += sums[0][0].s23;
+  		final += total.s23;
 #if POINTS_EVAL >= 4
-  		final += sums[0][0].s45 + sums[0][0].s67;
+  		final += total.s45 + total.s67;
 #endif
 #endif
 
