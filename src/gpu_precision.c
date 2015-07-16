@@ -5,14 +5,15 @@
 #include "benchmarking.h"
 #include "opencl_integ.h"
 
-int main (void)
+int main (int argc, const char** argv)
 {
     double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
     double betas[] = { 0, 0.5, 1 };
     double intervals[] = { -1000, -10, 10, 1000 };
     int points_per_interval = 1000;
-    double cpu_pdf[points_per_interval], gpu_pdf[points_per_interval];
+    double cpu_vals[points_per_interval], gpu_vals[points_per_interval];
     double cpu_err[points_per_interval], gpu_err[points_per_interval];
+    clinteg_type type = clinteg_pdf;
 
     stable_clinteg_printinfo();
 
@@ -29,6 +30,14 @@ int main (void)
         fprintf(stderr, "Couldn't initialize GPU.\n");
         return 1;
     }
+
+    if(argc > 1 && strcmp("cdf", argv[1]) == 0)
+        type = clinteg_cdf;
+
+    if(type == clinteg_pdf)
+        printf(" PDF precision testing\n");
+    else
+        printf(" CDF precision testing\n");
 
     stable_set_absTOL(1e-20);
     stable_set_relTOL(1.2e-10);
@@ -65,8 +74,16 @@ int main (void)
             {
                 stable_setparams(dist, alfas[ai], betas[bi], 1, 0, 0);
 
-                stable_pdf_gpu(dist, points, points_per_interval, gpu_pdf, gpu_err);
-                stable_pdf(dist, points, points_per_interval, cpu_pdf, cpu_err);
+                if(type == clinteg_pdf)
+                {
+                    stable_pdf_gpu(dist, points, points_per_interval, gpu_vals, gpu_err);
+                    stable_pdf(dist, points, points_per_interval, cpu_vals, cpu_err);
+                }
+                else
+                {
+                    stable_cdf_gpu(dist, points, points_per_interval, gpu_vals, gpu_err);
+                    stable_cdf(dist, points, points_per_interval, cpu_vals, cpu_err);
+                }
 
                 abs_diff_sum = 0;
                 rel_diff_sum = 0;
@@ -76,8 +93,8 @@ int main (void)
 
                 for(j = 0; j < points_per_interval; j++)
                 {
-                    double cpu = cpu_pdf[j];
-                    double gpu = gpu_pdf[j];
+                    double cpu = cpu_vals[j];
+                    double gpu = gpu_vals[j];
                     double diff = fabs(cpu - gpu);
                     double rel_diff = 0;
 
@@ -92,7 +109,7 @@ int main (void)
                         rel_diff = diff / cpu;
 
                     rel_diff_sum += rel_diff;
-                    fprintf(f, "%.2lf %.2lf %5.2g %9.5g %9.5g %9.5g %9.5g %9.5g\n", alfas[ai], betas[bi], points[j], cpu_pdf[j], gpu_pdf[j], diff, rel_diff, fabs(gpu_err[j]));
+                    fprintf(f, "%.2lf %.2lf %5.2g %9.5g %9.5g %9.5g %9.5g %9.5g\n", alfas[ai], betas[bi], points[j], cpu_vals[j], gpu_vals[j], diff, rel_diff, fabs(gpu_err[j]));
 
                     if(diff < cpu_err[j] || diff == 0)
                         in_cpu_bounds_count++;
