@@ -106,7 +106,7 @@ int stable_clinteg_init(struct stable_clinteg *cli, size_t platform_index)
         return -1;
     }
 
-    if (opencl_load_kernel(&cli->env, "opencl/stable_pdf.cl", KERN_NAME, KERNIDX_ALPHA_NEQ1))
+    if (opencl_load_kernel(&cli->env, "opencl/stable.cl", KERN_NAME, KERNIDX_ALPHA_NEQ1))
     {
         stablecl_log(log_message, "OpenCL kernel load failure.");
         return -1;
