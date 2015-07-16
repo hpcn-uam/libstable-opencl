@@ -165,6 +165,10 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
     cl_uint platform_num, device_num;
     size_t device_index = 0;
 
+#ifdef __APPLE__
+    device_index = 1;
+#endif
+
     err = clGetPlatformIDs(MAX_OPENCL_PLATFORMS, platforms, &platform_num);
 
     if (err)
