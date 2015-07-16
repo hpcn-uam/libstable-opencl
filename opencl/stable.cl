@@ -384,18 +384,10 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
 
 		if(stable->alfa <= 0.3)
 		{
-			if(is_integrand_cdf(stable->integrand))
-			{
-				// When alpha < 0.3, there's a big slope at the beginning of the subinterval
-				// Reevaluate there to achieve more precision.
-				min_contributing = 0;
-				max_contributing = 0;
-			}
-			else
-			{
-				min_contributing = GK_SUBDIVISIONS - 1;
-				max_contributing = GK_SUBDIVISIONS - 1;
-			}
+			// When alpha < 0.3, there's a big slope at the beginning of the subinterval
+			// Reevaluate there to achieve more precision.
+			min_contributing = 0;
+			max_contributing = 0;
 
 			reevaluate = 1;
 		}
