@@ -67,6 +67,7 @@ struct stable_info {
     short is_xxi_negative;
     unsigned int integrand;
     cl_precision final_factor;
+    cl_precision final_addition;
     size_t max_reevaluations;
 };
 
