@@ -125,6 +125,21 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 		val = exp(val + precalc->xxipow);
 		val = exp(-val) * val;
 	}
+	else if(stable->integrand == CDF_ALPHA_NEQ1)
+	{
+		aux = (precalc->theta0_ + val) * stable->alfa;
+		val = log(cosval / sin(aux)) * stable->alfainvalfa1 +
+			+ log(cos(aux - val) / cosval) + stable->k1;
+
+		val = exp(-exp(val + precalc->xxipow));
+	}
+	else if(stable->integrand == CDF_ALPHA_EQ1)
+	{
+		aux = (precalc->beta_ * val + vec(M_PI_2)) / cosval;
+		val = sin(val) * aux / precalc->beta_ + log(aux) + stable->k1;
+
+		val = exp(-exp(val + precalc->xxipow));
+	}
 
 	// GK quadrature is symmetric, so just add them in one quantity.
 	// Just avoid the 0 (last evaluation point) because it's the only
