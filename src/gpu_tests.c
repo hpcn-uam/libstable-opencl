@@ -76,7 +76,7 @@ int main (int argc, char** argv)
         return 1;
     }
 
-    if(stable_clinteg_points(&dist->cli, x, gpu_pdf, gpu_err, num_points, dist))
+    if(stable_clinteg_points(&dist->cli, x, gpu_pdf, gpu_err, num_points, dist, clinteg_pdf))
     {
         fprintf(stderr, "Stable-OpenCL error. Aborting.\n");
         return 1;

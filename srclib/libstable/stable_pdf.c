@@ -577,9 +577,9 @@ void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
     else
     {
         if(dist->gpu_queues == 1)
-            stable_clinteg_points(&dist->cli, (double*) x, pdf, err, Nx, dist);
+            stable_clinteg_points(&dist->cli, (double*) x, pdf, err, Nx, dist, clinteg_pdf);
         else
-            stable_clinteg_points_parallel(&dist->cli, (double*) x, pdf, err, Nx, dist, dist->gpu_queues);
+            stable_clinteg_points_parallel(&dist->cli, (double*) x, pdf, err, Nx, dist, dist->gpu_queues, clinteg_pdf);
     }
 }
 
