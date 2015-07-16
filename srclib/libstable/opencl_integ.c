@@ -38,15 +38,15 @@ static int _stable_create_points_array(struct stable_clinteg *cli, cl_precision 
     cli->points = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
                                  sizeof(cl_precision) * num_points, points, &err);
 
-    if(err) return err;
+    if (err) return err;
 
     cli->gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                 sizeof(cl_precision) * num_points, NULL, &err);
+                                sizeof(cl_precision) * num_points, NULL, &err);
 
-    if(err) return err;
+    if (err) return err;
 
     cli->kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                                 sizeof(cl_precision) * num_points, NULL, &err);
+                                  sizeof(cl_precision) * num_points, NULL, &err);
 
     return err;
 }
@@ -64,15 +64,15 @@ static int _stable_map_gk_buffers(struct stable_clinteg *cli, size_t points)
 static int  _stable_unmap_gk_buffers(struct stable_clinteg* cli)
 {
 #ifndef SIMULATOR_BUILD
-	int err;
+    int err;
     err = clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
 
-	if(err) return err;
+    if (err) return err;
     cli->h_gauss = NULL;
 
     err = clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
 
-	if(err) return err;
+    if (err) return err;
     cli->h_kronrod = NULL;
 #endif
 
@@ -105,7 +105,7 @@ int stable_clinteg_init(struct stable_clinteg *cli, size_t platform_index)
         return -1;
     }
 
-    if(opencl_load_kernel(&cli->env, "opencl/stable_pdf.cl", "stable_pdf_points", KERNIDX_ALPHA_NEQ1))
+    if (opencl_load_kernel(&cli->env, "opencl/stable_pdf.cl", "stable_pdf_points", KERNIDX_ALPHA_NEQ1))
     {
         stablecl_log(log_message, "OpenCL kernel load failure.");
         return -1;
@@ -174,29 +174,36 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     cli->h_args->sigma = dist->sigma;
     cli->h_args->xxi_th = stable_get_XXI_TH();
     cli->h_args->c2_part = dist->c2_part;
-    cli->h_args->xi_coef = (exp(lgamma(1 + 1 / dist->alfa))) / (M_PI * pow(1 + dist->xi * dist->xi, 1/(2*dist->alfa)));
+    cli->h_args->xi_coef = (exp(lgamma(1 + 1 / dist->alfa))) / (M_PI * pow(1 + dist->xi * dist->xi, 1 / (2 * dist->alfa)));
+    cli->h_args->final_factor = dist->c2_part / dist->sigma;
+    cli->h_args->max_reevaluations = dist->alfa > 1 ? 2 : 1;
 
     if (dist->ZONE == GPU_TEST_INTEGRAND)
         cli->h_args->integrand = GPU_TEST_INTEGRAND;
     else if (dist->ZONE == GPU_TEST_INTEGRAND_SIMPLE)
         cli->h_args->integrand = GPU_TEST_INTEGRAND_SIMPLE;
     else if (dist->ZONE == ALFA_1)
+    {
         cli->h_args->integrand = PDF_ALPHA_EQ1;
+        cli->h_args->beta = fabs(dist->beta);
+    }
     else
+    {
         cli->h_args->integrand = PDF_ALPHA_NEQ1;
+    }
 
 #ifdef CL_PRECISION_IS_FLOAT
     stablecl_log(log_message, "Using floats, forcing cast.");
 
     points = (cl_precision*) calloc(num_points, sizeof(cl_precision));
 
-    if(!points)
+    if (!points)
     {
         stablecl_log(log_err, "Couldn't allocate memory.");
         goto cleanup;
     }
 
-    for(size_t i = 0; i < num_points; i++)
+    for (size_t i = 0; i < num_points; i++)
         points[i] = (cl_precision) x[i];
 #else
     points = x;
@@ -228,7 +235,7 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     }
 
     stablecl_log(log_message, "Enqueing kernel %d - %zu × %zu work threads, %zu × %zu workgroup size",
-        kernel_index, work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
+                 kernel_index, work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
 
     bench_begin(cli->profiling.enqueue, cli->profile_enabled);
     err = clEnqueueNDRangeKernel(opencl_get_queue(&cli->env), opencl_get_current_kernel(&cli->env),
@@ -245,7 +252,7 @@ cleanup:
     stablecl_log(log_message, "Async command issued.");
 
 #ifdef CL_PRECISION_IS_FLOAT
-    if(points) free(points);
+    if (points) free(points);
 #endif
 
     return err;
@@ -258,7 +265,7 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
 
     err = stable_clinteg_points_async(cli, x, num_points, dist, &event);
 
-    if(err)
+    if (err)
     {
         stablecl_log(log_err, "Couldn't issue evaluation command to the GPU.");
         return err;
@@ -271,7 +278,7 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
 {
     cl_int err = 0;
 
-    if(event)
+    if (event)
         clWaitForEvents(1, event);
 
     bench_begin(cli->profiling.buffer_read, cli->profile_enabled);
@@ -300,7 +307,7 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
 
         if (errs)
         {
-            if(cli->h_kronrod[i] != 0)
+            if (cli->h_kronrod[i] != 0)
                 errs[i] = fabs(cli->h_kronrod[i] - cli->h_gauss[i]) / cli->h_kronrod[i];
             else
                 errs[i] = fabs(cli->h_kronrod[i] - cli->h_gauss[i]);
@@ -317,9 +324,9 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
 
     bench_end(cli->profiling.set_results, cli->profile_enabled);
 
-	cl_int retval = _stable_unmap_gk_buffers(cli);
-	if(retval)
-		stablecl_log(log_warning, "Error unmapping buffers: %s (%d)", opencl_strerr(retval), retval);
+    cl_int retval = _stable_unmap_gk_buffers(cli);
+    if (retval)
+        stablecl_log(log_warning, "Error unmapping buffers: %s (%d)", opencl_strerr(retval), retval);
 
     return err;
 }
@@ -331,7 +338,7 @@ short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, doub
     size_t points_per_queue, processed_points, required_queues, points_for_current_queue;
 
     // Ensure we have enough queues
-    if(cli->env.queue_count < queues)
+    if (cli->env.queue_count < queues)
         opencl_set_queues(&cli->env, queues);
 
     required_queues = num_points / MIN_POINTS_PER_QUEUE + 1;
@@ -340,9 +347,9 @@ short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, doub
     points_per_queue = num_points / required_queues;
     processed_points = 0;
 
-    for(i = 0; i < required_queues; i++)
+    for (i = 0; i < required_queues; i++)
     {
-        if(i == required_queues - 1)
+        if (i == required_queues - 1)
             points_for_current_queue = num_points - processed_points; // Process remaining points. We don't want to leave anything because of rounding errors.
         else
             points_for_current_queue = points_per_queue;
@@ -350,20 +357,20 @@ short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, doub
         opencl_set_current_queue(&cli->env, i);
         err = stable_clinteg_points_async(cli, x + processed_points, points_for_current_queue, dist, NULL);
 
-        if(err)
+        if (err)
             goto cleanup;
 
         processed_points += points_for_current_queue;
     }
 
-    if(processed_points != num_points)
+    if (processed_points != num_points)
         stablecl_log(log_err, "QQQQQ");
 
     processed_points = 0;
 
-    for(i = 0; i < required_queues; i++)
+    for (i = 0; i < required_queues; i++)
     {
-        if(i == required_queues - 1)
+        if (i == required_queues - 1)
             points_for_current_queue = num_points - processed_points; // Process remaining points. We don't want to leave anything because of rounding errors.
         else
             points_for_current_queue = points_per_queue;
@@ -371,14 +378,14 @@ short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, doub
         opencl_set_current_queue(&cli->env, i);
         err = stable_clinteg_points_end(cli, pdf_results + processed_points, errs ? errs + processed_points : NULL, points_for_current_queue, dist, NULL);
 
-        if(err)
+        if (err)
             goto cleanup;
 
         processed_points += points_for_current_queue;
     }
 
 cleanup:
-    if(err)
+    if (err)
         stablecl_log(log_err, "Error on parallel evaluation.");
 
     return err;
@@ -387,10 +394,10 @@ cleanup:
 void stable_clinteg_teardown(struct stable_clinteg *cli)
 {
 #ifndef SIMULATOR_BUILD
-    if(cli->h_gauss)
+    if (cli->h_gauss)
         clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
 
-    if(cli->h_kronrod)
+    if (cli->h_kronrod)
         clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->kronrod, cli->h_kronrod, 0, NULL, NULL);
 
     clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->args, cli->h_args, 0, NULL, NULL);

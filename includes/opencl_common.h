@@ -57,6 +57,8 @@ struct stable_info {
     cl_precision beta;
     cl_precision xi_coef;
     unsigned int integrand;
+    cl_precision final_factor;
+    size_t max_reevaluations;
 };
 
 struct stable_precalc {

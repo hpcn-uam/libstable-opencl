@@ -126,19 +126,6 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 		val = exp(-val) * val;
 	}
 
-	if(!isnormal(val.s0) || val.s0 < 0) val.s0 = 0;
-	if(!isnormal(val.s1) || val.s1 < 0) val.s1 = 0;
-#if POINTS_EVAL >= 2
-	if(!isnormal(val.s2) || val.s2 < 0) val.s2 = 0;
-	if(!isnormal(val.s3) || val.s3 < 0) val.s3 = 0;
-#if POINTS_EVAL >= 4
-	if(!isnormal(val.s4) || val.s4 < 0) val.s4 = 0;
-	if(!isnormal(val.s5) || val.s5 < 0) val.s5 = 0;
-	if(!isnormal(val.s6) || val.s6 < 0) val.s6 = 0;
-	if(!isnormal(val.s7) || val.s7 < 0) val.s7 = 0;
-#endif
-#endif
-
 	// GK quadrature is symmetric, so just add them in one quantity.
 	// Just avoid the 0 (last evaluation point) because it's the only
 	// point being evaluated once.
@@ -178,39 +165,37 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 
 	precalc->iend = M_PI_2;
 
-	precalc->final_factor = stable->c2_part / stable->sigma;
+	precalc->final_factor = stable->final_factor;
 
 	if(stable->integrand == PDF_ALPHA_NEQ1)
 	{
-		if (fabs(xxi) <= stable->xxi_th)
+		if (xxi < 0)
+	    {
+	        xxi = -xxi;
+	        precalc->theta0_ = - stable->theta0;
+	        precalc->beta_ = - stable->beta;
+	    }
+	    else
+		{
+	    	precalc->theta0_ = stable->theta0;
+	    	precalc->beta_ = stable->beta;
+		}
+
+	    if (xxi <= stable->xxi_th)
 	    {
 	        precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0) / stable->sigma;
 	        return SET_TO_RESULT_AND_RETURN;
 	    }
 
-	    precalc->theta0_ = stable->theta0;
-	    precalc->beta_ = stable->beta;
-
-	   	if (xxi < 0)
-	    {
-	        xxi = -xxi;
-	        precalc->theta0_ = - precalc->theta0_;
-	        precalc->beta_ = - precalc->beta_;
-	    }
-
-		precalc->ibegin = -precalc->theta0_;
+		precalc->ibegin = - precalc->theta0_;
 
 		precalc->xxipow = stable->alfainvalfa1 * log(fabs(xxi));
 		precalc->final_factor /= xxi;
-
-		precalc->max_reevaluations = stable->alfa > 1 ? 2 : 1;
 	}
 	else
 	{
-		precalc->ibegin = - M_PI_2;
-
-		precalc->beta_ = fabs(stable->beta);
 		precalc->xxipow = (-M_PI * x_ * stable->c2_part);
+		precalc->ibegin = - M_PI_2;
 	}
 
 	if (fabs(precalc->theta0_ + M_PI_2) < 2 * stable->THETA_TH)
@@ -308,6 +293,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS];
 	local int min_contributing, max_contributing;
 	short reevaluate = 0;
+	cl_vec result = vec(0);
 	size_t reevaluations = 0;
 
 	cl_precision2 previous_integration_remainder = vec2(0);
@@ -328,13 +314,22 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
     {
 	    precalc.subint_length = (precalc.iend - precalc.ibegin) / GK_SUBDIVISIONS;
 
+		offset = KRONROD_EVAL_POINTS / 2;
+
 		if(gk_point < KRONROD_EVAL_POINTS)
 		{
-			cl_vec result = eval_gk_pair(stable, &precalc);
-			sums[subinterval_index][gk_point] = result;
+			result = eval_gk_pair(stable, &precalc);
+
+			if(gk_point >= offset)
+				sums[subinterval_index][gk_point] = result;
 		}
 
-		for(offset = KRONROD_EVAL_POINTS / 2; offset > 0; offset >>= 1)
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		if(gk_point < offset)
+			sums[subinterval_index][gk_point] = result + sums[subinterval_index][gk_point + offset];
+
+		for(offset >>= 1; offset > 0; offset >>= 1)
 		{
 		    barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -344,7 +339,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
 		reevaluations++;
 
-		if(reevaluations > precalc.max_reevaluations)
+		if(reevaluations > stable->max_reevaluations)
 			break;
 
 		if(stable->alfa <= 0.3)
@@ -372,21 +367,21 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 		}
 	} while(reevaluate);
 
-	for(offset = MAX_WORKGROUPS / 2; offset > 0; offset >>= 1)
-	{
-		if(subinterval_index < offset)
-			sums[subinterval_index][gk_point] += sums[subinterval_index + offset][gk_point];
-
-		barrier(CLK_LOCAL_MEM_FENCE);
-	}
-
-    if(gk_point == 0 && subinterval_index == 0)
+	if(gk_point == 0 && subinterval_index == 0)
     {
-  		cl_precision2 final = sums[0][0].s01;
+    	// This is not a mistake: I measured it, this is faster than the other reduction.
+    	// Probably due to the fact that for few workgroups the barriers and increased
+    	// thread usage offset the advantage of the coalesced memory accesses.
+    	cl_vec total = sums[0][0];
+
+    	for(offset = 1; offset < MAX_WORKGROUPS; offset++)
+    		total += sums[offset][0];
+
+  		cl_precision2 final = total.s01;
 #if POINTS_EVAL >= 2
-  		final += sums[0][0].s23;
+  		final += total.s23;
 #if POINTS_EVAL >= 4
-  		final += sums[0][0].s45 + sums[0][0].s67;
+  		final += total.s45 + total.s67;
 #endif
 #endif
 
