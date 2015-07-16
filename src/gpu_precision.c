@@ -109,7 +109,7 @@ int main (int argc, const char** argv)
                         rel_diff = diff / cpu;
 
                     rel_diff_sum += rel_diff;
-                    fprintf(f, "%.2lf %.2lf %5.2g %9.5g %9.5g %9.5g %9.5g %9.5g\n", alfas[ai], betas[bi], points[j], cpu_vals[j], gpu_vals[j], diff, rel_diff, fabs(gpu_err[j]));
+                    fprintf(f, "%.2lf %.2lf %5.3g %9.5g %9.5g %9.5g %9.5g %9.5g\n", alfas[ai], betas[bi], points[j], cpu_vals[j], gpu_vals[j], diff, rel_diff, fabs(gpu_err[j]));
 
                     if(diff < cpu_err[j] || diff == 0)
                         in_cpu_bounds_count++;
