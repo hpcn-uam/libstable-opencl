@@ -297,6 +297,7 @@ void calculate_integration_remainder(
 	size_t subinterval_index = get_local_id(1);
 	size_t gk_point = get_local_id(0);
 	size_t j;
+	cl_precision2 current_integration_remainder = vec2(0);
 
 	if(gk_point == 0 && subinterval_index == 0)
 	{
@@ -304,20 +305,21 @@ void calculate_integration_remainder(
 		for(j = 0; j < MAX_WORKGROUPS; j++)
 		{
 			if(j < min_contributing || j > max_contributing)
-				*previous_integration_remainder += sums[j][0].s01;
+				current_integration_remainder += sums[j][0].s01;
 #if POINTS_EVAL >= 2
 			if(j + MAX_WORKGROUPS < min_contributing || j + MAX_WORKGROUPS > max_contributing)
-				*previous_integration_remainder += sums[j][0].s23;
+				current_integration_remainder += sums[j][0].s23;
 #if POINTS_EVAL >= 4
 			if(j + 2 * MAX_WORKGROUPS < min_contributing || j + 2 * MAX_WORKGROUPS > max_contributing)
-				*previous_integration_remainder += sums[j][0].s45;
+				current_integration_remainder += sums[j][0].s45;
 			if(j + 3 * MAX_WORKGROUPS < min_contributing || j + 3 * MAX_WORKGROUPS > max_contributing)
-				*previous_integration_remainder += sums[j][0].s67;
+				current_integration_remainder += sums[j][0].s67;
 #endif
 #endif
 		}
 
-		*previous_integration_remainder *= precalc->subint_length * precalc->final_factor;
+		current_integration_remainder *= precalc->subint_length * precalc->final_factor;
+		*previous_integration_remainder += current_integration_remainder;
 	}
 }
 
