@@ -179,16 +179,28 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
    	xxi = x_ - stable->xi;
 
 	precalc->iend = M_PI_2;
-
 	precalc->final_factor = stable->final_factor;
+	precalc->final_addition = 0;
 
-	if(stable->integrand == PDF_ALPHA_NEQ1)
+	if(is_integrand_neq1(stable->integrand))
 	{
+		if(stable->integrand == CDF_ALPHA_NEQ1)
+       	{
+       		precalc->final_factor = sign(1 - stable->alfa) / M_PI;
+       		precalc->final_addition = stable->c1;
+       	}
+
 		if (xxi < 0)
 	    {
 	        xxi = -xxi;
 	        precalc->theta0_ = - stable->theta0;
 	        precalc->beta_ = - stable->beta;
+
+	        if(stable->integrand == CDF_ALPHA_NEQ1)
+	       	{
+	       		precalc->final_factor *= -1;
+	       		precalc->final_addition = 1 - stable->c1;
+	       	}
 	    }
 	    else
 		{
@@ -198,7 +210,11 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 
 	    if (xxi <= stable->xxi_th)
 	    {
-	        precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0) / stable->sigma;
+	    	if(stable->integrand == PDF_ALPHA_NEQ1)
+	        	precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0) / stable->sigma;
+	        else // CDF_ALPHA_NEQ1
+	        	precalc->pdf_precalc = stable->c1;
+
 	        return SET_TO_RESULT_AND_RETURN;
 	    }
 
@@ -207,7 +223,7 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 		precalc->xxipow = stable->alfainvalfa1 * log(fabs(xxi));
 		precalc->final_factor /= xxi;
 	}
-	else
+	else if(is_integrand_eq1(stable->integrand))
 	{
 		precalc->xxipow = (-M_PI * x_ * stable->c2_part);
 		precalc->ibegin = - M_PI_2;
@@ -414,7 +430,7 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
 
     	final *= precalc.subint_length * precalc.final_factor;
 
-    	final += previous_integration_remainder;
+    	final += previous_integration_remainder + precalc.final_addition;
 
 		gauss[point_index] = final.y;
 		kronrod[point_index] = final.x;

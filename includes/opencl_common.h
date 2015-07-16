@@ -22,12 +22,17 @@
 #define GK_SUBDIVISIONS (POINTS_EVAL * MAX_WORKGROUPS)
 #define KRONROD_EVAL_POINTS (GK_POINTS / 2 + 1)
 
-#define PDF_ALPHA_EQ1 1
-#define PDF_ALPHA_NEQ1 2
-#define CDF_ALPHA_EQ1 11
-#define CDF_ALPHA_NEQ1 12
+#define PDF_ALPHA_EQ1 0
+#define PDF_ALPHA_NEQ1 1
+#define CDF_ALPHA_EQ1 2
+#define CDF_ALPHA_NEQ1 4
 #define GPU_TEST_INTEGRAND 100
 #define GPU_TEST_INTEGRAND_SIMPLE 101
+
+#define is_integrand_pdf(integrand) (integrand == PDF_ALPHA_EQ1 || integrand == PDF_ALPHA_NEQ1)
+#define is_integrand_cdf(integrand) (integrand == CDF_ALPHA_EQ1 || integrand == CDF_ALPHA_NEQ1)
+#define is_integrand_eq1(integrand) (integrand == PDF_ALPHA_EQ1 || integrand == CDF_ALPHA_EQ1)
+#define is_integrand_neq1(integrand) (integrand == PDF_ALPHA_NEQ1 || integrand == CDF_ALPHA_NEQ1)
 
 #if defined(FLOAT_GPU_UNIT) || (defined(__OPENCL_VERSION__) && !defined(cl_khr_fp64) && !defined(cl_amd_fp64))
 #define cl_precision float
@@ -55,9 +60,11 @@ struct stable_info {
     cl_precision xi;
     cl_precision xxi_th;
     cl_precision c2_part;
+    cl_precision c1;
     cl_precision THETA_TH;
     cl_precision beta;
     cl_precision xi_coef;
+    short is_xxi_negative;
     unsigned int integrand;
     cl_precision final_factor;
     size_t max_reevaluations;
@@ -73,6 +80,7 @@ struct stable_precalc {
     cl_precision xxi;
     cl_precision pdf_precalc;
     cl_precision final_factor;
+    cl_precision final_addition;
     size_t max_reevaluations;
 };
 
