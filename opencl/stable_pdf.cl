@@ -281,7 +281,7 @@ void calculate_integration_remainder(local cl_vec sums[MAX_WORKGROUPS][KRONROD_E
 	}
 }
 
-kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
+kernel void stable_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
 {
 	size_t gk_point = get_local_id(0);
 	size_t point_index = get_group_id(0);
