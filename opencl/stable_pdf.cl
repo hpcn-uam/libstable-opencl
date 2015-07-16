@@ -209,7 +209,13 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	return CONTINUE_CALC;
 }
 
-short scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], local int* min_contributing, local int* max_contributing)
+short scan_for_contributing_intervals(
+#ifdef INTEL
+	local cl_vec** sums
+#else
+	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS]
+#endif
+	, local int* min_contributing, local int* max_contributing)
 {
 	size_t subinterval_index = get_local_id(1);
 	size_t gk_point = get_local_id(0);
@@ -252,7 +258,13 @@ short scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_
 	return num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS;
 }
 
-void calculate_integration_remainder(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], struct stable_precalc* precalc, int min_contributing, int max_contributing, cl_precision2* previous_integration_remainder)
+void calculate_integration_remainder(
+#ifdef INTEL
+	local cl_vec** sums
+#else
+	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS]
+#endif
+	, struct stable_precalc* precalc, int min_contributing, int max_contributing, cl_precision2* previous_integration_remainder)
 {
 	size_t subinterval_index = get_local_id(1);
 	size_t gk_point = get_local_id(0);

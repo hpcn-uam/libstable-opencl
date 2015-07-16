@@ -3,6 +3,14 @@
 
 #define OPENCL_BUILD_OPTIONS "-cl-no-signed-zeros"
 
+#if defined(AMD_GPU)
+#define OPENCL_PLATFORM_SPECIFIC_OPTIONS "-DAMD_GPU"
+#elif defined(__APPLE__)
+#define OPENCL_PLATFORM_SPECIFIC_OPTIONS "-DINTEL"
+#else
+#define OPENCL_PLATFORM_SPECIFIC_OPTIONS ""
+#endif
+
 #define MAX_OPENCL_PLATFORMS 5
 #define MAX_BUILD_OPTS_LENGTH 1000
 
@@ -221,14 +229,14 @@ static void _opencl_generate_build_opts(char* build_opts, size_t build_opts_len)
     char cwd[300];
 
     if(getcwd(cwd, sizeof(cwd)) != NULL)
-        snprintf(build_opts, build_opts_len, "%s -I%s/ -DAMD_GPU", OPENCL_BUILD_OPTIONS, cwd);
+        snprintf(build_opts, build_opts_len, "%s %s -I%s/", OPENCL_BUILD_OPTIONS, OPENCL_PLATFORM_SPECIFIC_OPTIONS, cwd);
     else
     {
         stablecl_log(log_warning, "warning: getcwd failed with error %d: kernel compilation will probably fail", errno);
         snprintf(build_opts, build_opts_len, OPENCL_BUILD_OPTIONS);
     }
 #else
-    snprintf(build_opts, build_opts_len, OPENCL_BUILD_OPTIONS);
+    snprintf(build_opts, build_opts_len, "%s %s", OPENCL_BUILD_OPTIONS, OPENCL_PLATFORM_SPECIFIC_OPTIONS);
 #endif
 }
 
