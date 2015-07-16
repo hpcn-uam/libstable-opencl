@@ -221,7 +221,9 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 		precalc->ibegin = - precalc->theta0_;
 
 		precalc->xxipow = stable->alfainvalfa1 * log(fabs(xxi));
-		precalc->final_factor /= xxi;
+
+		if(stable->integrand == PDF_ALPHA_NEQ1)
+			precalc->final_factor /= xxi;
 	}
 	else if(is_integrand_eq1(stable->integrand))
 	{
@@ -385,6 +387,13 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
 		if(reevaluations > stable->max_reevaluations)
 			break;
 
+		if(is_integrand_cdf(stable->integrand))
+		{
+			min_contributing = GK_SUBDIVISIONS - 1;
+			max_contributing = GK_SUBDIVISIONS - 1;
+
+			reevaluate = 1;
+		}
 		if(stable->alfa <= 0.3)
 		{
 			// When alpha < 0.3, there's a big slope at the beginning of the subinterval

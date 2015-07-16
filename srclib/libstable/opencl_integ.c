@@ -177,8 +177,12 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     cli->h_args->c2_part = dist->c2_part;
     cli->h_args->xi_coef = (exp(lgamma(1 + 1 / dist->alfa))) / (M_PI * pow(1 + dist->xi * dist->xi, 1 / (2 * dist->alfa)));
     cli->h_args->final_factor = dist->c2_part / dist->sigma;
-    cli->h_args->max_reevaluations = dist->alfa > 1 ? 2 : 1;
     cli->h_args->c1 = dist->c1;
+
+    if(type == clinteg_pdf)
+        cli->h_args->max_reevaluations = dist->alfa > 1 ? 2 : 1;
+    else
+        cli->h_args->max_reevaluations = 2;
 
     if (dist->ZONE == GPU_TEST_INTEGRAND)
         cli->h_args->integrand = GPU_TEST_INTEGRAND;
