@@ -194,7 +194,8 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	        if(stable->integrand == CDF_ALPHA_NEQ1)
 	       	{
 	       		precalc->final_factor *= -1;
-	       		precalc->final_addition = 1 - stable->c1;
+	       		cl_precision c1 = 0.5 - precalc->theta0_ * M_1_PI;
+	       		precalc->final_addition = 1 - c1;
 	       	}
 	    }
 	    else
@@ -208,7 +209,7 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	    	if(stable->integrand == PDF_ALPHA_NEQ1)
 	        	precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0) / stable->sigma;
 	        else // CDF_ALPHA_NEQ1
-	        	precalc->pdf_precalc = 0.5 - stable->theta0 * M_1_PI;
+	        	precalc->pdf_precalc = 0.5 - precalc->theta0_ * M_1_PI;
 
 	        return SET_TO_RESULT_AND_RETURN;
 	    }
@@ -391,7 +392,7 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
 			min_contributing = 0;
 			max_contributing = 0;
 
-			reevaluate = 1;
+			reevaluate = 0;
 		}
 		else
 		{

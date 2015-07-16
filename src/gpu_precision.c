@@ -9,7 +9,7 @@ int main (int argc, const char** argv)
 {
     double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
     double betas[] = { 0, 0.5, 1 };
-    double intervals[] = { -1000, -10, 10, 1000 };
+    double intervals[] = {-10, 10,  };
     int points_per_interval = 1000;
     double cpu_vals[points_per_interval], gpu_vals[points_per_interval];
     double cpu_err[points_per_interval], gpu_err[points_per_interval];
