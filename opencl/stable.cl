@@ -194,7 +194,11 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	        if(stable->integrand == CDF_ALPHA_NEQ1)
 	       	{
 	       		precalc->final_factor *= -1;
-	       		precalc->final_addition = 1 - stable->c1;
+
+	       		if(stable->alfa < 1) // C1 changes here because of the sign inversion in θ0, recalculate
+	       			precalc->final_addition = 1 - 0.5 + precalc->theta0_ * M_1_PI;
+	       		else
+	       			precalc->final_addition = 1 - stable->c1;
 	       	}
 	    }
 	    else
