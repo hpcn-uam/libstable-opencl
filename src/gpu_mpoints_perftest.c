@@ -5,7 +5,7 @@
 #include "benchmarking.h"
 #include "opencl_integ.h"
 
-int main (void)
+int main (int argc, const char** argv)
 {
 	double alfa = 0.5, beta = 0.5, sigma = 1.0, mu = 0.0;
 	int param = 0;
@@ -22,6 +22,7 @@ int main (void)
 	double x_step_size = ((double)(max_x_range - min_x_range)) / (double) max_test_size;
 	double start, end, duration;
 	double cpu_duration, cpu_parallel_duration;
+	clinteg_type type = clinteg_pdf;
 
 	dist = stable_create(alfa, beta, sigma, mu, param);
 	x = calloc(max_test_size, sizeof(double));
@@ -42,6 +43,14 @@ int main (void)
 		return 1;
 	}
 
+	if(argc > 1 && strcmp("cdf", argv[1]) == 0)
+        type = clinteg_cdf;
+
+    if(type == clinteg_pdf)
+        printf(" PDF precision testing\n");
+    else
+        printf(" CDF precision testing\n");
+
 	for (test_size = test_size_step; test_size <= max_test_size; test_size += test_size_step)
 	{
 		duration = 0;
@@ -52,24 +61,48 @@ int main (void)
 		{
 			dist->gpu_queues = 1;
 
-			start = get_ms_time();
-			stable_pdf_gpu(dist, x, test_size, pdf, NULL);
-			end = get_ms_time();
-			duration += end - start;
+			if(type == clinteg_pdf)
+			{
+				start = get_ms_time();
+				stable_pdf_gpu(dist, x, test_size, pdf, NULL);
+				end = get_ms_time();
+				duration += end - start;
 
-			stable_set_THREADS(1);
+				stable_set_THREADS(1);
 
-			start = get_ms_time();
-			stable_pdf(dist, x, test_size, pdf, NULL);
-			end = get_ms_time();
-			cpu_duration += end - start;
+				start = get_ms_time();
+				stable_pdf(dist, x, test_size, pdf, NULL);
+				end = get_ms_time();
+				cpu_duration += end - start;
 
-			stable_set_THREADS(0);
+				stable_set_THREADS(0);
 
-			start = get_ms_time();
-			stable_pdf(dist, x, test_size, pdf, NULL);
-			end = get_ms_time();
-			cpu_parallel_duration += end - start;
+				start = get_ms_time();
+				stable_pdf(dist, x, test_size, pdf, NULL);
+				end = get_ms_time();
+				cpu_parallel_duration += end - start;
+			}
+			else
+			{
+				start = get_ms_time();
+				stable_cdf_gpu(dist, x, test_size, pdf, NULL);
+				end = get_ms_time();
+				duration += end - start;
+
+				stable_set_THREADS(1);
+
+				start = get_ms_time();
+				stable_cdf(dist, x, test_size, pdf, NULL);
+				end = get_ms_time();
+				cpu_duration += end - start;
+
+				stable_set_THREADS(0);
+
+				start = get_ms_time();
+				stable_cdf(dist, x, test_size, pdf, NULL);
+				end = get_ms_time();
+				cpu_parallel_duration += end - start;
+			}
 		}
 
 		duration /= num_tests_per_size;
