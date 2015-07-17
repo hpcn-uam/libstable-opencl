@@ -60,6 +60,7 @@ struct stable_info {
     cl_precision xi;
     cl_precision xxi_th;
     cl_precision c2_part;
+    cl_precision c1;
     cl_precision THETA_TH;
     cl_precision beta;
     cl_precision xi_coef;
