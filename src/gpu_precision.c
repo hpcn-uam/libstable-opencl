@@ -103,9 +103,10 @@ int main (int argc, const char** argv)
                     if(!isnan(cpu_err[j]))
                         cpu_err_sum += fabs(cpu_err[j]);
 
-                    abs_diff_sum += diff;
+                    if(!isnan(cpu))
+                        abs_diff_sum += diff;
 
-                    if(cpu != 0)
+                    if(cpu != 0 && !isnan(cpu))
                         rel_diff = diff / cpu;
 
                     rel_diff_sum += rel_diff;
