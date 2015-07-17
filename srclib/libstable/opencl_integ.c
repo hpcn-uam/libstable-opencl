@@ -186,7 +186,7 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     }
     else
     {
-        cli->h_args->max_reevaluations = 2;
+        cli->h_args->max_reevaluations = 1;
         cli->h_args->final_factor = dist->alfa < 1 ? M_1_PI : - M_1_PI;
         cli->h_args->final_addition = dist->c1;
     }
