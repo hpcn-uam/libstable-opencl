@@ -5,6 +5,14 @@
 #include "benchmarking.h"
 #include "opencl_integ.h"
 
+static int _dbl_compare (const void * a, const void * b)
+{
+    double da = *(const double *)a;
+    double db = *(const double *)b;
+
+    return (db < da) - (da < db);
+}
+
 int main (int argc, const char** argv)
 {
     double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
@@ -44,6 +52,8 @@ int main (int argc, const char** argv)
 
     size_t ai, bi, i, j;
     double points[points_per_interval];
+    double rel_errs[points_per_interval];
+    double abs_errs[points_per_interval];
     size_t interval_count = (sizeof(intervals) / sizeof(double)) - 1;
     size_t alfa_count = sizeof(alfas) / sizeof(double);
     size_t beta_count = sizeof(betas) / sizeof(double);
@@ -63,7 +73,7 @@ int main (int argc, const char** argv)
         double step = (end - begin) / points_per_interval;
 
         printf("\n=== Interval (%.0lf, %.0lf)\n", begin, end);
-        printf("alfa  beta   abserr    relerr    gpuerr    cpuerr    within bounds\n");
+        printf("alfa  beta   abserr    relerr    Mabserr   Mrelerr   gpuerr    cpuerr    within bounds\n");
 
         for(j = 0; j < points_per_interval; j++)
             points[j] = j * step + begin;
@@ -106,8 +116,11 @@ int main (int argc, const char** argv)
                     if(!isnan(cpu))
                         abs_diff_sum += diff;
 
-                    if(cpu != 0 && !isnan(cpu))
+                    if(cpu != 0 && !isnan(cpu) && cpu > 1e-20)
                         rel_diff = diff / cpu;
+
+                    rel_errs[j] = rel_diff;
+                    abs_errs[j] = diff;
 
                     rel_diff_sum += rel_diff;
                     fprintf(f, "%.2lf %.2lf %5.3g %9.5g %9.5g %9.5g %9.5g %9.5g\n", alfas[ai], betas[bi], points[j], cpu_vals[j], gpu_vals[j], diff, rel_diff, fabs(gpu_err[j]));
@@ -127,9 +140,13 @@ int main (int argc, const char** argv)
                 total_in_cpu_bounds_count += in_cpu_bounds_count;
                 percentage_in_bounds = 100 * ((double)in_cpu_bounds_count) / points_per_interval;
 
-                printf("%.3lf %.3lf  %8.3g  %8.3g  %8.3g  %8.3g  %8.1lf %%\n",
+                qsort(abs_errs, points_per_interval, sizeof(double), _dbl_compare);
+                qsort(rel_errs, points_per_interval, sizeof(double), _dbl_compare);
+
+                printf("%.3lf %.3lf  %8.3g  %8.3g  %8.3g  %8.3g  %8.3g  %8.3g  %8.1lf %%\n",
                     alfas[ai], betas[bi],
                     abs_diff_sum, rel_diff_sum,
+                    abs_errs[points_per_interval / 2], rel_errs[points_per_interval / 2],
                     gpu_err_sum, cpu_err_sum,
                     percentage_in_bounds);
             }
