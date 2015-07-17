@@ -1,0 +1,25 @@
+#!/bin/bash
+
+host=$(hostname -s)
+
+make -j 2 release
+
+echo "Performance PDF..."
+bin/release/gpu_performance pdf > ${host}-performance-pdf.dat
+echo "Performance CDF..."
+bin/release/gpu_performance cdf > ${host}-performance-cdf.dat
+echo "Precision PDF..."
+bin/release/gpu_precision pdf > ${host}-precision-pdf.dat
+echo "Precision CDF..."
+bin/release/gpu_precision pdf > ${host}-precision-pdf.dat
+echo "Mpoints PDF..."
+bin/release/gpu_mpoints_perftest pdf > ${host}-mpoints-pdf.dat
+echo "Mpoints CDF..."
+bin/release/gpu_mpoints_perftest cdf > ${host}-mpoints-cdf.dat
+
+files="${host}-performance-pdf.dat ${host}-performance-cdf.dat \
+		${host}-precision-pdf.dat ${host}-precision-pdf.dat \
+		${host}-mpoints-pdf.dat ${host}-mpoints-cdf.dat"
+
+ts=$(date +"%Y-%m-%d_%H-%M-%S")
+tar -cvzf "${host}__${ts}.tar.gz" $files
