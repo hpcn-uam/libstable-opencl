@@ -12,6 +12,7 @@
 
 #define KERNIDX_ALPHA_NEQ1 0
 #define KERNIDX_ALPHA_EQ1 1
+#define KERN_NAME "stable_points"
 
 #define MIN_POINTS_PER_QUEUE 200
 
@@ -105,7 +106,7 @@ int stable_clinteg_init(struct stable_clinteg *cli, size_t platform_index)
         return -1;
     }
 
-    if (opencl_load_kernel(&cli->env, "opencl/stable_pdf.cl", "stable_pdf_points", KERNIDX_ALPHA_NEQ1))
+    if (opencl_load_kernel(&cli->env, "opencl/stable.cl", KERN_NAME, KERNIDX_ALPHA_NEQ1))
     {
         stablecl_log(log_message, "OpenCL kernel load failure.");
         return -1;
@@ -155,7 +156,7 @@ static void _stable_print_profileinfo(struct opencl_profile *prof)
     printf("\tKernel exec time: %3.3g.\n", prof->exec_time);
 }
 
-short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t num_points, struct StableDistStruct *dist, cl_event* event)
+short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t num_points, struct StableDistStruct *dist, cl_event* event, clinteg_type type)
 {
     cl_int err = 0;
     size_t work_threads[2] = { KRONROD_EVAL_POINTS * num_points, MAX_WORKGROUPS };
@@ -175,8 +176,20 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     cli->h_args->xxi_th = stable_get_XXI_TH();
     cli->h_args->c2_part = dist->c2_part;
     cli->h_args->xi_coef = (exp(lgamma(1 + 1 / dist->alfa))) / (M_PI * pow(1 + dist->xi * dist->xi, 1 / (2 * dist->alfa)));
-    cli->h_args->final_factor = dist->c2_part / dist->sigma;
-    cli->h_args->max_reevaluations = dist->alfa > 1 ? 2 : 1;
+    cli->h_args->c1 = dist->c1;
+
+    if(type == clinteg_pdf)
+    {
+        cli->h_args->max_reevaluations = dist->alfa > 1 ? 2 : 1;
+        cli->h_args->final_factor = dist->c2_part / dist->sigma;
+        cli->h_args->final_addition = 0;
+    }
+    else
+    {
+        cli->h_args->max_reevaluations = 1;
+        cli->h_args->final_factor = dist->alfa < 1 ? M_1_PI : - M_1_PI;
+        cli->h_args->final_addition = dist->c1;
+    }
 
     if (dist->ZONE == GPU_TEST_INTEGRAND)
         cli->h_args->integrand = GPU_TEST_INTEGRAND;
@@ -184,12 +197,12 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
         cli->h_args->integrand = GPU_TEST_INTEGRAND_SIMPLE;
     else if (dist->ZONE == ALFA_1)
     {
-        cli->h_args->integrand = PDF_ALPHA_EQ1;
+        cli->h_args->integrand = type == clinteg_pdf ? PDF_ALPHA_EQ1 : CDF_ALPHA_EQ1;
         cli->h_args->beta = fabs(dist->beta);
     }
     else
     {
-        cli->h_args->integrand = PDF_ALPHA_NEQ1;
+        cli->h_args->integrand = type == clinteg_pdf ? PDF_ALPHA_NEQ1 : CDF_ALPHA_NEQ1;
     }
 
 #ifdef CL_PRECISION_IS_FLOAT
@@ -258,12 +271,12 @@ cleanup:
     return err;
 }
 
-short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_results, double *errs, size_t num_points, struct StableDistStruct *dist)
+short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_results, double *errs, size_t num_points, struct StableDistStruct *dist, clinteg_type type)
 {
     cl_event event;
     cl_int err;
 
-    err = stable_clinteg_points_async(cli, x, num_points, dist, &event);
+    err = stable_clinteg_points_async(cli, x, num_points, dist, &event, type);
 
     if (err)
     {
@@ -331,7 +344,7 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
     return err;
 }
 
-short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, double *pdf_results, double *errs, size_t num_points, struct StableDistStruct *dist, size_t queues)
+short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, double *pdf_results, double *errs, size_t num_points, struct StableDistStruct *dist, size_t queues, clinteg_type type)
 {
     cl_int err = 0;
     size_t i;
@@ -355,7 +368,7 @@ short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, doub
             points_for_current_queue = points_per_queue;
 
         opencl_set_current_queue(&cli->env, i);
-        err = stable_clinteg_points_async(cli, x + processed_points, points_for_current_queue, dist, NULL);
+        err = stable_clinteg_points_async(cli, x + processed_points, points_for_current_queue, dist, NULL, type);
 
         if (err)
             goto cleanup;

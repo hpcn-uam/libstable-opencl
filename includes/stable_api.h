@@ -303,6 +303,9 @@ double stable_cdf_point(StableDist *dist, const double x, double *err);
 void stable_cdf(StableDist *dist, const double x[], const int Nx,
                 double *cdf, double *err);
 
+void stable_cdf_gpu(StableDist *dist, const double x[], const int Nx,
+                double *pdf, double *err);
+
 /******************************************************************************/
 /*   CDF integrad functions                                                   */
 /******************************************************************************/

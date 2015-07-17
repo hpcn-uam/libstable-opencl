@@ -5,14 +5,23 @@
 #include "benchmarking.h"
 #include "opencl_integ.h"
 
-int main (void)
+static int _dbl_compare (const void * a, const void * b)
+{
+    double da = *(const double *)a;
+    double db = *(const double *)b;
+
+    return (db < da) - (da < db);
+}
+
+int main (int argc, const char** argv)
 {
     double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
     double betas[] = { 0, 0.5, 1 };
     double intervals[] = { -1000, -10, 10, 1000 };
     int points_per_interval = 1000;
-    double cpu_pdf[points_per_interval], gpu_pdf[points_per_interval];
+    double cpu_vals[points_per_interval], gpu_vals[points_per_interval];
     double cpu_err[points_per_interval], gpu_err[points_per_interval];
+    clinteg_type type = clinteg_pdf;
 
     stable_clinteg_printinfo();
 
@@ -30,11 +39,21 @@ int main (void)
         return 1;
     }
 
+    if(argc > 1 && strcmp("cdf", argv[1]) == 0)
+        type = clinteg_cdf;
+
+    if(type == clinteg_pdf)
+        printf(" PDF precision testing\n");
+    else
+        printf(" CDF precision testing\n");
+
     stable_set_absTOL(1e-20);
     stable_set_relTOL(1.2e-10);
 
     size_t ai, bi, i, j;
     double points[points_per_interval];
+    double rel_errs[points_per_interval];
+    double abs_errs[points_per_interval];
     size_t interval_count = (sizeof(intervals) / sizeof(double)) - 1;
     size_t alfa_count = sizeof(alfas) / sizeof(double);
     size_t beta_count = sizeof(betas) / sizeof(double);
@@ -54,7 +73,7 @@ int main (void)
         double step = (end - begin) / points_per_interval;
 
         printf("\n=== Interval (%.0lf, %.0lf)\n", begin, end);
-        printf("alfa  beta   abserr    relerr    gpuerr    cpuerr    within bounds\n");
+        printf("alfa  beta   abserr    relerr    Mabserr   Mrelerr   gpuerr    cpuerr    within bounds\n");
 
         for(j = 0; j < points_per_interval; j++)
             points[j] = j * step + begin;
@@ -65,8 +84,16 @@ int main (void)
             {
                 stable_setparams(dist, alfas[ai], betas[bi], 1, 0, 0);
 
-                stable_pdf_gpu(dist, points, points_per_interval, gpu_pdf, gpu_err);
-                stable_pdf(dist, points, points_per_interval, cpu_pdf, cpu_err);
+                if(type == clinteg_pdf)
+                {
+                    stable_pdf_gpu(dist, points, points_per_interval, gpu_vals, gpu_err);
+                    stable_pdf(dist, points, points_per_interval, cpu_vals, cpu_err);
+                }
+                else
+                {
+                    stable_cdf_gpu(dist, points, points_per_interval, gpu_vals, gpu_err);
+                    stable_cdf(dist, points, points_per_interval, cpu_vals, cpu_err);
+                }
 
                 abs_diff_sum = 0;
                 rel_diff_sum = 0;
@@ -76,8 +103,8 @@ int main (void)
 
                 for(j = 0; j < points_per_interval; j++)
                 {
-                    double cpu = cpu_pdf[j];
-                    double gpu = gpu_pdf[j];
+                    double cpu = cpu_vals[j];
+                    double gpu = gpu_vals[j];
                     double diff = fabs(cpu - gpu);
                     double rel_diff = 0;
 
@@ -86,13 +113,17 @@ int main (void)
                     if(!isnan(cpu_err[j]))
                         cpu_err_sum += fabs(cpu_err[j]);
 
-                    abs_diff_sum += diff;
+                    if(!isnan(cpu))
+                        abs_diff_sum += diff;
 
-                    if(cpu != 0)
+                    if(cpu != 0 && !isnan(cpu) && cpu > 1e-20)
                         rel_diff = diff / cpu;
 
+                    rel_errs[j] = rel_diff;
+                    abs_errs[j] = diff;
+
                     rel_diff_sum += rel_diff;
-                    fprintf(f, "%.2lf %.2lf %5.2g %9.5g %9.5g %9.5g %9.5g %9.5g\n", alfas[ai], betas[bi], points[j], cpu_pdf[j], gpu_pdf[j], diff, rel_diff, fabs(gpu_err[j]));
+                    fprintf(f, "%.2lf %.2lf %5.3g %9.5g %9.5g %9.5g %9.5g %9.5g\n", alfas[ai], betas[bi], points[j], cpu_vals[j], gpu_vals[j], diff, rel_diff, fabs(gpu_err[j]));
 
                     if(diff < cpu_err[j] || diff == 0)
                         in_cpu_bounds_count++;
@@ -109,9 +140,13 @@ int main (void)
                 total_in_cpu_bounds_count += in_cpu_bounds_count;
                 percentage_in_bounds = 100 * ((double)in_cpu_bounds_count) / points_per_interval;
 
-                printf("%.3lf %.3lf  %8.3g  %8.3g  %8.3g  %8.3g  %8.1lf %%\n",
+                qsort(abs_errs, points_per_interval, sizeof(double), _dbl_compare);
+                qsort(rel_errs, points_per_interval, sizeof(double), _dbl_compare);
+
+                printf("%.3lf %.3lf  %8.3g  %8.3g  %8.3g  %8.3g  %8.3g  %8.3g  %8.1lf %%\n",
                     alfas[ai], betas[bi],
                     abs_diff_sum, rel_diff_sum,
+                    abs_errs[points_per_interval / 2], rel_errs[points_per_interval / 2],
                     gpu_err_sum, cpu_err_sum,
                     percentage_in_bounds);
             }

@@ -125,6 +125,21 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 		val = exp(val + precalc->xxipow);
 		val = exp(-val) * val;
 	}
+	else if(stable->integrand == CDF_ALPHA_NEQ1)
+	{
+		aux = (precalc->theta0_ + val) * stable->alfa;
+		val = log(cosval / sin(aux)) * stable->alfainvalfa1 +
+			+ log(cos(aux - val) / cosval) + stable->k1;
+
+		val = exp(-exp(val + precalc->xxipow));
+	}
+	else if(stable->integrand == CDF_ALPHA_EQ1)
+	{
+		aux = (precalc->beta_ * val + vec(M_PI_2)) / cosval;
+		val = sin(val) * aux / precalc->beta_ + log(aux) + stable->k1;
+
+		val = exp(-exp(val + precalc->xxipow));
+	}
 
 	// GK quadrature is symmetric, so just add them in one quantity.
 	// Just avoid the 0 (last evaluation point) because it's the only
@@ -166,14 +181,25 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	precalc->iend = M_PI_2;
 
 	precalc->final_factor = stable->final_factor;
+	precalc->final_addition = stable->final_addition;
 
-	if(stable->integrand == PDF_ALPHA_NEQ1)
+	if(is_integrand_neq1(stable->integrand))
 	{
 		if (xxi < 0)
 	    {
 	        xxi = -xxi;
 	        precalc->theta0_ = - stable->theta0;
 	        precalc->beta_ = - stable->beta;
+
+	        if(stable->integrand == CDF_ALPHA_NEQ1)
+	       	{
+	       		precalc->final_factor *= -1;
+
+	       		if(stable->alfa < 1) // C1 changes here because of the sign inversion in θ0, recalculate
+	       			precalc->final_addition = 1 - 0.5 + precalc->theta0_ * M_1_PI;
+	       		else
+	       			precalc->final_addition = 1 - stable->c1;
+	       	}
 	    }
 	    else
 		{
@@ -183,16 +209,22 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 
 	    if (xxi <= stable->xxi_th)
 	    {
-	        precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0) / stable->sigma;
+	    	if(stable->integrand == PDF_ALPHA_NEQ1)
+	        	precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0) / stable->sigma;
+	        else // CDF_ALPHA_NEQ1
+	        	precalc->pdf_precalc = 0.5 - stable->theta0 * M_1_PI;
+
 	        return SET_TO_RESULT_AND_RETURN;
 	    }
 
 		precalc->ibegin = - precalc->theta0_;
 
 		precalc->xxipow = stable->alfainvalfa1 * log(fabs(xxi));
-		precalc->final_factor /= xxi;
+
+		if(stable->integrand == PDF_ALPHA_NEQ1)
+			precalc->final_factor /= xxi;
 	}
-	else
+	else if(is_integrand_eq1(stable->integrand))
 	{
 		precalc->xxipow = (-M_PI * x_ * stable->c2_part);
 		precalc->ibegin = - M_PI_2;
@@ -209,7 +241,13 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	return CONTINUE_CALC;
 }
 
-short scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], local int* min_contributing, local int* max_contributing)
+short scan_for_contributing_intervals(
+#ifdef INTEL
+	local cl_vec** sums
+#else
+	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS]
+#endif
+	, local int* min_contributing, local int* max_contributing)
 {
 	size_t subinterval_index = get_local_id(1);
 	size_t gk_point = get_local_id(0);
@@ -252,11 +290,18 @@ short scan_for_contributing_intervals(local cl_vec sums[MAX_WORKGROUPS][KRONROD_
 	return num_contributing > 0 && num_contributing < MIN_CONTRIBUTING_SUBINTS;
 }
 
-void calculate_integration_remainder(local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS], struct stable_precalc* precalc, int min_contributing, int max_contributing, cl_precision2* previous_integration_remainder)
+void calculate_integration_remainder(
+#ifdef INTEL
+	local cl_vec** sums
+#else
+	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS]
+#endif
+	, struct stable_precalc* precalc, int min_contributing, int max_contributing, cl_precision2* previous_integration_remainder)
 {
 	size_t subinterval_index = get_local_id(1);
 	size_t gk_point = get_local_id(0);
 	size_t j;
+	cl_precision2 current_integration_remainder = vec2(0);
 
 	if(gk_point == 0 && subinterval_index == 0)
 	{
@@ -264,24 +309,25 @@ void calculate_integration_remainder(local cl_vec sums[MAX_WORKGROUPS][KRONROD_E
 		for(j = 0; j < MAX_WORKGROUPS; j++)
 		{
 			if(j < min_contributing || j > max_contributing)
-				*previous_integration_remainder += sums[j][0].s01;
+				current_integration_remainder += sums[j][0].s01;
 #if POINTS_EVAL >= 2
 			if(j + MAX_WORKGROUPS < min_contributing || j + MAX_WORKGROUPS > max_contributing)
-				*previous_integration_remainder += sums[j][0].s23;
+				current_integration_remainder += sums[j][0].s23;
 #if POINTS_EVAL >= 4
 			if(j + 2 * MAX_WORKGROUPS < min_contributing || j + 2 * MAX_WORKGROUPS > max_contributing)
-				*previous_integration_remainder += sums[j][0].s45;
+				current_integration_remainder += sums[j][0].s45;
 			if(j + 3 * MAX_WORKGROUPS < min_contributing || j + 3 * MAX_WORKGROUPS > max_contributing)
-				*previous_integration_remainder += sums[j][0].s67;
+				current_integration_remainder += sums[j][0].s67;
 #endif
 #endif
 		}
 
-		*previous_integration_remainder *= precalc->subint_length * precalc->final_factor;
+		current_integration_remainder *= precalc->subint_length * precalc->final_factor;
+		*previous_integration_remainder += current_integration_remainder;
 	}
 }
 
-kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
+kernel void stable_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
 {
 	size_t gk_point = get_local_id(0);
 	size_t point_index = get_group_id(0);
@@ -387,7 +433,7 @@ kernel void stable_pdf_points(constant struct stable_info* stable, constant cl_p
 
     	final *= precalc.subint_length * precalc.final_factor;
 
-    	final += previous_integration_remainder;
+    	final += previous_integration_remainder + precalc.final_addition;
 
 		gauss[point_index] = final.y;
 		kronrod[point_index] = final.x;
