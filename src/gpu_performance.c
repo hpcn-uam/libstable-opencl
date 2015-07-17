@@ -118,6 +118,7 @@ int main (int argc, char** argv)
     struct opencl_profile profile;
     double ms_per_point;
     clinteg_type type = clinteg_pdf;
+    short enable_cpu = 0;
     evaluator cpu_fn;
     evaluator gpu_fn;
 
@@ -137,6 +138,10 @@ int main (int argc, char** argv)
         else if (strcmp(argv[i], "cdf") == 0)
         {
             type = clinteg_cdf;
+        }
+        else if(strcmp(argv[i], "cpu") == 0)
+        {
+            enable_cpu = 1;
         }
     }
 
@@ -169,12 +174,15 @@ int main (int argc, char** argv)
 
     fprintf(stdout, "α     β\t\t| time  |\n");
 
-    for (ai = 0; ai < alfas_len; ai++)
+    if(enable_cpu)
     {
-        for (bi = 0; bi < betas_len; bi++)
+        for (ai = 0; ai < alfas_len; ai++)
         {
-            stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
-            _measure_cpu_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile, cpu_fn);
+            for (bi = 0; bi < betas_len; bi++)
+            {
+                stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
+                _measure_cpu_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile, cpu_fn);
+            }
         }
     }
 
