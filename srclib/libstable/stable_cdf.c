@@ -301,6 +301,9 @@ stable_integration_cdf(StableDist *dist, double(*integrando)(double,void*),
   /*fprintf(FINTEG,"%le\t%le\t%le\t%le\t%le\t%le\t%le\t%le\t\n",
           x,theta[0],theta[SUBS_def/2],theta[SUBS_def],g[0],g[SUBS_def/2],g[SUBS_def],pdf);*/
 
+  if(isnan(cdf))
+    cdf = 0;
+
   return cdf;
 }
 
@@ -373,6 +376,9 @@ stable_cdf_point_ALFA_1(StableDist *dist, const double x, double *err)
     cdf = dist->c3*cdf;
   else
     cdf = 1.0 - dist->c3*cdf;
+
+  if(isnan(cdf))
+    cdf = 0;
 
   return cdf;
 }
