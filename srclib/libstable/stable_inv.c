@@ -207,62 +207,65 @@ static short _is_guess_valid(double val)
     return fabs(val) < 1e-6;
 }
 
-double stable_inv_point_gpu(StableDist* dist, const double q, double *err)
+static double _stable_inv_bracket(StableDist* dist, double q, size_t point_count, double guess, double search_width, double* guess_error)
 {
-    double initial_guess;
-    double interval_width; // This should probably depend dinamically on α.
-    double interval_begin, interval_end, interval_step;
-    double tolerance;
-    double guess_error;
-    size_t point_count = 200, i;
     double points[point_count];
     double cdf[point_count];
-    size_t bracket_begin, bracket_end;
+    double interval_begin, interval_end, interval_step;
+    size_t i, bracket_begin, bracket_end;
+    double bracket_begin_val, bracket_end_val;
 
-    if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
-        return stable_inv_point(dist, q, err);
-
-    initial_guess = stable_quick_inv_point(dist, q, &guess_error);
-
-    interval_width = 2 * guess_error;
-    tolerance = interval_width / point_count;
-    interval_begin = initial_guess - guess_error;
-    interval_end = initial_guess + guess_error;
-    interval_step = tolerance;
+    interval_begin = guess - search_width / 2;
+    interval_end = guess + search_width / 2;
+    interval_step = search_width / point_count;
 
     for(i = 0; i < point_count; i++)
         points[i] = interval_begin + interval_step * i;
 
-    stable_cdf_gpu(dist, points, point_count, cdf, NULL);
+    stable_cdf(dist, points, point_count, cdf, NULL);
 
     // Binary search for the 0
     bracket_begin = 0;
     bracket_end = point_count - 1;
 
-    double bracket_begin_val = cdf[bracket_begin];
-    double bracket_end_val = cdf[bracket_end];
+    bracket_begin_val = cdf[bracket_begin] - q;
+    bracket_end_val = cdf[bracket_end] - q;
 
     if(_is_guess_valid(bracket_begin_val))
+    {
+        guess_error = 0;
         return points[bracket_begin];
+    }
     else if(_is_guess_valid(bracket_end_val))
+    {
+        guess_error = 0;
         return points[bracket_end];
+    }
 
     while(bracket_end - bracket_begin > 1)
     {
-        bracket_begin_val = cdf[bracket_begin];
-        bracket_end_val = cdf[bracket_end];
+        bracket_begin_val = cdf[bracket_begin] - q;
+        bracket_end_val = cdf[bracket_end] - q;
 
-        if(bracket_begin_val > 0 || bracket_end_val < 0)
+        if(bracket_begin_val > 0)
         {
-            fprintf(stderr, "Bracketing same-sign failure at [%zu, %zu]\n", bracket_begin, bracket_end);
+            *guess_error = search_width;
             return NAN;
+        }
+        else if(bracket_end_val < 0)
+        {
+            *guess_error = search_width;
+            return -NAN;
         }
 
         size_t middle = (bracket_end + bracket_begin + 1) / 2;
-        double middle_val = cdf[middle];
+        double middle_val = cdf[middle] - q;
 
         if(_is_guess_valid(middle_val))
+        {
+            *guess_error = 0;
             return points[middle];
+        }
 
         if(middle_val < 0)
             bracket_begin = middle;
@@ -270,7 +273,37 @@ double stable_inv_point_gpu(StableDist* dist, const double q, double *err)
             bracket_end = middle;
     }
 
+    *guess_error = interval_step / 2;
+
     return (points[bracket_end] + points[bracket_begin]) / 2;
+}
+
+double stable_inv_point_gpu(StableDist* dist, const double q, double *err)
+{
+    double guess;
+    double interval_width;
+    double tolerance = 1e-3;
+    double guess_error;
+    size_t point_count = 200;
+
+    if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
+        return stable_inv_point(dist, q, err);
+
+    guess = stable_quick_inv_point(dist, q, &guess_error);
+
+    if(q > 0.9 || q < 0.1)
+        return guess;
+
+    while(guess_error > tolerance)
+    {
+        interval_width = 2 * guess_error;
+        guess = _stable_inv_bracket(dist, q, point_count, guess, interval_width, &guess_error);
+    }
+
+    if(err)
+        *err = guess_error;
+
+    return guess;
 }
 
 double stable_inv_point(StableDist *dist, const double q, double *err)
