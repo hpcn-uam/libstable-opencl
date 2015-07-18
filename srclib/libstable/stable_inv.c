@@ -1,5 +1,5 @@
 /* stable/stable_inv.h
- * 
+ *
  * Functions to calculate the quantile function of alpha-stable
  * distributions. Based on the developed method for CDF evaluation.
  * Code fractions based on code in [1].
@@ -9,17 +9,17 @@
  *
  * Copyright (C) 2013. Javier Royuela del Val
  *                     Federico Simmross Wattenberg
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; If not, see <http://www.gnu.org/licenses/>.
  *
@@ -28,7 +28,7 @@
  *  E.T.S.I. Telecomunicación
  *  Universidad de Valladolid
  *  Paseo de Belén 15, 47002 Valladolid, Spain.
- *  jroyval@lpi.tel.uva.es    
+ *  jroyval@lpi.tel.uva.es
  */
 #include "stable_api.h"
 #include "stable_integration.h"
@@ -101,9 +101,9 @@ double stable_quick_inv_point(StableDist *dist, const double q, double *err)
   double beta = dist->beta;
   double q_ = q;
   double signBeta = 1;
-  
-  if (alfa<0.1)   alfa=0.1; 
-  
+
+  if (alfa<0.1)   alfa=0.1;
+
   if (beta < 0) {
     signBeta = -1;
     q_ = 1.0 - q_;
@@ -114,7 +114,7 @@ double stable_quick_inv_point(StableDist *dist, const double q, double *err)
       q_=0.1;
     }
   }
-  
+
   /* Asympthotic expansion near the limits of the domain */
   if (q_>0.9 || q_<0.1) {
     if (alfa!=1.0)
@@ -126,26 +126,28 @@ double stable_quick_inv_point(StableDist *dist, const double q, double *err)
       x0=pow((1-q_)/(C*0.5*(1.0+beta)),-1.0/alfa);
     else
       x0=-pow(q_/(C*0.5*(1.0-beta)),-1.0/alfa);
-  }    
-      
+
+    *err = 0.1;
+  }
+
   else {
-	/* Linear interpolation on precalculated values */    
-    int ia, ib, iq;    
+	/* Linear interpolation on precalculated values */
+    int ia, ib, iq;
     double aux=0;
     double xa = modf(alfa/0.1,&aux); ia =(int)aux-1;
     double xb = modf(beta/0.2,&aux); ib =(int)aux;
     double xq = modf(  q_/0.1,&aux); iq =(int)aux-1;
-    
+
     if (alfa==2) {ia = 18; xa = 1.0;}
     if (beta==1) {ib = 4;  xb = 1.0;}
     if (q_==0.9) {iq = 7;  xq = 1.0;}
-    
+
     double p[8] = {precalc[iq][ib][ia],   precalc[iq][ib][ia+1],   precalc[iq][ib+1][ia],   precalc[iq][ib+1][ia+1],
                    precalc[iq+1][ib][ia], precalc[iq+1][ib][ia+1], precalc[iq+1][ib+1][ia], precalc[iq+1][ib+1][ia+1]};
-    
+
 	//Trilinear interpolation
     x0=((p[0]*(1.0-xa)+p[1]*xa)*(1-xb)+(p[2]*(1-xa)+p[3]*xa)*xb)*(1-xq)+((p[4]*(1.0-xa)+p[5]*xa)*(1-xb)+(p[6]*(1-xa)+p[7]*xa)*xb)*xq;
- 
+
     if (err!=NULL) {
       *err = fabs(0.5*(p[0]-p[1]));
     }
@@ -155,12 +157,10 @@ double stable_quick_inv_point(StableDist *dist, const double q, double *err)
     printf("Precalc: \t %1.6e %1.6e \t\t %1.6e %1.6e\n\t\t %1.6e %1.6e \t\t %1.6e %1.6e",p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7]);
 #endif
   }
-  
-  if (err!=NULL) *err=0.0;
-  
+
   x0=x0*signBeta*dist->sigma + dist->mu_0;
-  
-  return x0;                     
+
+  return x0;
 }
 
 typedef struct {
@@ -194,12 +194,91 @@ void fdf_wrap(double x, void * params, double * f, double * df) {
   return;
 }
 
+static int _dbl_compare (const void * a, const void * b)
+{
+    double da = *(const double *)a;
+    double db = *(const double *)b;
+
+    return (db < da) - (da < db);
+}
+
+static short _is_guess_valid(double val)
+{
+    return fabs(val) < 1e-6;
+}
+
+double stable_inv_point_gpu(StableDist* dist, const double q, double *err)
+{
+    double initial_guess;
+    double interval_width; // This should probably depend dinamically on α.
+    double interval_begin, interval_end, interval_step;
+    double tolerance;
+    double guess_error;
+    size_t point_count = 200, i;
+    double points[point_count];
+    double cdf[point_count];
+    size_t bracket_begin, bracket_end;
+
+    if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
+        return stable_inv_point(dist, q, err);
+
+    initial_guess = stable_quick_inv_point(dist, q, &guess_error);
+
+    interval_width = 2 * guess_error;
+    tolerance = interval_width / point_count;
+    interval_begin = initial_guess - guess_error;
+    interval_end = initial_guess + guess_error;
+    interval_step = tolerance;
+
+    for(i = 0; i < point_count; i++)
+        points[i] = interval_begin + interval_step * i;
+
+    stable_cdf_gpu(dist, points, point_count, cdf, NULL);
+
+    // Binary search for the 0
+    bracket_begin = 0;
+    bracket_end = point_count - 1;
+
+    double bracket_begin_val = cdf[bracket_begin];
+    double bracket_end_val = cdf[bracket_end];
+
+    if(_is_guess_valid(bracket_begin_val))
+        return points[bracket_begin];
+    else if(_is_guess_valid(bracket_end_val))
+        return points[bracket_end];
+
+    while(bracket_end - bracket_begin > 1)
+    {
+        bracket_begin_val = cdf[bracket_begin];
+        bracket_end_val = cdf[bracket_end];
+
+        if(bracket_begin_val > 0 || bracket_end_val < 0)
+        {
+            fprintf(stderr, "Bracketing same-sign failure at [%zu, %zu]\n", bracket_begin, bracket_end);
+            return NAN;
+        }
+
+        size_t middle = (bracket_end + bracket_begin + 1) / 2;
+        double middle_val = cdf[middle];
+
+        if(_is_guess_valid(middle_val))
+            return points[middle];
+
+        if(middle_val < 0)
+            bracket_begin = middle;
+        else
+            bracket_end = middle;
+    }
+
+    return (points[bracket_end] + points[bracket_begin]) / 2;
+}
+
 double stable_inv_point(StableDist *dist, const double q, double *err)
 {
   double x,x0=0;
 
   gsl_root_fdfsolver * fdfsolver;
-  
+
   // Casos particulares
   if (dist->ZONE == GAUSS) {
     x = gsl_cdf_ugaussian_Pinv(q)*M_SQRT2*dist->sigma+dist->mu_0;
@@ -213,19 +292,19 @@ double stable_inv_point(StableDist *dist, const double q, double *err)
     x = (dist->beta*pow(gsl_cdf_ugaussian_Pinv(q/2.0),-2.0)+dist->xi)*dist->sigma+dist->mu_0;
     return x;
   }
-  
+
   x = stable_quick_inv_point(dist, q, err);
-    
+
   rootparams params;
   params.dist = dist;
   params.q = q;
- 
+
   gsl_function_fdf fdf;
   fdf.f   = f_wrap;
   fdf.df  = df_wrap;
   fdf.fdf = fdf_wrap;
   fdf.params = (void*)&params;
-  
+
 //  gsl_function f;
 //  f.function = f_wrap;
 //  f.params = (void*)&params;
@@ -237,7 +316,7 @@ double stable_inv_point(StableDist *dist, const double q, double *err)
 
 //    fsolver = gsl_root_fsolver_alloc(gsl_root_fsolver_falsepos);
 //    gsl_root_fsolver_set (fsolver, & f, x_lower , x_upper);
-        
+
     int k=0;
 	double INVrelTOL = 1e-6;
     do {
@@ -247,11 +326,11 @@ double stable_inv_point(StableDist *dist, const double q, double *err)
       x = gsl_root_fdfsolver_root (fdfsolver);
       status = gsl_root_test_delta (x, x0, 0, INVrelTOL);
     } while (status == GSL_CONTINUE && k < INV_MAXITER);
-    
+
     gsl_root_fdfsolver_free(fdfsolver);
   }
-  
-#ifdef DEBUG  
+
+#ifdef DEBUG
   if (status == GSL_SUCCESS) {
     printf("convergence at x = %e\n",x);
   }
@@ -287,7 +366,7 @@ void stable_inv(StableDist *dist, const double q[], const int Nq,
   void *status;
   pthread_t threads[THREADS];
   StableArgsCdf args[THREADS];
-  
+
   /* If no error pointer is introduced, it's created*/
   if (err==NULL) {flag=1;err=malloc(Nq*sizeof(double));}
 
@@ -337,6 +416,6 @@ void stable_inv(StableDist *dist, const double q[], const int Nq,
     {
       stable_free(args[k].dist);
     }
-    
+
   if (flag==1) free(err);
 }

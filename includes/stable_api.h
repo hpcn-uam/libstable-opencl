@@ -319,6 +319,7 @@ double stable_cdf_g(double theta, void *dist);
 double stable_inv_point(StableDist * dist, const double q, double * err);
 void   stable_inv(StableDist *dist, const double q[], const int Nq,
                 double * inv, double * err);
+double stable_inv_point_gpu(StableDist* dist, const double q, double *err);
 
 /************************************************************************
  ************************************************************************
