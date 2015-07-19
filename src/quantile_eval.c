@@ -23,7 +23,7 @@ int main (int argc, const char** argv)
         return 1;
     }
 
-    if(0 && stable_activate_gpu(dist))
+    if(stable_activate_gpu(dist))
     {
         fprintf(stderr, "Couldn't initialize GPU.\n");
         return 1;
@@ -59,7 +59,7 @@ int main (int argc, const char** argv)
             for(bi = 0; bi < beta_count; bi++)
             {
                 stable_setparams(dist, alfas[ai], betas[bi], 1, 0, 0);
-                stable_cdf(dist, points, points_per_interval, cdf_vals, NULL);
+                stable_cdf_gpu(dist, points, points_per_interval, cdf_vals, NULL);
 
                 abs_diff_sum = 0;
                 rel_diff_sum = 0;

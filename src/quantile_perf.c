@@ -125,7 +125,7 @@ int main (int argc, char** argv)
 
     fflush(stdout);
 
-    if (0 && stable_activate_gpu(dist))
+    if (stable_activate_gpu(dist))
     {
         fprintf(stderr, "Couldn't activate GPU :(\n");
         return 1;

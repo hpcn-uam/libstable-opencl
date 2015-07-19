@@ -222,7 +222,7 @@ static double _stable_inv_bracket(StableDist* dist, double q, size_t point_count
     for(i = 0; i < point_count; i++)
         points[i] = interval_begin + interval_step * i;
 
-    stable_cdf(dist, points, point_count, cdf, NULL);
+    stable_cdf_gpu(dist, points, point_count, cdf, NULL);
 
     // Binary search for the 0
     bracket_begin = 0;
