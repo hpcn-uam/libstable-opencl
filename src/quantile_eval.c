@@ -9,8 +9,8 @@ int main (int argc, const char** argv)
 {
     double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
     double betas[] = { 0, 0.5, 1 };
-    double intervals[] = { -1000, -100, 100, 1000 };
-    int points_per_interval = 1000;
+    double intervals[] = { -10, 10 };
+    int points_per_interval = 1;
     double cdf_vals[points_per_interval];
 
     stable_clinteg_printinfo();
@@ -37,8 +37,8 @@ int main (int argc, const char** argv)
     size_t interval_count = (sizeof(intervals) / sizeof(double)) - 1;
     size_t alfa_count = sizeof(alfas) / sizeof(double);
     size_t beta_count = sizeof(betas) / sizeof(double);
-    size_t in_cpu_bounds_count;
     double total_relerr = 0, total_abserr = 0;
+    size_t valid_points;
 
     double abs_diff_sum, rel_diff_sum, gpu_err_sum, cpu_err_sum;
 
@@ -65,20 +65,24 @@ int main (int argc, const char** argv)
                 rel_diff_sum = 0;
                 gpu_err_sum = 0;
                 cpu_err_sum = 0;
-                in_cpu_bounds_count = 0;
+                valid_points = 0;
 
                 for(j = 0; j < points_per_interval; j++)
                 {
-                    double guess = stable_inv_point_gpu(dist, cdf_vals[j], NULL);
-                    double diff = fabs(guess - points[j]);
+                    if(cdf_vals[j] >= 0.1 && cdf_vals[j] <= 0.9)
+                    {
+                        double guess = stable_inv_point_gpu(dist, cdf_vals[j], NULL);
+                        double diff = fabs(guess - points[j]);
 
-                    abs_diff_sum += diff;
+                        abs_diff_sum += diff;
+                        valid_points++;
+                    }
                 }
 
                 total_relerr += rel_diff_sum;
                 total_abserr += abs_diff_sum;
 
-                abs_diff_sum /= points_per_interval;
+                abs_diff_sum /= valid_points;
 
                 printf("%.3lf %.3lf  %8.3g\n",
                     alfas[ai], betas[bi],
