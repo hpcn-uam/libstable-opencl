@@ -204,7 +204,6 @@ int main (int argc, char** argv)
         for (bi = 0; bi < betas_len; bi++)
         {
             stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
-
             _measure_gpu_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile, gpu_fn);
         }
     }
