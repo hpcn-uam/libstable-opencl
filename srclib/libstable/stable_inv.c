@@ -250,12 +250,12 @@ static double _stable_inv_bracket(StableDist* dist, double q, size_t point_count
         if(bracket_begin_val > 0)
         {
             *guess_error = search_width;
-            return NAN;
+            return points[bracket_begin];
         }
         else if(bracket_end_val < 0)
         {
             *guess_error = search_width;
-            return -NAN;
+            return points[bracket_end];
         }
 
         size_t middle = (bracket_end + bracket_begin + 1) / 2;
