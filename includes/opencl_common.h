@@ -76,6 +76,7 @@ struct stable_info {
     cl_precision final_pdf_factor;
     cl_precision final_cdf_factor;
     cl_precision final_cdf_addition;
+    cl_precision quantile_tolerance;
     size_t max_reevaluations;
 };
 

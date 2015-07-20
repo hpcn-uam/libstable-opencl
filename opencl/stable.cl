@@ -22,6 +22,7 @@
 
 #include "includes/opencl_common.h"
 #include "includes/gk_points.h"
+#include "includes/stable_inv_precalcs.h"
 
 #define anyf(a) any((int2) a)
 #define vec2(b) (cl_precision2)((b), (b))
@@ -397,6 +398,9 @@ void calculate_integration_remainder(
 	}
 }
 
+
+// If CDF or PDF: returns (kronrod, gauss).
+// If PCDF: returns (PDF, CDF).
 cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision x)
 {
 	size_t gk_point = get_local_id(0);
@@ -411,6 +415,7 @@ cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision
 	short reevaluate = 0;
 	cl_vec result = vec(0);
 	size_t reevaluations = 0;
+	cl_precision2 final;
 
 	cl_precision2 previous_integration_remainder = vec2(0);
 
@@ -423,7 +428,7 @@ cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision
 	{
 		// Return the precalculated values of the PDF and/or CDF. If we're on PCDF mode
 		// return the PDF on the Gauss array and the CDF on the Kronrod array.
-		cl_precision2 final;
+		final;
 		final.y = is_integrand_pdf(stable->integrand) ? precalc.pdf_precalc : precalc.cdf_precalc;
 		final.x = is_integrand_cdf(stable->integrand) ? precalc.cdf_precalc : precalc.pdf_precalc;
 
@@ -497,7 +502,7 @@ cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision
     	for(offset = 1; offset < MAX_WORKGROUPS; offset++)
     		total += sums[offset][0];
 
-  		cl_precision2 final = total.s01;
+  		final = total.s01;
 #if POINTS_EVAL >= 2
   		final += total.s23;
 #if POINTS_EVAL >= 4
@@ -508,9 +513,9 @@ cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision
     	final *= precalc.subint_length * precalc.final_factor;
 
     	final += previous_integration_remainder + precalc.final_addition;
-
-		return final;
 	}
+
+	return final;
 }
 
 kernel void stable_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
@@ -526,5 +531,104 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
 	{
 		gauss[point_index] = val.y;
 		kronrod[point_index] = val.x;
+	}
+}
+
+cl_precision stable_quick_inv_point(constant struct stable_info *stable, const cl_precision q, cl_precision *err)
+{
+	cl_precision x0 = 0;
+	cl_precision C = 0;
+	cl_precision alfa = stable->alfa;
+	cl_precision beta = stable->beta;
+	cl_precision q_ = q;
+	cl_precision signBeta = 1;
+
+	if (alfa < 0.1)   alfa = 0.1;
+
+	if (beta < 0) {
+		signBeta = -1;
+		q_ = 1.0 - q_;
+		beta = -beta;
+	}
+	if (beta == 1) {
+		if (q_ < 0.1) {
+			q_ = 0.1;
+		}
+	}
+
+	/* Asympthotic expansion near the limits of the domain */
+	if (q_ > 0.9 || q_ < 0.1) {
+		if (alfa != 1.0)
+			C = (1 - alfa) / (exp(lgamma(2 - alfa)) * cos(M_PI * alfa / 2.0));
+		else
+			C = 2 / M_PI;
+
+		if (q_ > 0.9)
+			x0 = pow((1 - q_) / (C * 0.5 * (1.0 + beta)), -1.0 / alfa);
+		else
+			x0 = -pow(q_ / (C * 0.5 * (1.0 - beta)), -1.0 / alfa);
+
+		*err = 0.1;
+	}
+
+	else {
+		/* Linear interpolation on precalculated values */
+		int ia, ib, iq;
+		cl_precision aux = 0;
+		cl_precision xa = modf(alfa / 0.1, &aux); ia = (int)aux - 1;
+		cl_precision xb = modf(beta / 0.2, &aux); ib = (int)aux;
+		cl_precision xq = modf(  q_ / 0.1, &aux); iq = (int)aux - 1;
+
+		if (alfa == 2) {ia = 18; xa = 1.0;}
+		if (beta == 1) {ib = 4;  xb = 1.0;}
+		if (q_ == 0.9) {iq = 7;  xq = 1.0;}
+
+		cl_precision p[8] = {precalc[iq][ib][ia],   precalc[iq][ib][ia + 1],   precalc[iq][ib + 1][ia],   precalc[iq][ib + 1][ia + 1],
+		               precalc[iq + 1][ib][ia], precalc[iq + 1][ib][ia + 1], precalc[iq + 1][ib + 1][ia], precalc[iq + 1][ib + 1][ia + 1]
+		              };
+
+		//Trilinear interpolation
+		x0 = ((p[0] * (1.0 - xa) + p[1] * xa) * (1 - xb) + (p[2] * (1 - xa) + p[3] * xa) * xb) * (1 - xq) + ((p[4] * (1.0 - xa) + p[5] * xa) * (1 - xb) + (p[6] * (1 - xa) + p[7] * xa) * xb) * xq;
+
+		if (err) {
+			*err = fabs(0.5 * (p[0] - p[1]));
+		}
+	}
+
+	x0 = x0 * signBeta * stable->sigma + stable->mu_0;
+
+	return x0;
+}
+
+kernel void stable_quantile(constant struct stable_info* stable, constant cl_precision* q_vals, global cl_precision* results, global cl_precision* err)
+{
+	size_t gk_point = get_local_id(0);
+	size_t point_index = get_group_id(0);
+	size_t subinterval_index = get_local_id(1);
+	cl_precision2 pcdf;
+	cl_precision quantile = q_vals[point_index];
+	cl_precision error, next_guess;
+	local cl_precision guess;
+
+	guess = stable_quick_inv_point(stable, quantile, &error);
+
+	// Newton method.
+	while(error > stable->quantile_tolerance)
+	{
+		barrier(CLK_LOCAL_MEM_FENCE);
+		pcdf = stable_get_value(stable, guess);
+
+		if(gk_point == 0 && subinterval_index == 0)
+		{
+			next_guess = guess - pcdf.y / pcdf.x;
+			error = fabs(next_guess - guess);
+			guess = next_guess;
+		}
+	}
+
+	if(gk_point == 0 && subinterval_index == 0)
+	{
+		results[point_index] = guess;
+		err[point_index] = error;
 	}
 }
