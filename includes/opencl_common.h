@@ -73,22 +73,9 @@ struct stable_info {
     cl_precision xi_coef;
     short is_xxi_negative;
     unsigned int integrand;
-    cl_precision final_factor;
-    cl_precision final_addition;
-    size_t max_reevaluations;
-};
-
-struct stable_precalc {
-    cl_precision theta0_;
-    cl_precision beta_;
-    cl_precision xxipow;
-    cl_precision ibegin;
-    cl_precision iend;
-    cl_precision subint_length;
-    cl_precision xxi;
-    cl_precision pdf_precalc;
-    cl_precision final_factor;
-    cl_precision final_addition;
+    cl_precision final_pdf_factor;
+    cl_precision final_cdf_factor;
+    cl_precision final_cdf_addition;
     size_t max_reevaluations;
 };
 

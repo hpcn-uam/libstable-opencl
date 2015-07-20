@@ -181,14 +181,13 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     if(type == clinteg_pdf)
     {
         cli->h_args->max_reevaluations = dist->alfa > 1 ? 2 : 1;
-        cli->h_args->final_factor = dist->c2_part / dist->sigma;
-        cli->h_args->final_addition = 0;
+        cli->h_args->final_pdf_factor = dist->c2_part / dist->sigma;
     }
     else
     {
         cli->h_args->max_reevaluations = 1;
-        cli->h_args->final_factor = dist->alfa < 1 ? M_1_PI : - M_1_PI;
-        cli->h_args->final_addition = dist->c1;
+        cli->h_args->final_cdf_factor = dist->alfa < 1 ? M_1_PI : - M_1_PI;
+        cli->h_args->final_cdf_addition = dist->c1;
     }
 
     if (dist->ZONE == GPU_TEST_INTEGRAND)
