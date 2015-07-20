@@ -67,7 +67,6 @@ int main (int argc, char** argv)
     double cpu_total;
     struct opencl_profile profile;
     double ms_per_point;
-    clinteg_type type = clinteg_pdf;
     short enable_cpu = 0;
     evaluator cpu_fn;
     evaluator gpu_fn;
@@ -92,8 +91,8 @@ int main (int argc, char** argv)
     }
 
 
-    cpu_fn = stable_inv_point;
-    gpu_fn = stable_inv_point_gpu;
+    cpu_fn = (evaluator) stable_inv_point;
+    gpu_fn = (evaluator) stable_inv_point_gpu;
 
     fill(alfas, 0, 2, alfas_len);
     fill(betas, 0, 1, betas_len);
