@@ -12,7 +12,9 @@
 
 #define KERNIDX_ALPHA_NEQ1 0
 #define KERNIDX_ALPHA_EQ1 1
-#define KERN_NAME "stable_points"
+#define KERNIDX_QUANTILE 2
+#define KERN_POINTS_NAME "stable_points"
+#define KERN_QUANTILE_NAME "stable_quantile"
 
 #define MIN_POINTS_PER_QUEUE 200
 
@@ -106,9 +108,15 @@ int stable_clinteg_init(struct stable_clinteg *cli, size_t platform_index)
         return -1;
     }
 
-    if (opencl_load_kernel(&cli->env, "opencl/stable.cl", KERN_NAME, KERNIDX_ALPHA_NEQ1))
+    if (opencl_load_kernel(&cli->env, "opencl/stable.cl", KERN_POINTS_NAME, KERNIDX_ALPHA_NEQ1))
     {
-        stablecl_log(log_message, "OpenCL kernel load failure.");
+        stablecl_log(log_message, "OpenCL kernel %s load failure.", KERN_POINTS_NAME);
+        return -1;
+    }
+
+    if (opencl_load_kernel(&cli->env, "opencl/stable.cl", KERN_QUANTILE_NAME, KERNIDX_QUANTILE))
+    {
+        stablecl_log(log_message, "OpenCL kernel %s load failure.", KERN_QUANTILE_NAME);
         return -1;
     }
 
