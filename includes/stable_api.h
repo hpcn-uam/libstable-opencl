@@ -272,6 +272,10 @@ void stable_pdf(StableDist *dist, const double x[], const int Nx,
 void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
                 double *pdf, double *err);
 
+
+void stable_pcdf_gpu(StableDist *dist, const double x[], const int Nx,
+                double *pdf, double *cdf);
+
 /******************************************************************************/
 /*   PDF integrand functions                                                  */
 /******************************************************************************/

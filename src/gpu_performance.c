@@ -37,7 +37,7 @@ static void _measure_gpu_performance(StableDist *gpu_dist, double* x, size_t nx,
 
     gpu_start = get_ms_time();
     for (i = 0; i < NUMTESTS; i++)
-        stable_clinteg_points(&gpu_dist->cli, x, dummya, dummyb, nx, gpu_dist, clinteg_pdf);
+        stable_clinteg_points(&gpu_dist->cli, x, dummya, NULL, dummyb, nx, gpu_dist, clinteg_pdf);
     gpu_end = get_ms_time();
 
     gpu_duration = gpu_end - gpu_start;

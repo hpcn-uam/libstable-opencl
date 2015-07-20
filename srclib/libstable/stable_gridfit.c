@@ -165,7 +165,7 @@ static void gridfit_iterate(struct stable_gridfit* gridfit)
 		dist = gridfit->fitter_dists[i];
 
 		if(prepare_grid_params_for_fitter(gridfit, i) == 0)
-			stable_clinteg_points(gridfit->cli, (double*) gridfit->data, pdf, NULL, gridfit->data_length, dist, clinteg_pdf);
+			stable_clinteg_points(gridfit->cli, (double*) gridfit->data, pdf, NULL, NULL, gridfit->data_length, dist, clinteg_pdf);
 		else
 			continue;
 
@@ -217,7 +217,7 @@ static void gridfit_iterate_parallel(struct stable_gridfit* gridfit)
 			continue;
 
 		opencl_set_current_queue(&gridfit->cli->env, i);
-		stable_clinteg_points_end(gridfit->cli, pdf, NULL, gridfit->data_length, dist, NULL);
+		stable_clinteg_points_end(gridfit->cli, pdf, NULL, NULL, gridfit->data_length, dist, NULL, clinteg_pdf);
 
 		gridfit->likelihoods[i] = 0;
 

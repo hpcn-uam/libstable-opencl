@@ -270,7 +270,7 @@ cleanup:
     return err;
 }
 
-short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_results, double *errs, size_t num_points, struct StableDistStruct *dist, clinteg_type type)
+short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_results, double *cdf_results, double *errs, size_t num_points, struct StableDistStruct *dist, clinteg_type type)
 {
     cl_event event;
     cl_int err;
@@ -283,10 +283,10 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
         return err;
     }
 
-    return stable_clinteg_points_end(cli, pdf_results, errs, num_points, dist, &event);
+    return stable_clinteg_points_end(cli, pdf_results, cdf_results, errs, num_points, dist, &event, type);
 }
 
-short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results, double* errs, size_t num_points, struct StableDistStruct *dist, cl_event* event)
+short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results, double *cdf_results, double* errs, size_t num_points, struct StableDistStruct *dist, cl_event* event, clinteg_type type)
 {
     cl_int err = 0;
 
@@ -310,14 +310,23 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
 
     for (size_t i = 0; i < num_points; i++)
     {
-        pdf_results[i] = cli->h_kronrod[i];
+        if(pdf_results && (type & clinteg_pdf))
+            pdf_results[i] = cli->h_kronrod[i];
+
+        if(cdf_results)
+        {
+            if(type == clinteg_cdf)
+                cdf_results[i] = cli->h_kronrod[i];
+            else
+                cdf_results[i] = cli->h_gauss[i];
+        }
 
 #if STABLE_MIN_LOG <= 0
         char msg[500];
         snprintf(msg, 500, "Results set P%zu: gauss_sum = %.3g, kronrod_sum = %.3g", i, cli->h_gauss[i], cli->h_kronrod[i]);
 #endif
 
-        if (errs)
+        if (errs && type != clinteg_pcdf)
         {
             if (cli->h_kronrod[i] != 0)
                 errs[i] = fabs(cli->h_kronrod[i] - cli->h_gauss[i]) / cli->h_kronrod[i];
@@ -343,7 +352,7 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
     return err;
 }
 
-short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, double *pdf_results, double *errs, size_t num_points, struct StableDistStruct *dist, size_t queues, clinteg_type type)
+short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, double *pdf_results, double* cdf_results, double *errs, size_t num_points, struct StableDistStruct *dist, size_t queues, clinteg_type type)
 {
     cl_int err = 0;
     size_t i;
@@ -388,7 +397,7 @@ short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, doub
             points_for_current_queue = points_per_queue;
 
         opencl_set_current_queue(&cli->env, i);
-        err = stable_clinteg_points_end(cli, pdf_results + processed_points, errs ? errs + processed_points : NULL, points_for_current_queue, dist, NULL);
+        err = stable_clinteg_points_end(cli, pdf_results + processed_points, cdf_results + processed_points, errs ? errs + processed_points : NULL, points_for_current_queue, dist, NULL, type);
 
         if (err)
             goto cleanup;

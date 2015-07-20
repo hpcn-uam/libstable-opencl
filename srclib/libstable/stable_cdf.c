@@ -445,16 +445,16 @@ stable_cdf_point(StableDist *dist, const double x, double *err)
 }
 
 void stable_cdf_gpu(StableDist *dist, const double x[], const int Nx,
-                double *pdf, double *err)
+                double *cdf, double *err)
 {
     if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
-        stable_cdf(dist, x, Nx, pdf, err); // Rely on analytical formulae where possible
+        stable_cdf(dist, x, Nx, cdf, err); // Rely on analytical formulae where possible
     else
     {
         if(dist->gpu_queues == 1)
-            stable_clinteg_points(&dist->cli, (double*) x, pdf, err, Nx, dist, clinteg_cdf);
+            stable_clinteg_points(&dist->cli, (double*) x, NULL, cdf, err, Nx, dist, clinteg_cdf);
         else
-            stable_clinteg_points_parallel(&dist->cli, (double*) x, pdf, err, Nx, dist, dist->gpu_queues, clinteg_cdf);
+            stable_clinteg_points_parallel(&dist->cli, (double*) x, NULL, cdf, err, Nx, dist, dist->gpu_queues, clinteg_cdf);
     }
 }
 
