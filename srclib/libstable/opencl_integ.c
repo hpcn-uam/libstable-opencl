@@ -198,12 +198,23 @@ static void _stable_clinteg_prepare_kernel_data(struct stable_info* info, Stable
         info->integrand = GPU_TEST_INTEGRAND_SIMPLE;
     else if (dist->ZONE == ALFA_1)
     {
-        info->integrand = type == clinteg_pdf ? PDF_ALPHA_EQ1 : CDF_ALPHA_EQ1;
+        if(type == clinteg_cdf)
+            info->integrand = CDF_ALPHA_EQ1;
+        else if(type == clinteg_pdf)
+            info->integrand = PDF_ALPHA_EQ1;
+        else if(type == clinteg_pcdf)
+            info->integrand = PCDF_ALPHA_EQ1;
+
         info->beta = fabs(dist->beta);
     }
     else
     {
-        info->integrand = type == clinteg_pdf ? PDF_ALPHA_NEQ1 : CDF_ALPHA_NEQ1;
+        if(type == clinteg_cdf)
+            info->integrand = CDF_ALPHA_EQ1;
+        else if(type == clinteg_pdf)
+            info->integrand = PDF_ALPHA_EQ1;
+        else if(type == clinteg_pcdf)
+            info->integrand = PCDF_ALPHA_EQ1;
     }
 }
 
