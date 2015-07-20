@@ -164,53 +164,52 @@ static void _stable_print_profileinfo(struct opencl_profile *prof)
     printf("\tKernel exec time: %3.3g.\n", prof->exec_time);
 }
 
-short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t num_points, struct StableDistStruct *dist, cl_event* event, clinteg_type type)
+static void _stable_clinteg_prepare_kernel_data(struct stable_info* info, StableDist* dist, clinteg_type type)
 {
-    cl_int err = 0;
-    size_t work_threads[2] = { KRONROD_EVAL_POINTS * num_points, MAX_WORKGROUPS };
-    size_t workgroup_size[2] = { KRONROD_EVAL_POINTS, MAX_WORKGROUPS };
-    cl_precision* points = NULL;
-    size_t kernel_index = KERNIDX_ALPHA_NEQ1;
-
-    cli->h_args->k1 = dist->k1;
-    cli->h_args->alfa = dist->alfa;
-    cli->h_args->alfainvalfa1 = dist->alfainvalfa1;
-    cli->h_args->beta = dist->beta;
-    cli->h_args->THETA_TH = stable_get_THETA_TH();
-    cli->h_args->theta0 = dist->theta0;
-    cli->h_args->xi = dist->xi;
-    cli->h_args->mu_0 = dist->mu_0;
-    cli->h_args->sigma = dist->sigma;
-    cli->h_args->xxi_th = stable_get_XXI_TH();
-    cli->h_args->c2_part = dist->c2_part;
-    cli->h_args->xi_coef = (exp(lgamma(1 + 1 / dist->alfa))) / (M_PI * pow(1 + dist->xi * dist->xi, 1 / (2 * dist->alfa)));
-    cli->h_args->c1 = dist->c1;
+    info->k1 = dist->k1;
+    info->alfa = dist->alfa;
+    info->alfainvalfa1 = dist->alfainvalfa1;
+    info->beta = dist->beta;
+    info->THETA_TH = stable_get_THETA_TH();
+    info->theta0 = dist->theta0;
+    info->xi = dist->xi;
+    info->mu_0 = dist->mu_0;
+    info->sigma = dist->sigma;
+    info->xxi_th = stable_get_XXI_TH();
+    info->c2_part = dist->c2_part;
+    info->xi_coef = (exp(lgamma(1 + 1 / dist->alfa))) / (M_PI * pow(1 + dist->xi * dist->xi, 1 / (2 * dist->alfa)));
+    info->c1 = dist->c1;
 
     if(type == clinteg_pdf)
     {
-        cli->h_args->max_reevaluations = dist->alfa > 1 ? 2 : 1;
-        cli->h_args->final_pdf_factor = dist->c2_part / dist->sigma;
+        info->max_reevaluations = dist->alfa > 1 ? 2 : 1;
+        info->final_pdf_factor = dist->c2_part / dist->sigma;
     }
     else
     {
-        cli->h_args->max_reevaluations = 1;
-        cli->h_args->final_cdf_factor = dist->alfa < 1 ? M_1_PI : - M_1_PI;
-        cli->h_args->final_cdf_addition = dist->c1;
+        info->max_reevaluations = 1;
+        info->final_cdf_factor = dist->alfa < 1 ? M_1_PI : - M_1_PI;
+        info->final_cdf_addition = dist->c1;
     }
 
     if (dist->ZONE == GPU_TEST_INTEGRAND)
-        cli->h_args->integrand = GPU_TEST_INTEGRAND;
+        info->integrand = GPU_TEST_INTEGRAND;
     else if (dist->ZONE == GPU_TEST_INTEGRAND_SIMPLE)
-        cli->h_args->integrand = GPU_TEST_INTEGRAND_SIMPLE;
+        info->integrand = GPU_TEST_INTEGRAND_SIMPLE;
     else if (dist->ZONE == ALFA_1)
     {
-        cli->h_args->integrand = type == clinteg_pdf ? PDF_ALPHA_EQ1 : CDF_ALPHA_EQ1;
-        cli->h_args->beta = fabs(dist->beta);
+        info->integrand = type == clinteg_pdf ? PDF_ALPHA_EQ1 : CDF_ALPHA_EQ1;
+        info->beta = fabs(dist->beta);
     }
     else
     {
-        cli->h_args->integrand = type == clinteg_pdf ? PDF_ALPHA_NEQ1 : CDF_ALPHA_NEQ1;
+        info->integrand = type == clinteg_pdf ? PDF_ALPHA_NEQ1 : CDF_ALPHA_NEQ1;
     }
+}
+
+cl_precision* _stable_check_precision_type(double* values)
+{
+    cl_precision* points = values;
 
 #ifdef CL_PRECISION_IS_FLOAT
     stablecl_log(log_message, "Using floats, forcing cast.");
@@ -220,14 +219,29 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     if (!points)
     {
         stablecl_log(log_err, "Couldn't allocate memory.");
-        goto cleanup;
+        return NULL;
     }
 
     for (size_t i = 0; i < num_points; i++)
         points[i] = (cl_precision) x[i];
-#else
-    points = x;
 #endif
+
+    return points;
+}
+
+short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t num_points, struct StableDistStruct *dist, cl_event* event, clinteg_type type)
+{
+    cl_int err = 0;
+    size_t work_threads[2] = { KRONROD_EVAL_POINTS * num_points, MAX_WORKGROUPS };
+    size_t workgroup_size[2] = { KRONROD_EVAL_POINTS, MAX_WORKGROUPS };
+    cl_precision* points = NULL;
+    size_t kernel_index = KERNIDX_ALPHA_NEQ1;
+
+    _stable_clinteg_prepare_kernel_data(cli->h_args, dist, type);
+    points = _stable_check_precision_type(x);
+
+    if(!points)
+        goto cleanup;
 
     err |= clEnqueueWriteBuffer(opencl_get_queue(&cli->env), cli->args, CL_FALSE, 0, sizeof(struct stable_info), cli->h_args, 0, NULL, NULL);
     err |= _stable_create_points_array(cli, points, num_points);
