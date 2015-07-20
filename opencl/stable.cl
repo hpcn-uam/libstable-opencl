@@ -397,7 +397,7 @@ void calculate_integration_remainder(
 	}
 }
 
-kernel void stable_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
+cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision x)
 {
 	size_t gk_point = get_local_id(0);
 	size_t point_index = get_group_id(0);
@@ -419,13 +419,15 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
 
 	cl_precision pdf = 0;
 
-   	if(precalculate_values(x[point_index], stable, &precalc) == SET_TO_RESULT_AND_RETURN)
+   	if(precalculate_values(x, stable, &precalc) == SET_TO_RESULT_AND_RETURN)
 	{
 		// Return the precalculated values of the PDF and/or CDF. If we're on PCDF mode
 		// return the PDF on the Gauss array and the CDF on the Kronrod array.
-		gauss[point_index] = is_integrand_pdf(stable->integrand) ? precalc.pdf_precalc : precalc.cdf_precalc;
-		kronrod[point_index] = is_integrand_cdf(stable->integrand) ? precalc.cdf_precalc : precalc.pdf_precalc;
-		return;
+		cl_precision2 final;
+		final.y = is_integrand_pdf(stable->integrand) ? precalc.pdf_precalc : precalc.cdf_precalc;
+		final.x = is_integrand_cdf(stable->integrand) ? precalc.cdf_precalc : precalc.pdf_precalc;
+
+		return final;
 	}
 
     do
@@ -507,7 +509,22 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
 
     	final += previous_integration_remainder + precalc.final_addition;
 
-		gauss[point_index] = final.y;
-		kronrod[point_index] = final.x;
+		return final;
+	}
+}
+
+kernel void stable_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
+{
+	cl_precision2 val;
+	size_t gk_point = get_local_id(0);
+	size_t point_index = get_group_id(0);
+	size_t subinterval_index = get_local_id(1);
+
+	val = stable_get_value(stable, x[point_index]);
+
+	if(gk_point == 0 && subinterval_index == 0)
+	{
+		gauss[point_index] = val.y;
+		kronrod[point_index] = val.x;
 	}
 }
