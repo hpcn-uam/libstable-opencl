@@ -17,7 +17,11 @@
 #endif
 
 #ifndef M_PI
-#define M_PI       3.14159265358979323846264338327950288       // Pi/2
+#define M_PI       3.14159265358979323846264338327950288       // Pi
+#endif
+
+#ifndef M_1_PI
+#define M_1_PI 	 	0.318309886183790671537767526745028724 	   // 1 / Pi
 #endif
 
 #include "includes/opencl_common.h"
