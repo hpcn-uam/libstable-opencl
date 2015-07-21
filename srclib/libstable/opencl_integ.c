@@ -464,3 +464,14 @@ void stable_clinteg_set_mode(struct stable_clinteg* cli, clinteg_mode mode)
     cli->copy_gauss_array = mode == mode_pcdf;
     cli->error_mode = mode == mode_quantile ? error_is_gauss_array : error_from_results;
 }
+
+const char* stable_mode_str(clinteg_mode mode)
+{
+    switch(mode)
+    {
+        case mode_cdf: return "CDF";
+        case mode_pcdf: return "PDF & CDF";
+        case mode_pdf: return "PDF";
+        case mode_quantile: return "INV";
+    }
+}

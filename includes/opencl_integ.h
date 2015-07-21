@@ -72,5 +72,7 @@ void stable_clinteg_printinfo();
 
 void stable_clinteg_set_mode(struct stable_clinteg* cli, clinteg_mode mode);
 
+const char* stable_mode_str(clinteg_mode mode);
+
 #endif
 
