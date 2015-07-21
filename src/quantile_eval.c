@@ -54,7 +54,7 @@ int main (int argc, const char** argv)
         double step = (end - begin) / points_per_interval;
 
         printf("\n=== Interval (%.0lf, %.0lf)\n", begin, end);
-        printf("alfa  beta   abserr\n");
+        printf("alfa  beta   abserr  relerr\n");
 
         for(j = 0; j < points_per_interval; j++)
             points[j] = j * step + begin;
@@ -92,6 +92,10 @@ int main (int argc, const char** argv)
                         double diff = fabs(guess - points[j]);
 
                         abs_diff_sum += diff;
+
+                        if(points[j] != 0)
+                            rel_diff_sum += diff / points[j];
+
                         valid_points++;
                     }
                 }
@@ -100,11 +104,14 @@ int main (int argc, const char** argv)
                 total_abserr += abs_diff_sum;
 
                 if(valid_points != 0)
+                {
                     abs_diff_sum /= valid_points;
+                    rel_diff_sum /= valid_points;
+                }
 
-                printf("%.3lf %.3lf  %8.3g\n",
+                printf("%.3lf %.3lf  %8.3g %8.3g\n",
                     alfas[ai], betas[bi],
-                    abs_diff_sum);
+                    abs_diff_sum, rel_diff_sum);
             }
         }
     }
