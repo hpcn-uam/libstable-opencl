@@ -576,12 +576,33 @@ void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
         stable_pdf(dist, x, Nx, pdf, err); // Rely on analytical formulae where possible
     else
     {
+        stable_clinteg_set_mode(&dist->cli, mode_pdf);
         if(dist->gpu_queues == 1)
-            stable_clinteg_points(&dist->cli, (double*) x, pdf, err, Nx, dist, clinteg_pdf);
+            stable_clinteg_points(&dist->cli, (double*) x, pdf, NULL, err, Nx, dist);
         else
-            stable_clinteg_points_parallel(&dist->cli, (double*) x, pdf, err, Nx, dist, dist->gpu_queues, clinteg_pdf);
+            stable_clinteg_points_parallel(&dist->cli, (double*) x, pdf, NULL, err, Nx, dist, dist->gpu_queues);
     }
 }
+
+
+void stable_pcdf_gpu(StableDist *dist, const double x[], const int Nx,
+                double *pdf, double *cdf)
+{
+    if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
+    {
+        stable_pdf(dist, x, Nx, pdf, NULL); // Rely on analytical formulae where possible
+        stable_cdf(dist, x, Nx, cdf, NULL);
+    }
+    else
+    {
+        stable_clinteg_set_mode(&dist->cli, mode_pcdf);
+        if(dist->gpu_queues == 1)
+            stable_clinteg_points(&dist->cli, (double*) x, pdf, cdf, NULL, Nx, dist);
+        else
+            stable_clinteg_points_parallel(&dist->cli, (double*) x, pdf, cdf, NULL, Nx, dist, dist->gpu_queues);
+    }
+}
+
 
 /******************************************************************************/
 /*   PDF de casos particulares                                                */

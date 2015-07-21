@@ -35,9 +35,11 @@ static void _measure_gpu_performance(StableDist *gpu_dist, double* x, size_t nx,
     bzero(&current_prof_info, sizeof(struct opencl_profile));
     gpu_dist->cli.profile_enabled = 0;
 
+    stable_clinteg_set_mode(&gpu_dist->cli, mode_pdf);
+
     gpu_start = get_ms_time();
     for (i = 0; i < NUMTESTS; i++)
-        stable_clinteg_points(&gpu_dist->cli, x, dummya, dummyb, nx, gpu_dist, clinteg_pdf);
+        stable_clinteg_points(&gpu_dist->cli, x, dummya, NULL, dummyb, nx, gpu_dist);
     gpu_end = get_ms_time();
 
     gpu_duration = gpu_end - gpu_start;
@@ -117,7 +119,7 @@ int main (int argc, char** argv)
     double cpu_total;
     struct opencl_profile profile;
     double ms_per_point;
-    clinteg_type type = clinteg_pdf;
+    clinteg_mode mode = mode_pdf;
     short enable_cpu = 0;
     evaluator cpu_fn;
     evaluator gpu_fn;
@@ -137,7 +139,7 @@ int main (int argc, char** argv)
         }
         else if (strcmp(argv[i], "cdf") == 0)
         {
-            type = clinteg_cdf;
+            mode = mode_cdf;
         }
         else if(strcmp(argv[i], "cpu") == 0)
         {
@@ -145,7 +147,7 @@ int main (int argc, char** argv)
         }
     }
 
-    if (type == clinteg_pdf)
+    if (mode == mode_pdf)
     {
         cpu_fn = stable_pdf;
         gpu_fn = stable_pdf_gpu;
@@ -204,7 +206,6 @@ int main (int argc, char** argv)
         for (bi = 0; bi < betas_len; bi++)
         {
             stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
-
             _measure_gpu_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile, gpu_fn);
         }
     }

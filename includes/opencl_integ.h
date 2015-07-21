@@ -8,6 +8,10 @@
 
 struct StableDistStruct;
 
+typedef enum {
+	error_from_results, error_is_gauss_array
+} error_mode;
+
 struct stable_clinteg {
 	double interv_begin;
 	double interv_end;
@@ -28,35 +32,47 @@ struct stable_clinteg {
 
 	struct opencl_profile profiling;
 	short profile_enabled;
+
+	size_t kern_index;
+	unsigned short mode_bits;
+	short copy_gauss_array;
+	error_mode error_mode;
 };
 
 typedef enum {
-	clinteg_pdf,
-	clinteg_cdf
-} clinteg_type;
-
+	mode_pdf,
+	mode_cdf,
+	mode_pcdf,
+	mode_quantile
+} clinteg_mode;
 
 int stable_clinteg_init(struct stable_clinteg* cli, size_t platform_index);
 
 short stable_clinteg_points(struct stable_clinteg *cli,
-	double *x, double *pdf_results, double *errs, size_t num_points,
-	struct StableDistStruct *dist, clinteg_type type);
+	double *x, double *pdf_results, double* cdf_results,
+	double *errs, size_t num_points, struct StableDistStruct *dist);
 
 void stable_clinteg_teardown(struct stable_clinteg* cli);
 
 short stable_clinteg_points_end(struct stable_clinteg *cli,
-	double *pdf_results, double* errs, size_t num_points,
-	struct StableDistStruct *dist, cl_event* event);
+	double *pdf_results, double* cdf_results, double* errs,
+	size_t num_points, struct StableDistStruct *dist,
+	cl_event* event);
 
 short stable_clinteg_points_async(struct stable_clinteg *cli,
 	double *x, size_t num_points, struct StableDistStruct *dist,
-	cl_event* event, clinteg_type type);
+	cl_event* event);
 
 short stable_clinteg_points_parallel(struct stable_clinteg *cli,
-	double *x, double *pdf_results, double *errs, size_t num_points,
-	struct StableDistStruct *dist, size_t queues, clinteg_type type);
+	double *x, double *pdf_results, double* cdf_results,
+	double *errs, size_t num_points,
+	struct StableDistStruct *dist, size_t queues);
 
 void stable_clinteg_printinfo();
+
+void stable_clinteg_set_mode(struct stable_clinteg* cli, clinteg_mode mode);
+
+const char* stable_mode_str(clinteg_mode mode);
 
 #endif
 

@@ -22,17 +22,30 @@
 #define GK_SUBDIVISIONS (POINTS_EVAL * MAX_WORKGROUPS)
 #define KRONROD_EVAL_POINTS (GK_POINTS / 2 + 1)
 
-#define PDF_ALPHA_EQ1 0
-#define PDF_ALPHA_NEQ1 1
-#define CDF_ALPHA_EQ1 2
+// Just byte markers: XYZ where
+//      Z == 1 if is an evaluation on α = 1 (0 if α ≠ 1),
+//      Y == 1 if PDF evaluation
+//      X == 1 if CDF evaluation
+#define PDF_ALPHA_NEQ1 2
+#define PDF_ALPHA_EQ1 3
 #define CDF_ALPHA_NEQ1 4
+#define CDF_ALPHA_EQ1 5
+#define PCDF_ALPHA_NEQ1 6
+#define PCDF_ALPHA_EQ1  7
 #define GPU_TEST_INTEGRAND 100
 #define GPU_TEST_INTEGRAND_SIMPLE 101
 
-#define is_integrand_pdf(integrand) (integrand == PDF_ALPHA_EQ1 || integrand == PDF_ALPHA_NEQ1)
-#define is_integrand_cdf(integrand) (integrand == CDF_ALPHA_EQ1 || integrand == CDF_ALPHA_NEQ1)
-#define is_integrand_eq1(integrand) (integrand == PDF_ALPHA_EQ1 || integrand == CDF_ALPHA_EQ1)
-#define is_integrand_neq1(integrand) (integrand == PDF_ALPHA_NEQ1 || integrand == CDF_ALPHA_NEQ1)
+#define MODEMARKER_PDF 2
+#define MODEMARKER_CDF 4
+#define MODEMARKER_PCDF (2 | 4)
+#define MODEMARKER_EQ1 1
+#define MODEMARKER_NEQ1 0
+
+#define is_integrand_pdf(integrand) (integrand & MODEMARKER_PDF)
+#define is_integrand_cdf(integrand) (integrand & MODEMARKER_CDF)
+#define is_integrand_eq1(integrand) (integrand & MODEMARKER_EQ1)
+#define is_integrand_neq1(integrand) (!is_integrand_eq1(integrand))
+#define is_integrand_pcdf(integrand) (is_integrand_cdf(integrand) && is_integrand_pdf(integrand))
 
 #if defined(FLOAT_GPU_UNIT) || (defined(__OPENCL_VERSION__) && !defined(cl_khr_fp64) && !defined(cl_amd_fp64))
 #define cl_precision float
@@ -66,22 +79,10 @@ struct stable_info {
     cl_precision xi_coef;
     short is_xxi_negative;
     unsigned int integrand;
-    cl_precision final_factor;
-    cl_precision final_addition;
-    size_t max_reevaluations;
-};
-
-struct stable_precalc {
-    cl_precision theta0_;
-    cl_precision beta_;
-    cl_precision xxipow;
-    cl_precision ibegin;
-    cl_precision iend;
-    cl_precision subint_length;
-    cl_precision xxi;
-    cl_precision pdf_precalc;
-    cl_precision final_factor;
-    cl_precision final_addition;
+    cl_precision final_pdf_factor;
+    cl_precision final_cdf_factor;
+    cl_precision final_cdf_addition;
+    cl_precision quantile_tolerance;
     size_t max_reevaluations;
 };
 

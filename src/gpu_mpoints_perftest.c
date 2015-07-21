@@ -22,7 +22,7 @@ int main (int argc, const char** argv)
 	double x_step_size = ((double)(max_x_range - min_x_range)) / (double) max_test_size;
 	double start, end, duration;
 	double cpu_duration, cpu_parallel_duration;
-	clinteg_type type = clinteg_pdf;
+	clinteg_mode mode = mode_pdf;
 
 	dist = stable_create(alfa, beta, sigma, mu, param);
 	x = calloc(max_test_size, sizeof(double));
@@ -43,13 +43,17 @@ int main (int argc, const char** argv)
 		return 1;
 	}
 
-	if(argc > 1 && strcmp("cdf", argv[1]) == 0)
-        type = clinteg_cdf;
+	if(argc > 1)
+	{
+		if (strcmp("cdf", argv[1]) == 0)
+        	mode = mode_cdf;
+        else if(strcmp("quantile", argv[1]) == 0)
+        	mode = mode_quantile;
+        else if(strcmp("pcdf", argv[1]) == 0)
+			mode = mode_pcdf;
+	}
 
-    if(type == clinteg_pdf)
-        printf(" PDF precision testing\n");
-    else
-        printf(" CDF precision testing\n");
+    printf(" %s precision testing\n", stable_mode_str(mode));
 
 	for (test_size = test_size_step; test_size <= max_test_size; test_size += test_size_step)
 	{
@@ -61,7 +65,7 @@ int main (int argc, const char** argv)
 		{
 			dist->gpu_queues = 1;
 
-			if(type == clinteg_pdf)
+			if(mode == mode_pdf)
 			{
 				start = get_ms_time();
 				stable_pdf_gpu(dist, x, test_size, pdf, NULL);
@@ -82,7 +86,7 @@ int main (int argc, const char** argv)
 				end = get_ms_time();
 				cpu_parallel_duration += end - start;
 			}
-			else
+			else if(mode == mode_cdf)
 			{
 				start = get_ms_time();
 				stable_cdf_gpu(dist, x, test_size, pdf, NULL);
@@ -100,6 +104,52 @@ int main (int argc, const char** argv)
 
 				start = get_ms_time();
 				stable_cdf(dist, x, test_size, pdf, NULL);
+				end = get_ms_time();
+				cpu_parallel_duration += end - start;
+			}
+			else if(mode == mode_pcdf)
+			{
+				start = get_ms_time();
+				stable_pcdf_gpu(dist, x, test_size, pdf, NULL);
+				end = get_ms_time();
+				duration += end - start;
+
+				stable_set_THREADS(1);
+
+				start = get_ms_time();
+				stable_cdf(dist, x, test_size, pdf, NULL);
+				stable_pdf(dist, x, test_size, pdf, NULL);
+				end = get_ms_time();
+				cpu_duration += end - start;
+
+				stable_set_THREADS(0);
+
+				start = get_ms_time();
+				stable_cdf(dist, x, test_size, pdf, NULL);
+				stable_pdf(dist, x, test_size, pdf, NULL);
+				end = get_ms_time();
+				cpu_parallel_duration += end - start;
+			}
+			else if(mode == mode_quantile)
+			{
+				double q[test_size];
+				stable_cdf_gpu(dist, x, test_size, q, NULL);
+
+				start = get_ms_time();
+				stable_inv_gpu(dist, q, test_size, pdf, NULL);
+				end = get_ms_time();
+				duration += end - start;
+
+				start = get_ms_time();
+				stable_inv(dist, q, test_size, pdf, NULL);
+				end = get_ms_time();
+				cpu_duration += end - start;
+
+				stable_set_THREADS(0);
+
+				start = get_ms_time();
+				for(size_t j = 0; j < test_size; j++)
+					stable_inv_point_gpu(dist, q[j], NULL);
 				end = get_ms_time();
 				cpu_parallel_duration += end - start;
 			}

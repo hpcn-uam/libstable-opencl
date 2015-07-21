@@ -17,11 +17,16 @@
 #endif
 
 #ifndef M_PI
-#define M_PI       3.14159265358979323846264338327950288       // Pi/2
+#define M_PI       3.14159265358979323846264338327950288       // Pi
+#endif
+
+#ifndef M_1_PI
+#define M_1_PI 	 	0.318309886183790671537767526745028724 	   // 1 / Pi
 #endif
 
 #include "includes/opencl_common.h"
 #include "includes/gk_points.h"
+#include "includes/stable_inv_precalcs.h"
 
 #define anyf(a) any((int2) a)
 #define vec2(b) (cl_precision2)((b), (b))
@@ -50,6 +55,22 @@
 
 #define SET_TO_RESULT_AND_RETURN 1
 #define CONTINUE_CALC 0
+
+
+struct stable_precalc {
+    cl_precision theta0_;
+    cl_precision beta_;
+    cl_precision xxipow;
+    cl_precision ibegin;
+    cl_precision iend;
+    cl_precision subint_length;
+    cl_precision xxi;
+    cl_precision pdf_precalc;
+    cl_precision cdf_precalc;
+    cl_precision2 final_factor;
+    cl_precision2 final_addition;
+    size_t max_reevaluations;
+};
 
 // Just a debug macro to report to values out
 // in gauss[point_index] and kronrod[point_index]
@@ -88,57 +109,51 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 	subd_offsets *= precalc->subint_length;
 	centers += subd_offsets;
 
-	cl_vec val;
+	cl_vec cdf_val, pdf_val, final_val;
 
 	// Calculate the points of evaluation: add each center to our two abscissae.
 #if POINTS_EVAL == 1
-	val.s01 = vec2(centers) + abscissa_vec;
+	cdf_val.s01 = vec2(centers) + abscissa_vec;
 #else
-	val.s01 = centers.s00 + abscissa_vec;
+	cdf_val.s01 = centers.s00 + abscissa_vec;
 #if POINTS_EVAL >= 2
-	val.s23 = centers.s11 + abscissa_vec;
+	cdf_val.s23 = centers.s11 + abscissa_vec;
 #if POINTS_EVAL >= 4
-	val.s45 = centers.s22 + abscissa_vec;
-	val.s67 = centers.s33 + abscissa_vec;
+	cdf_val.s45 = centers.s22 + abscissa_vec;
+	cdf_val.s67 = centers.s33 + abscissa_vec;
 #endif
 #endif
 #endif
 
 	// Now evaluate the function.
 	cl_vec aux;
-	cl_vec cosval = cos(val);
+	cl_vec cosval = cos(cdf_val);
 
-	if(stable->integrand == PDF_ALPHA_EQ1)
+	// The difference between the calculation of the PDF and the CDF is just one
+	// additional operation in the case of the PDF. We share the code and allow the
+	// return of both values if required.
+	if(is_integrand_eq1(stable->integrand))
 	{
-		aux = (precalc->beta_ * val + vec(M_PI_2)) / cosval;
-		val = sin(val) * aux / precalc->beta_ + log(aux) + stable->k1;
+		aux = (precalc->beta_ * cdf_val + vec(M_PI_2)) / cosval;
+		cdf_val = sin(cdf_val) * aux / precalc->beta_ + log(aux) + stable->k1;
 
-		val = exp(val + precalc->xxipow);
-		val = exp(-val) * val;
+		pdf_val = exp(cdf_val + precalc->xxipow);
+		cdf_val = exp(-pdf_val);
+
+		if(is_integrand_pdf(stable->integrand))
+			pdf_val = cdf_val * pdf_val;
 	}
-	else if(stable->integrand == PDF_ALPHA_NEQ1)
+	else if(is_integrand_neq1(stable->integrand))
 	{
-		aux = (precalc->theta0_ + val) * stable->alfa;
-		val = log(cosval / sin(aux)) * stable->alfainvalfa1 +
-			+ log(cos(aux - val) / cosval) + stable->k1;
+		aux = (precalc->theta0_ + cdf_val) * stable->alfa;
+		cdf_val = log(cosval / sin(aux)) * stable->alfainvalfa1 +
+			+ log(cos(aux - cdf_val) / cosval) + stable->k1;
 
-		val = exp(val + precalc->xxipow);
-		val = exp(-val) * val;
-	}
-	else if(stable->integrand == CDF_ALPHA_NEQ1)
-	{
-		aux = (precalc->theta0_ + val) * stable->alfa;
-		val = log(cosval / sin(aux)) * stable->alfainvalfa1 +
-			+ log(cos(aux - val) / cosval) + stable->k1;
+		pdf_val = exp(cdf_val + precalc->xxipow);
+		cdf_val = exp(-pdf_val);
 
-		val = exp(-exp(val + precalc->xxipow));
-	}
-	else if(stable->integrand == CDF_ALPHA_EQ1)
-	{
-		aux = (precalc->beta_ * val + vec(M_PI_2)) / cosval;
-		val = sin(val) * aux / precalc->beta_ + log(aux) + stable->k1;
-
-		val = exp(-exp(val + precalc->xxipow));
+		if(is_integrand_pdf(stable->integrand))
+			pdf_val = cdf_val * pdf_val;
 	}
 
 	// GK quadrature is symmetric, so just add them in one quantity.
@@ -146,42 +161,86 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 	// point being evaluated once.
 	if(gk_point < KRONROD_EVAL_POINTS - 1)
 	{
-		val.s0 += val.s1;
+		if(is_integrand_pdf(stable->integrand))
+		{
+			pdf_val.s0 += pdf_val.s1;
 #if POINTS_EVAL >= 2
-		val.s2 += val.s3;
+			pdf_val.s2 += pdf_val.s3;
 #if POINTS_EVAL >= 4
-		val.s4 += val.s5;
-		val.s6 += val.s7;
+			pdf_val.s4 += pdf_val.s5;
+			pdf_val.s6 += pdf_val.s7;
+#endif
+#endif
+		}
+		if(is_integrand_cdf(stable->integrand))
+		{
+			cdf_val.s0 += cdf_val.s1;
+#if POINTS_EVAL >= 2
+			cdf_val.s2 += cdf_val.s3;
+#if POINTS_EVAL >= 4
+			cdf_val.s4 += cdf_val.s5;
+			cdf_val.s6 += cdf_val.s7;
+#endif
+#endif
+		}
+	}
+
+	// Now multiply the result by the corresponding weight and return.
+	if(is_integrand_pcdf(stable->integrand))
+	{
+		final_val.s0 = w.s0 * pdf_val.s0;
+		final_val.s1 = w.s0 * cdf_val.s0;
+#if POINTS_EVAL >= 2
+		final_val.s2 = w.s0 * pdf_val.s2;
+		final_val.s3 = w.s0 * cdf_val.s2;
+#if POINTS_EVAL >= 4
+		final_val.s4 = w.s0 * pdf_val.s4;
+		final_val.s5 = w.s0 * cdf_val.s4;
+		final_val.s6 = w.s0 * pdf_val.s6;
+		final_val.s7 = w.s0 * cdf_val.s6;
+#endif
+#endif
+	}
+	else if(is_integrand_cdf(stable->integrand))
+	{
+		final_val.s01 = w * cdf_val.s0;
+#if POINTS_EVAL >= 2
+		final_val.s23 = w * cdf_val.s2;
+#if POINTS_EVAL >= 4
+		final_val.s45 = w * cdf_val.s4;
+		final_val.s67 = w * cdf_val.s6;
+#endif
+#endif
+	}
+	else if(is_integrand_pdf(stable->integrand))
+	{
+		final_val.s01 = w * pdf_val.s0;
+#if POINTS_EVAL >= 2
+		final_val.s23 = w * pdf_val.s2;
+#if POINTS_EVAL >= 4
+		final_val.s45 = w * pdf_val.s4;
+		final_val.s67 = w * pdf_val.s6;
 #endif
 #endif
 	}
 
-	// Now multiply the result by the corresponding weight and return.
-	val.s01 = w * val.s0;
-#if POINTS_EVAL >= 2
-	val.s23 = w * val.s2;
-#if POINTS_EVAL >= 4
-	val.s45 = w * val.s4;
-	val.s67 = w * val.s6;
-#endif
-#endif
 
-
-	return val;
+	return final_val;
 }
 
 
 short precalculate_values(cl_precision x, constant struct stable_info* stable, struct stable_precalc* precalc)
 {
-	cl_precision x_, xxi;
+	cl_precision x_, xxi, pdf_factor, cdf_factor, cdf_addition;
 
     x_ = (x - stable->mu_0) / stable->sigma;
    	xxi = x_ - stable->xi;
 
 	precalc->iend = M_PI_2;
 
-	precalc->final_factor = stable->final_factor;
-	precalc->final_addition = stable->final_addition;
+	pdf_factor = stable->final_pdf_factor;
+	cdf_factor = stable->final_cdf_factor;
+	cdf_addition = stable->final_cdf_addition;
 
 	if(is_integrand_neq1(stable->integrand))
 	{
@@ -191,14 +250,14 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	        precalc->theta0_ = - stable->theta0;
 	        precalc->beta_ = - stable->beta;
 
-	        if(stable->integrand == CDF_ALPHA_NEQ1)
+	        if(is_integrand_cdf(stable->integrand))
 	       	{
-	       		precalc->final_factor *= -1;
+	       		cdf_factor *= -1;
 
 	       		if(stable->alfa < 1) // C1 changes here because of the sign inversion in θ0, recalculate
-	       			precalc->final_addition = 1 - 0.5 + precalc->theta0_ * M_1_PI;
+	       			cdf_addition = 1 - 0.5 + precalc->theta0_ * M_1_PI;
 	       		else
-	       			precalc->final_addition = 1 - stable->c1;
+	       			cdf_addition = 1 - stable->c1;
 	       	}
 	    }
 	    else
@@ -209,10 +268,8 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 
 	    if (xxi <= stable->xxi_th)
 	    {
-	    	if(stable->integrand == PDF_ALPHA_NEQ1)
-	        	precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0) / stable->sigma;
-	        else // CDF_ALPHA_NEQ1
-	        	precalc->pdf_precalc = 0.5 - stable->theta0 * M_1_PI;
+	       	precalc->pdf_precalc = stable->xi_coef * cos(stable->theta0) / stable->sigma;
+	       	precalc->cdf_precalc = 0.5 - stable->theta0 * M_1_PI;
 
 	        return SET_TO_RESULT_AND_RETURN;
 	    }
@@ -221,8 +278,8 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 
 		precalc->xxipow = stable->alfainvalfa1 * log(fabs(xxi));
 
-		if(stable->integrand == PDF_ALPHA_NEQ1)
-			precalc->final_factor /= xxi;
+		if(is_integrand_pdf(stable->integrand))
+			pdf_factor /= xxi;
 	}
 	else if(is_integrand_eq1(stable->integrand))
 	{
@@ -233,10 +290,27 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	if (fabs(precalc->theta0_ + M_PI_2) < 2 * stable->THETA_TH)
 	{
 		precalc->pdf_precalc = 0;
+		precalc->cdf_precalc = 0;
 	    return SET_TO_RESULT_AND_RETURN;
 	}
 
 	precalc->xxi = xxi;
+
+	if(is_integrand_pcdf(stable->integrand))
+	{
+		precalc->final_factor = (cl_precision2)(pdf_factor, cdf_factor);
+		precalc->final_addition = (cl_precision2)(0, cdf_addition);
+	}
+	else if(is_integrand_pdf(stable->integrand))
+	{
+		precalc->final_factor = vec2(pdf_factor);
+		precalc->final_addition = vec2(0);
+	}
+	else if(is_integrand_cdf(stable->integrand))
+	{
+		precalc->final_factor = vec2(cdf_factor);
+		precalc->final_addition = vec2(cdf_addition);
+	}
 
 	return CONTINUE_CALC;
 }
@@ -327,7 +401,10 @@ void calculate_integration_remainder(
 	}
 }
 
-kernel void stable_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
+
+// If CDF or PDF: returns (kronrod, gauss).
+// If PCDF: returns (PDF, CDF).
+cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision x)
 {
 	size_t gk_point = get_local_id(0);
 	size_t point_index = get_group_id(0);
@@ -341,6 +418,7 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
 	short reevaluate = 0;
 	cl_vec result = vec(0);
 	size_t reevaluations = 0;
+	cl_precision2 final;
 
 	cl_precision2 previous_integration_remainder = vec2(0);
 
@@ -349,11 +427,14 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
 
 	cl_precision pdf = 0;
 
-   	if(precalculate_values(x[point_index], stable, &precalc) == SET_TO_RESULT_AND_RETURN)
+   	if(precalculate_values(x, stable, &precalc) == SET_TO_RESULT_AND_RETURN)
 	{
-		gauss[point_index] = precalc.pdf_precalc;
-		kronrod[point_index] = precalc.pdf_precalc;
-		return;
+		// Return the precalculated values of the PDF and/or CDF. If we're on PCDF mode
+		// return the PDF on the Gauss array and the CDF on the Kronrod array.
+		final.y = is_integrand_pdf(stable->integrand) ? precalc.pdf_precalc : precalc.cdf_precalc;
+		final.x = is_integrand_cdf(stable->integrand) ? precalc.cdf_precalc : precalc.pdf_precalc;
+
+		return final;
 	}
 
     do
@@ -423,19 +504,147 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
     	for(offset = 1; offset < MAX_WORKGROUPS; offset++)
     		total += sums[offset][0];
 
-  		cl_precision2 final = total.s01;
+  		final = total.s01;
 #if POINTS_EVAL >= 2
   		final += total.s23;
 #if POINTS_EVAL >= 4
   		final += total.s45 + total.s67;
 #endif
 #endif
-
     	final *= precalc.subint_length * precalc.final_factor;
 
     	final += previous_integration_remainder + precalc.final_addition;
+	}
 
-		gauss[point_index] = final.y;
-		kronrod[point_index] = final.x;
+	return final;
+}
+
+kernel void stable_points(constant struct stable_info* stable, constant cl_precision* x, global cl_precision* gauss, global cl_precision* kronrod)
+{
+	cl_precision2 val;
+	size_t gk_point = get_local_id(0);
+	size_t point_index = get_group_id(0);
+	size_t subinterval_index = get_local_id(1);
+
+	val = stable_get_value(stable, x[point_index]);
+
+	if(gk_point == 0 && subinterval_index == 0)
+	{
+		gauss[point_index] = val.y;
+		kronrod[point_index] = val.x;
+	}
+}
+
+cl_precision stable_quick_inv_point(constant struct stable_info *stable, const cl_precision q, cl_precision *err)
+{
+	cl_precision x0 = 0;
+	cl_precision C = 0;
+	cl_precision alfa = stable->alfa;
+	cl_precision beta = stable->beta;
+	cl_precision q_ = q;
+	cl_precision signBeta = 1;
+
+	if (alfa < 0.1)   alfa = 0.1;
+
+	if (beta < 0) {
+		signBeta = -1;
+		q_ = 1.0 - q_;
+		beta = -beta;
+	}
+	if (beta == 1) {
+		if (q_ < 0.1) {
+			q_ = 0.1;
+		}
+	}
+
+	/* Asympthotic expansion near the limits of the domain */
+	if (q_ > 0.9 || q_ < 0.1) {
+		if (alfa != 1.0)
+			C = (1 - alfa) / (exp(lgamma(2 - alfa)) * cos(M_PI * alfa / 2.0));
+		else
+			C = 2 / M_PI;
+
+		if (q_ > 0.9)
+			x0 = pow((1 - q_) / (C * 0.5 * (1.0 + beta)), -1.0 / alfa);
+		else
+			x0 = -pow(q_ / (C * 0.5 * (1.0 - beta)), -1.0 / alfa);
+
+		*err = 0.1;
+	}
+
+	else {
+		/* Linear interpolation on precalculated values */
+		int ia, ib, iq;
+		cl_precision aux = 0;
+		cl_precision xa = modf(alfa / 0.1, &aux); ia = (int)aux - 1;
+		cl_precision xb = modf(beta / 0.2, &aux); ib = (int)aux;
+		cl_precision xq = modf(  q_ / 0.1, &aux); iq = (int)aux - 1;
+
+		if (alfa == 2) {ia = 18; xa = 1.0;}
+		if (beta == 1) {ib = 4;  xb = 1.0;}
+		if (q_ == 0.9) {iq = 7;  xq = 1.0;}
+
+		cl_precision p[8] = {precalc[iq][ib][ia],   precalc[iq][ib][ia + 1],   precalc[iq][ib + 1][ia],   precalc[iq][ib + 1][ia + 1],
+		               precalc[iq + 1][ib][ia], precalc[iq + 1][ib][ia + 1], precalc[iq + 1][ib + 1][ia], precalc[iq + 1][ib + 1][ia + 1]
+		              };
+
+		//Trilinear interpolation
+		x0 = ((p[0] * (1.0 - xa) + p[1] * xa) * (1 - xb) + (p[2] * (1 - xa) + p[3] * xa) * xb) * (1 - xq) + ((p[4] * (1.0 - xa) + p[5] * xa) * (1 - xb) + (p[6] * (1 - xa) + p[7] * xa) * xb) * xq;
+
+		if (err) {
+			*err = fabs(0.5 * (p[0] - p[1]));
+		}
+	}
+
+	x0 = x0 * signBeta * stable->sigma + stable->mu_0;
+
+	return x0;
+}
+
+kernel void stable_quantile(constant struct stable_info* stable, constant cl_precision* q_vals, global cl_precision* err, global cl_precision* results)
+{
+	size_t gk_point = get_local_id(0);
+	size_t point_index = get_group_id(0);
+	size_t subinterval_index = get_local_id(1);
+	cl_precision2 pcdf;
+	cl_precision quantile = q_vals[point_index];
+	cl_precision next_guess, error_priv;
+	local cl_precision guess, error;
+	size_t iterations = 0, max_iterations = 50;
+
+	guess = stable_quick_inv_point(stable, quantile, &error_priv);
+	error = error_priv;
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Newton method.
+	while(error > stable->quantile_tolerance && iterations < max_iterations)
+	{
+		pcdf = stable_get_value(stable, guess);
+
+		if(gk_point == 0 && subinterval_index == 0)
+		{
+			cl_precision value = pcdf.y - quantile;
+			cl_precision derivative = pcdf.x;
+
+			if(fabs(value) < 1e-10)
+			{
+				error = 0;
+			}
+			else
+			{
+				next_guess = guess - value / derivative;
+				error = fabs(next_guess - guess);
+				guess = next_guess;
+			}
+		}
+
+		barrier(CLK_LOCAL_MEM_FENCE);
+		iterations++;
+	}
+
+	if(gk_point == 0 && subinterval_index == 0)
+	{
+		results[point_index] = guess;
+		err[point_index] = error;
 	}
 }

@@ -77,13 +77,15 @@ int main (int argc, char** argv)
         return 1;
     }
 
-    if(stable_clinteg_points(&dist->cli, x, gpu_pdf, gpu_pdf_err, num_points, dist, clinteg_pdf))
+    stable_clinteg_set_mode(&dist->cli, mode_pdf);
+    if(stable_clinteg_points(&dist->cli, x, gpu_pdf, NULL, gpu_pdf_err, num_points, dist))
     {
         fprintf(stderr, "Stable-OpenCL error. Aborting.\n");
         return 1;
     }
 
-    if(stable_clinteg_points(&dist->cli, x, gpu_cdf, gpu_cdf_err, num_points, dist, clinteg_cdf))
+    stable_clinteg_set_mode(&dist->cli, mode_cdf);
+    if(stable_clinteg_points(&dist->cli, x, gpu_cdf, NULL, gpu_cdf_err, num_points, dist))
     {
         fprintf(stderr, "Stable-OpenCL error. Aborting.\n");
         return 1;

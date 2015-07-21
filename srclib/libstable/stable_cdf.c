@@ -301,6 +301,9 @@ stable_integration_cdf(StableDist *dist, double(*integrando)(double,void*),
   /*fprintf(FINTEG,"%le\t%le\t%le\t%le\t%le\t%le\t%le\t%le\t\n",
           x,theta[0],theta[SUBS_def/2],theta[SUBS_def],g[0],g[SUBS_def/2],g[SUBS_def],pdf);*/
 
+  if(isnan(cdf))
+    cdf = 0;
+
   return cdf;
 }
 
@@ -374,6 +377,9 @@ stable_cdf_point_ALFA_1(StableDist *dist, const double x, double *err)
   else
     cdf = 1.0 - dist->c3*cdf;
 
+  if(isnan(cdf))
+    cdf = 0;
+
   return cdf;
 }
 
@@ -439,16 +445,17 @@ stable_cdf_point(StableDist *dist, const double x, double *err)
 }
 
 void stable_cdf_gpu(StableDist *dist, const double x[], const int Nx,
-                double *pdf, double *err)
+                double *cdf, double *err)
 {
     if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
-        stable_cdf(dist, x, Nx, pdf, err); // Rely on analytical formulae where possible
+        stable_cdf(dist, x, Nx, cdf, err); // Rely on analytical formulae where possible
     else
     {
-        if(dist->gpu_queues == 1)
-            stable_clinteg_points(&dist->cli, (double*) x, pdf, err, Nx, dist, clinteg_cdf);
-        else
-            stable_clinteg_points_parallel(&dist->cli, (double*) x, pdf, err, Nx, dist, dist->gpu_queues, clinteg_cdf);
+      stable_clinteg_set_mode(&dist->cli, mode_cdf);
+      if(dist->gpu_queues == 1)
+          stable_clinteg_points(&dist->cli, (double*) x, cdf, NULL, err, Nx, dist);
+      else
+          stable_clinteg_points_parallel(&dist->cli, (double*) x, cdf, NULL, err, Nx, dist, dist->gpu_queues);
     }
 }
 
