@@ -608,15 +608,17 @@ kernel void stable_quantile(constant struct stable_info* stable, constant cl_pre
 	size_t subinterval_index = get_local_id(1);
 	cl_precision2 pcdf;
 	cl_precision quantile = q_vals[point_index];
-	cl_precision error, next_guess;
-	local cl_precision guess;
+	cl_precision next_guess, error_priv;
+	local cl_precision guess, error;
+	size_t iterations = 0, max_iterations = 50;
 
-	guess = stable_quick_inv_point(stable, quantile, &error);
+	guess = stable_quick_inv_point(stable, quantile, &error_priv);
+	error = error_priv;
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	// Newton method.
-	while(error > stable->quantile_tolerance)
+	while(error > stable->quantile_tolerance && iterations < max_iterations)
 	{
-		barrier(CLK_LOCAL_MEM_FENCE);
 		pcdf = stable_get_value(stable, guess);
 
 		if(gk_point == 0 && subinterval_index == 0)
@@ -625,6 +627,9 @@ kernel void stable_quantile(constant struct stable_info* stable, constant cl_pre
 			error = fabs(next_guess - guess);
 			guess = next_guess;
 		}
+
+		barrier(CLK_LOCAL_MEM_FENCE);
+		iterations++;
 	}
 
 	if(gk_point == 0 && subinterval_index == 0)
