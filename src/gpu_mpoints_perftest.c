@@ -22,7 +22,7 @@ int main (int argc, const char** argv)
 	double x_step_size = ((double)(max_x_range - min_x_range)) / (double) max_test_size;
 	double start, end, duration;
 	double cpu_duration, cpu_parallel_duration;
-	clinteg_type type = clinteg_pdf;
+	clinteg_mode mode = mode_pdf;
 
 	dist = stable_create(alfa, beta, sigma, mu, param);
 	x = calloc(max_test_size, sizeof(double));
@@ -44,9 +44,9 @@ int main (int argc, const char** argv)
 	}
 
 	if(argc > 1 && strcmp("cdf", argv[1]) == 0)
-        type = clinteg_cdf;
+        mode = mode_cdf;
 
-    if(type == clinteg_pdf)
+    if(mode == mode_pdf)
         printf(" PDF precision testing\n");
     else
         printf(" CDF precision testing\n");
@@ -61,7 +61,7 @@ int main (int argc, const char** argv)
 		{
 			dist->gpu_queues = 1;
 
-			if(type == clinteg_pdf)
+			if(mode == mode_pdf)
 			{
 				start = get_ms_time();
 				stable_pdf_gpu(dist, x, test_size, pdf, NULL);

@@ -21,7 +21,7 @@ int main (int argc, const char** argv)
     int points_per_interval = 1000;
     double cpu_vals[points_per_interval], gpu_vals[points_per_interval];
     double cpu_err[points_per_interval], gpu_err[points_per_interval];
-    clinteg_type type = clinteg_pdf;
+    clinteg_mode mode = mode_pdf;
 
     stable_clinteg_printinfo();
 
@@ -40,9 +40,9 @@ int main (int argc, const char** argv)
     }
 
     if(argc > 1 && strcmp("cdf", argv[1]) == 0)
-        type = clinteg_cdf;
+        mode = mode_cdf;
 
-    if(type == clinteg_pdf)
+    if(mode == mode_pdf)
         printf(" PDF precision testing\n");
     else
         printf(" CDF precision testing\n");
@@ -84,7 +84,7 @@ int main (int argc, const char** argv)
             {
                 stable_setparams(dist, alfas[ai], betas[bi], 1, 0, 0);
 
-                if(type == clinteg_pdf)
+                if(mode == mode_pdf)
                 {
                     stable_pdf_gpu(dist, points, points_per_interval, gpu_vals, gpu_err);
                     stable_pdf(dist, points, points_per_interval, cpu_vals, cpu_err);

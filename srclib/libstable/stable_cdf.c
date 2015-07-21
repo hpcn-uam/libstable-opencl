@@ -451,10 +451,11 @@ void stable_cdf_gpu(StableDist *dist, const double x[], const int Nx,
         stable_cdf(dist, x, Nx, cdf, err); // Rely on analytical formulae where possible
     else
     {
-        if(dist->gpu_queues == 1)
-            stable_clinteg_points(&dist->cli, (double*) x, NULL, cdf, err, Nx, dist, clinteg_cdf);
-        else
-            stable_clinteg_points_parallel(&dist->cli, (double*) x, NULL, cdf, err, Nx, dist, dist->gpu_queues, clinteg_cdf);
+      stable_clinteg_set_mode(&dist->cli, mode_cdf);
+      if(dist->gpu_queues == 1)
+          stable_clinteg_points(&dist->cli, (double*) x, cdf, NULL, err, Nx, dist);
+      else
+          stable_clinteg_points_parallel(&dist->cli, (double*) x, cdf, NULL, err, Nx, dist, dist->gpu_queues);
     }
 }
 

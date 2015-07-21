@@ -10,8 +10,7 @@
 #define max(a,b) (a < b ? b : a)
 #endif
 
-#define KERNIDX_ALPHA_NEQ1 0
-#define KERNIDX_ALPHA_EQ1 1
+#define KERNIDX_INTEGRATE 0
 #define KERNIDX_QUANTILE 2
 #define KERN_POINTS_NAME "stable_points"
 #define KERN_QUANTILE_NAME "stable_quantile"
@@ -108,7 +107,7 @@ int stable_clinteg_init(struct stable_clinteg *cli, size_t platform_index)
         return -1;
     }
 
-    if (opencl_load_kernel(&cli->env, "opencl/stable.cl", KERN_POINTS_NAME, KERNIDX_ALPHA_NEQ1))
+    if (opencl_load_kernel(&cli->env, "opencl/stable.cl", KERN_POINTS_NAME, KERNIDX_INTEGRATE))
     {
         stablecl_log(log_message, "OpenCL kernel %s load failure.", KERN_POINTS_NAME);
         return -1;
@@ -164,7 +163,7 @@ static void _stable_print_profileinfo(struct opencl_profile *prof)
     printf("\tKernel exec time: %3.3g.\n", prof->exec_time);
 }
 
-static void _stable_clinteg_prepare_kernel_data(struct stable_info* info, StableDist* dist, clinteg_type type)
+static void _stable_clinteg_prepare_kernel_data(struct stable_info* info, StableDist* dist)
 {
     info->k1 = dist->k1;
     info->alfa = dist->alfa;
@@ -179,46 +178,27 @@ static void _stable_clinteg_prepare_kernel_data(struct stable_info* info, Stable
     info->c2_part = dist->c2_part;
     info->xi_coef = (exp(lgamma(1 + 1 / dist->alfa))) / (M_PI * pow(1 + dist->xi * dist->xi, 1 / (2 * dist->alfa)));
     info->c1 = dist->c1;
+    info->final_pdf_factor = dist->c2_part / dist->sigma;
+    info->final_cdf_factor = dist->alfa < 1 ? M_1_PI : - M_1_PI;
+    info->final_cdf_addition = dist->c1;
 
-    if(type == clinteg_pdf)
+    if(dist->cli.mode_bits == MODEMARKER_PDF)
     {
         info->max_reevaluations = dist->alfa > 1 ? 2 : 1;
-        info->final_pdf_factor = dist->c2_part / dist->sigma;
     }
     else
     {
         info->max_reevaluations = 1;
-        info->final_cdf_factor = dist->alfa < 1 ? M_1_PI : - M_1_PI;
-        info->final_cdf_addition = dist->c1;
     }
 
-    if (dist->ZONE == GPU_TEST_INTEGRAND)
-        info->integrand = GPU_TEST_INTEGRAND;
-    else if (dist->ZONE == GPU_TEST_INTEGRAND_SIMPLE)
-        info->integrand = GPU_TEST_INTEGRAND_SIMPLE;
-    else if (dist->ZONE == ALFA_1)
-    {
-        if(type == clinteg_cdf)
-            info->integrand = CDF_ALPHA_EQ1;
-        else if(type == clinteg_pdf)
-            info->integrand = PDF_ALPHA_EQ1;
-        else if(type == clinteg_pcdf)
-            info->integrand = PCDF_ALPHA_EQ1;
+    short alfa_marker = dist->ZONE == ALFA_1 ? MODEMARKER_EQ1 : MODEMARKER_NEQ1;
+    info->integrand = alfa_marker | dist->cli.mode_bits;
 
+    if (dist->ZONE == ALFA_1)
         info->beta = fabs(dist->beta);
-    }
-    else
-    {
-        if(type == clinteg_cdf)
-            info->integrand = CDF_ALPHA_NEQ1;
-        else if(type == clinteg_pdf)
-            info->integrand = PDF_ALPHA_NEQ1;
-        else if(type == clinteg_pcdf)
-            info->integrand = PCDF_ALPHA_NEQ1;
-    }
 }
 
-cl_precision* _stable_check_precision_type(double* values)
+cl_precision* _stable_check_precision_type(double* values, size_t num_points)
 {
     cl_precision* points = values;
 
@@ -234,22 +214,21 @@ cl_precision* _stable_check_precision_type(double* values)
     }
 
     for (size_t i = 0; i < num_points; i++)
-        points[i] = (cl_precision) x[i];
+        points[i] = (cl_precision) values[i];
 #endif
 
     return points;
 }
 
-short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t num_points, struct StableDistStruct *dist, cl_event* event, clinteg_type type)
+short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t num_points, struct StableDistStruct *dist, cl_event* event)
 {
     cl_int err = 0;
     size_t work_threads[2] = { KRONROD_EVAL_POINTS * num_points, MAX_WORKGROUPS };
     size_t workgroup_size[2] = { KRONROD_EVAL_POINTS, MAX_WORKGROUPS };
     cl_precision* points = NULL;
-    size_t kernel_index = KERNIDX_ALPHA_NEQ1;
 
-    _stable_clinteg_prepare_kernel_data(cli->h_args, dist, type);
-    points = _stable_check_precision_type(x);
+    _stable_clinteg_prepare_kernel_data(cli->h_args, dist);
+    points = _stable_check_precision_type(x, num_points);
 
     if(!points)
         goto cleanup;
@@ -263,7 +242,7 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
         goto cleanup;
     }
 
-    opencl_set_current_kernel(&cli->env, kernel_index);
+    opencl_set_current_kernel(&cli->env, cli->kern_index);
 
     bench_begin(cli->profiling.argset, cli->profile_enabled);
     int argc = 0;
@@ -280,7 +259,7 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     }
 
     stablecl_log(log_message, "Enqueing kernel %d - %zu × %zu work threads, %zu × %zu workgroup size",
-                 kernel_index, work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
+                 cli->kern_index, work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
 
     bench_begin(cli->profiling.enqueue, cli->profile_enabled);
     err = clEnqueueNDRangeKernel(opencl_get_queue(&cli->env), opencl_get_current_kernel(&cli->env),
@@ -303,12 +282,12 @@ cleanup:
     return err;
 }
 
-short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_results, double *cdf_results, double *errs, size_t num_points, struct StableDistStruct *dist, clinteg_type type)
+short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *results_1, double *results_2, double *errs, size_t num_points, struct StableDistStruct *dist)
 {
     cl_event event;
     cl_int err;
 
-    err = stable_clinteg_points_async(cli, x, num_points, dist, &event, type);
+    err = stable_clinteg_points_async(cli, x, num_points, dist, &event);
 
     if (err)
     {
@@ -316,10 +295,10 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *pdf_r
         return err;
     }
 
-    return stable_clinteg_points_end(cli, pdf_results, cdf_results, errs, num_points, dist, &event, type);
+    return stable_clinteg_points_end(cli, results_1, results_2, errs, num_points, dist, &event);
 }
 
-short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results, double *cdf_results, double* errs, size_t num_points, struct StableDistStruct *dist, cl_event* event, clinteg_type type)
+short stable_clinteg_points_end(struct stable_clinteg *cli, double *results_1, double *results_2, double* errs, size_t num_points, struct StableDistStruct *dist, cl_event* event)
 {
     cl_int err = 0;
 
@@ -343,28 +322,28 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
 
     for (size_t i = 0; i < num_points; i++)
     {
-        if(pdf_results && (type & clinteg_pdf))
-            pdf_results[i] = cli->h_kronrod[i];
+        if(results_1)
+            results_1[i] = cli->h_kronrod[i];
 
-        if(cdf_results)
-        {
-            if(type == clinteg_cdf)
-                cdf_results[i] = cli->h_kronrod[i];
-            else
-                cdf_results[i] = cli->h_gauss[i];
-        }
+        if(results_2 && cli->copy_gauss_array)
+            results_2[i] = cli->h_gauss[i];
 
 #if STABLE_MIN_LOG <= 0
         char msg[500];
         snprintf(msg, 500, "Results set P%zu: gauss_sum = %.3g, kronrod_sum = %.3g", i, cli->h_gauss[i], cli->h_kronrod[i]);
 #endif
 
-        if (errs && type != clinteg_pcdf)
+        if (errs)
         {
-            if (cli->h_kronrod[i] != 0)
-                errs[i] = fabs(cli->h_kronrod[i] - cli->h_gauss[i]) / cli->h_kronrod[i];
-            else
-                errs[i] = fabs(cli->h_kronrod[i] - cli->h_gauss[i]);
+            if (cli->error_mode == error_from_results)
+            {
+                if(cli->h_kronrod[i] != 0)
+                    errs[i] = fabs(cli->h_kronrod[i] - cli->h_gauss[i]) / cli->h_kronrod[i];
+                else
+                    errs[i] = fabs(cli->h_kronrod[i] - cli->h_gauss[i]);
+            }
+            else if(cli->error_mode == error_is_gauss_array)
+                errs[i] = cli->h_gauss[i];
 
 #if STABLE_MIN_LOG <= 0
             snprintf(msg + strlen(msg), 500 - strlen(msg), ", relerr = %.3g", errs[i]);
@@ -385,7 +364,7 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *pdf_results,
     return err;
 }
 
-short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, double *pdf_results, double* cdf_results, double *errs, size_t num_points, struct StableDistStruct *dist, size_t queues, clinteg_type type)
+short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, double *results_1, double* results_2, double *errs, size_t num_points, struct StableDistStruct *dist, size_t queues)
 {
     cl_int err = 0;
     size_t i;
@@ -409,7 +388,7 @@ short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, doub
             points_for_current_queue = points_per_queue;
 
         opencl_set_current_queue(&cli->env, i);
-        err = stable_clinteg_points_async(cli, x + processed_points, points_for_current_queue, dist, NULL, type);
+        err = stable_clinteg_points_async(cli, x + processed_points, points_for_current_queue, dist, NULL);
 
         if (err)
             goto cleanup;
@@ -430,7 +409,7 @@ short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, doub
             points_for_current_queue = points_per_queue;
 
         opencl_set_current_queue(&cli->env, i);
-        err = stable_clinteg_points_end(cli, pdf_results + processed_points, cdf_results + processed_points, errs ? errs + processed_points : NULL, points_for_current_queue, dist, NULL, type);
+        err = stable_clinteg_points_end(cli, results_1 + processed_points, results_2 + processed_points, errs ? errs + processed_points : NULL, points_for_current_queue, dist, NULL);
 
         if (err)
             goto cleanup;
@@ -472,3 +451,16 @@ void stable_clinteg_printinfo()
     printf(" Precision used: %s.\n\n", cl_precision_type);
 }
 
+void stable_clinteg_set_mode(struct stable_clinteg* cli, clinteg_mode mode)
+{
+    if(mode == mode_pdf)
+        cli->mode_bits = MODEMARKER_PDF;
+    else if(mode == mode_cdf)
+        cli->mode_bits = MODEMARKER_CDF;
+    else // pcdf or quantile
+        cli->mode_bits = MODEMARKER_PCDF;
+
+    cli->kern_index = mode == mode_quantile ? KERNIDX_QUANTILE : KERNIDX_INTEGRATE;
+    cli->copy_gauss_array = mode == mode_pcdf;
+    cli->error_mode = mode == mode_quantile ? error_is_gauss_array : error_from_results;
+}

@@ -35,9 +35,15 @@
 #define GPU_TEST_INTEGRAND 100
 #define GPU_TEST_INTEGRAND_SIMPLE 101
 
-#define is_integrand_pdf(integrand) (integrand & 2)
-#define is_integrand_cdf(integrand) (integrand & 4)
-#define is_integrand_eq1(integrand) (integrand & 1)
+#define MODEMARKER_PDF 2
+#define MODEMARKER_CDF 4
+#define MODEMARKER_PCDF (2 | 4)
+#define MODEMARKER_EQ1 1
+#define MODEMARKER_NEQ1 0
+
+#define is_integrand_pdf(integrand) (integrand & MODEMARKER_PDF)
+#define is_integrand_cdf(integrand) (integrand & MODEMARKER_CDF)
+#define is_integrand_eq1(integrand) (integrand & MODEMARKER_EQ1)
 #define is_integrand_neq1(integrand) (!is_integrand_eq1(integrand))
 #define is_integrand_pcdf(integrand) (is_integrand_cdf(integrand) && is_integrand_pdf(integrand))
 
