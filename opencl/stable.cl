@@ -432,7 +432,6 @@ cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision
 	{
 		// Return the precalculated values of the PDF and/or CDF. If we're on PCDF mode
 		// return the PDF on the Gauss array and the CDF on the Kronrod array.
-		final;
 		final.y = is_integrand_pdf(stable->integrand) ? precalc.pdf_precalc : precalc.cdf_precalc;
 		final.x = is_integrand_cdf(stable->integrand) ? precalc.cdf_precalc : precalc.pdf_precalc;
 
