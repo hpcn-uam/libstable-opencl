@@ -601,7 +601,7 @@ cl_precision stable_quick_inv_point(constant struct stable_info *stable, const c
 	return x0;
 }
 
-kernel void stable_quantile(constant struct stable_info* stable, constant cl_precision* q_vals, global cl_precision* results, global cl_precision* err)
+kernel void stable_quantile(constant struct stable_info* stable, constant cl_precision* q_vals, global cl_precision* err, global cl_precision* results)
 {
 	size_t gk_point = get_local_id(0);
 	size_t point_index = get_group_id(0);
@@ -623,7 +623,7 @@ kernel void stable_quantile(constant struct stable_info* stable, constant cl_pre
 
 		if(gk_point == 0 && subinterval_index == 0)
 		{
-			next_guess = guess - pcdf.y / pcdf.x;
+			next_guess = guess - (pcdf.y - quantile) / pcdf.x;
 			error = fabs(next_guess - guess);
 			guess = next_guess;
 		}
