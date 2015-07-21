@@ -82,7 +82,7 @@ int main (int argc, const char** argv)
                         double guess;
 
                         if(use_all_gpu)
-                            guess = guesses[i];
+                            guess = guesses[j];
                         else
                             guess = stable_inv_point_gpu(dist, cdf_vals[j], NULL);
 
