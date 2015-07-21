@@ -142,6 +142,8 @@ int main (int argc, const char** argv)
 				end = get_ms_time();
 				duration += end - start;
 
+				stable_set_THREADS(1);
+
 				start = get_ms_time();
 				stable_inv(dist, q, test_size, pdf, NULL);
 				end = get_ms_time();
@@ -150,8 +152,7 @@ int main (int argc, const char** argv)
 				stable_set_THREADS(0);
 
 				start = get_ms_time();
-				for(size_t j = 0; j < test_size; j++)
-					stable_inv_point_gpu(dist, q[j], NULL);
+				stable_inv(dist, q, test_size, pdf, NULL);
 				end = get_ms_time();
 				cpu_parallel_duration += end - start;
 			}

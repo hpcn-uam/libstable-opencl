@@ -13,7 +13,7 @@ int main (int argc, const char** argv)
     int points_per_interval = 20;
     double cdf_vals[points_per_interval];
     double guesses[points_per_interval];
-    short use_all_gpu = 0;
+    short use_all_gpu = 1;
 
     stable_clinteg_printinfo();
 
@@ -32,7 +32,7 @@ int main (int argc, const char** argv)
     }
 
     if(argc > 1)
-        use_all_gpu = 1;
+        use_all_gpu = 0;
 
     stable_set_absTOL(1e-20);
     stable_set_relTOL(1.2e-10);
