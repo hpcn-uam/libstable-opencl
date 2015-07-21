@@ -16,10 +16,18 @@ echo "Mpoints PDF..."
 bin/release/gpu_mpoints_perftest pdf | grep -v "ERROR #" > ${host}-mpoints-pdf.dat
 echo "Mpoints CDF..."
 bin/release/gpu_mpoints_perftest cdf | grep -v "ERROR #" > ${host}-mpoints-cdf.dat
+echo "Mpoints PCDF..."
+bin/release/gpu_mpoints_perftest pcdf | grep -v "ERROR #" > ${host}-mpoints-pcdf.dat
+echo "Mpoints Quantile..."
+bin/release/gpu_mpoints_perftest quantile | grep -v "ERROR #" > ${host}-mpoints-inv.dat
+echo "Performance Quantile..."
+bin/release/quantile_perf cpu | grep -v "ERROR #" > ${host}-performance-inv.dat
+echo "Precision Quantile..."
+bin/release/quantile_eval cpu | grep -v "ERROR #" > ${host}-precision-inv.dat
 
-files="${host}-performance-pdf.dat ${host}-performance-cdf.dat \
-		${host}-precision-pdf.dat ${host}-precision-pdf.dat \
-		${host}-mpoints-pdf.dat ${host}-mpoints-cdf.dat"
+files="${host}-performance-pdf.dat ${host}-performance-cdf.dat ${host}-performance-inv.dat \
+		${host}-precision-pdf.dat ${host}-precision-pdf.dat ${host}-precision-inv.dat  \
+		${host}-mpoints-pdf.dat ${host}-mpoints-cdf.dat ${host}-mpoints-pcdf.dat ${host}-mpoints-inv.dat"
 
 ts=$(date +"%Y-%m-%d_%H-%M-%S")
 tar -cvzf "${host}__${ts}.tar.gz" $files
