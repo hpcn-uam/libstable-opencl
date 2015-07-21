@@ -203,23 +203,23 @@ cl_vec eval_gk_pair(constant struct stable_info* stable, struct stable_precalc* 
 	}
 	else if(is_integrand_cdf(stable->integrand))
 	{
-		final_val.s0 = w.s0 * cdf_val.s0;
+		final_val.s01 = w * cdf_val.s0;
 #if POINTS_EVAL >= 2
-		final_val.s2 = w.s0 * cdf_val.s2;
+		final_val.s23 = w * cdf_val.s2;
 #if POINTS_EVAL >= 4
-		final_val.s4 = w.s0 * cdf_val.s4;
-		final_val.s6 = w.s0 * cdf_val.s6;
+		final_val.s45 = w * cdf_val.s4;
+		final_val.s67 = w * cdf_val.s6;
 #endif
 #endif
 	}
 	else if(is_integrand_pdf(stable->integrand))
 	{
-		final_val.s0 = w.s0 * pdf_val.s0;
+		final_val.s01 = w * pdf_val.s0;
 #if POINTS_EVAL >= 2
-		final_val.s2 = w.s0 * pdf_val.s2;
+		final_val.s23 = w * pdf_val.s2;
 #if POINTS_EVAL >= 4
-		final_val.s4 = w.s0 * pdf_val.s4;
-		final_val.s6 = w.s0 * pdf_val.s6;
+		final_val.s45 = w * pdf_val.s4;
+		final_val.s67 = w * pdf_val.s6;
 #endif
 #endif
 	}
@@ -241,7 +241,6 @@ short precalculate_values(cl_precision x, constant struct stable_info* stable, s
 	pdf_factor = stable->final_pdf_factor;
 	cdf_factor = stable->final_cdf_factor;
 	cdf_addition = stable->final_cdf_addition;
-	precalc->final_addition = stable->final_cdf_addition;
 
 	if(is_integrand_neq1(stable->integrand))
 	{
@@ -512,7 +511,6 @@ cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision
   		final += total.s45 + total.s67;
 #endif
 #endif
-
     	final *= precalc.subint_length * precalc.final_factor;
 
     	final += previous_integration_remainder + precalc.final_addition;
