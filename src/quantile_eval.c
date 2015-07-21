@@ -77,7 +77,7 @@ int main (int argc, const char** argv)
 
                 for(j = 0; j < points_per_interval; j++)
                 {
-                    if(use_all_gpu || (cdf_vals[j] >= 0.1 && cdf_vals[j] <= 0.9))
+                    if(cdf_vals[j] >= 0.1 && cdf_vals[j] <= 0.9)
                     {
                         double guess;
 
