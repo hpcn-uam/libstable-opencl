@@ -398,3 +398,18 @@ void stable_inv(StableDist *dist, const double q[], const int Nq,
 
   if (flag==1) free(err);
 }
+
+void stable_inv_gpu(StableDist *dist, const double q[], const int Nq,
+                double *inv, double *err)
+{
+    if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
+        stable_inv(dist, q, Nq, inv, err); // Rely on analytical formulae where possible
+    else
+    {
+        stable_clinteg_set_mode(&dist->cli, mode_quantile);
+        if(dist->gpu_queues == 1)
+            stable_clinteg_points(&dist->cli, (double*) q, inv, NULL, err, Nq, dist);
+        else
+            stable_clinteg_points_parallel(&dist->cli, (double*) q, inv, NULL, err, Nq, dist, dist->gpu_queues);
+    }
+}
