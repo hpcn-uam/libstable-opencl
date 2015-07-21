@@ -12,6 +12,8 @@ int main (int argc, const char** argv)
     double intervals[] = { -10, 10 };
     int points_per_interval = 20;
     double cdf_vals[points_per_interval];
+    double guesses[points_per_interval];
+    short use_all_gpu = 0;
 
     stable_clinteg_printinfo();
 
@@ -28,6 +30,9 @@ int main (int argc, const char** argv)
         fprintf(stderr, "Couldn't initialize GPU.\n");
         return 1;
     }
+
+    if(argc > 1)
+        use_all_gpu = 1;
 
     stable_set_absTOL(1e-20);
     stable_set_relTOL(1.2e-10);
@@ -67,11 +72,20 @@ int main (int argc, const char** argv)
                 cpu_err_sum = 0;
                 valid_points = 0;
 
+                if(use_all_gpu)
+                    stable_inv_gpu(dist, cdf_vals, points_per_interval, guesses, NULL);
+
                 for(j = 0; j < points_per_interval; j++)
                 {
-                    if(cdf_vals[j] >= 0.1 && cdf_vals[j] <= 0.9)
+                    if(use_all_gpu || (cdf_vals[j] >= 0.1 && cdf_vals[j] <= 0.9))
                     {
-                        double guess = stable_inv_point_gpu(dist, cdf_vals[j], NULL);
+                        double guess;
+
+                        if(use_all_gpu)
+                            guess = guesses[i];
+                        else
+                            guess = stable_inv_point_gpu(dist, cdf_vals[j], NULL);
+
                         double diff = fabs(guess - points[j]);
 
                         abs_diff_sum += diff;

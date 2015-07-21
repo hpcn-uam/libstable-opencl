@@ -181,6 +181,7 @@ static void _stable_clinteg_prepare_kernel_data(struct stable_info* info, Stable
     info->final_pdf_factor = dist->c2_part / dist->sigma;
     info->final_cdf_factor = dist->alfa < 1 ? M_1_PI : - M_1_PI;
     info->final_cdf_addition = dist->c1;
+    info->quantile_tolerance = 1e-4;
 
     if(dist->cli.mode_bits == MODEMARKER_PDF)
     {
