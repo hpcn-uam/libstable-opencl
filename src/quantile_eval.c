@@ -10,7 +10,7 @@ int main (int argc, const char** argv)
     double alfas[] = { 0.25, 0.5, 0.75, 1.25, 1.5 };
     double betas[] = { 0, 0.5, 1 };
     double intervals[] = { -10, 10 };
-    int points_per_interval = 1;
+    int points_per_interval = 20;
     double cdf_vals[points_per_interval];
 
     stable_clinteg_printinfo();
@@ -82,7 +82,8 @@ int main (int argc, const char** argv)
                 total_relerr += rel_diff_sum;
                 total_abserr += abs_diff_sum;
 
-                abs_diff_sum /= valid_points;
+                if(valid_points != 0)
+                    abs_diff_sum /= valid_points;
 
                 printf("%.3lf %.3lf  %8.3g\n",
                     alfas[ai], betas[bi],
