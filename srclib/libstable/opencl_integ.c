@@ -331,7 +331,7 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *results_1, d
 
 #if STABLE_MIN_LOG <= 0
         char msg[500];
-        snprintf(msg, 500, "Results set P%zu: gauss_sum = %.3g, kronrod_sum = %.3g", i, cli->h_gauss[i], cli->h_kronrod[i]);
+        snprintf(msg, 500, "Results set P%zu: kronrod_sum = %.3g, gauss_sum = %.3g", i, cli->h_kronrod[i], cli->h_gauss[i]);
 #endif
 
         if (errs)
