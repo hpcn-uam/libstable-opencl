@@ -86,9 +86,10 @@ int main (int argc, const char** argv)
                         else
                             guess = stable_inv_point_gpu(dist, cdf_vals[j], NULL);
 
-                        double diff = fabs(guess - points[j]);
-                        printf("%lf -> %lf (diff %lf)\n", cdf_vals[j], guess, diff);
+                        if(isnan(guess))
+                            continue;
 
+                        double diff = fabs(guess - points[j]);
 
                         abs_diff_sum += diff;
                         valid_points++;
