@@ -230,7 +230,7 @@ double stable_inv_point_gpu(StableDist* dist, const double q, double *err)
     double interval_width;
     double tolerance = 1e-4;
     double guess_error;
-    size_t point_count = 50;
+    size_t point_count = 10;
 
     if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
         return stable_inv_point(dist, q, err);

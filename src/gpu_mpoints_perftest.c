@@ -14,18 +14,22 @@ int main (int argc, const char** argv)
 	int test_size_step = 10;
 	int test_size;
 	int i;
-	double *x;
+	double *x, *q;
 	double *pdf;
 	StableDist *dist;
 	int min_x_range = -20;
 	int max_x_range = -min_x_range;
 	double x_step_size = ((double)(max_x_range - min_x_range)) / (double) max_test_size;
+	double min_q_range = 0.11;
+	double max_q_range = 0.89;
+	double q_step_size = (max_q_range - min_q_range) / max_test_size;
 	double start, end, duration;
 	double cpu_duration, cpu_parallel_duration;
 	clinteg_mode mode = mode_pdf;
 
 	dist = stable_create(alfa, beta, sigma, mu, param);
 	x = calloc(max_test_size, sizeof(double));
+	q = calloc(max_test_size, sizeof(double));
 	pdf = calloc(max_test_size, sizeof(double));
 
 	if (!dist)
@@ -35,7 +39,10 @@ int main (int argc, const char** argv)
 	}
 
 	for (i = 0; i < max_test_size; i++)
+	{
 		x[i] = min_x_range + x_step_size * i;
+		q[i] = min_q_range + q_step_size * i;
+	}
 
 	if (stable_activate_gpu(dist))
 	{
@@ -130,9 +137,6 @@ int main (int argc, const char** argv)
 			}
 			else if(mode == mode_quantile)
 			{
-				double q[test_size];
-				stable_cdf_gpu(dist, x, test_size, q, NULL);
-
 				start = get_ms_time();
 				stable_inv_gpu(dist, q, test_size, pdf, NULL);
 				end = get_ms_time();
