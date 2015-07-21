@@ -623,9 +623,19 @@ kernel void stable_quantile(constant struct stable_info* stable, constant cl_pre
 
 		if(gk_point == 0 && subinterval_index == 0)
 		{
-			next_guess = guess - (pcdf.y - quantile) / pcdf.x;
-			error = fabs(next_guess - guess);
-			guess = next_guess;
+			cl_precision value = pcdf.y - quantile;
+			cl_precision derivative = pcdf.x;
+
+			if(fabs(value) < 1e-10)
+			{
+				error = 0;
+			}
+			else
+			{
+				next_guess = guess - value / derivative;
+				error = fabs(next_guess - guess);
+				guess = next_guess;
+			}
 		}
 
 		barrier(CLK_LOCAL_MEM_FENCE);
