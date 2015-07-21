@@ -53,8 +53,6 @@ int main (int argc, const char** argv)
 			mode = mode_pcdf;
 	}
 
-    printf(" %s precision testing\n", stable_mode_str(mode));
-
 	for (test_size = test_size_step; test_size <= max_test_size; test_size += test_size_step)
 	{
 		duration = 0;
