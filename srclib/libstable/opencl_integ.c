@@ -210,11 +210,11 @@ static void _stable_clinteg_prepare_kernel_data(struct stable_info* info, Stable
     else
     {
         if(type == clinteg_cdf)
-            info->integrand = CDF_ALPHA_EQ1;
+            info->integrand = CDF_ALPHA_NEQ1;
         else if(type == clinteg_pdf)
-            info->integrand = PDF_ALPHA_EQ1;
+            info->integrand = PDF_ALPHA_NEQ1;
         else if(type == clinteg_pcdf)
-            info->integrand = PCDF_ALPHA_EQ1;
+            info->integrand = PCDF_ALPHA_NEQ1;
     }
 }
 
