@@ -404,7 +404,13 @@ void calculate_integration_remainder(
 
 // If CDF or PDF: returns (kronrod, gauss).
 // If PCDF: returns (PDF, CDF).
-cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision x)
+cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision x,
+	#ifdef INTEL
+	local cl_vec** sums
+#else
+	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS]
+#endif
+	, local int* min_contributing, local int* max_contributing)
 {
 	size_t gk_point = get_local_id(0);
 	size_t point_index = get_group_id(0);
@@ -413,8 +419,6 @@ cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision
 	struct stable_precalc precalc;
 	size_t offset;
 	size_t j;
-	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS];
-	local int min_contributing, max_contributing;
 	short reevaluate = 0;
 	cl_vec result = vec(0);
 	size_t reevaluations = 0;
@@ -422,8 +426,8 @@ cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision
 
 	cl_precision2 previous_integration_remainder = vec2(0);
 
-	min_contributing = GK_SUBDIVISIONS;
-	max_contributing = 0;
+	*min_contributing = GK_SUBDIVISIONS;
+	*max_contributing = 0;
 
 	cl_precision pdf = 0;
 
@@ -473,23 +477,23 @@ cl_precision2 stable_get_value(constant struct stable_info* stable, cl_precision
 		{
 			// When alpha < 0.3, there's a big slope at the beginning of the subinterval
 			// Reevaluate there to achieve more precision.
-			min_contributing = 0;
-			max_contributing = 0;
+			*min_contributing = 0;
+			*max_contributing = 0;
 
 			reevaluate = 1;
 		}
 		else
 		{
-			reevaluate = scan_for_contributing_intervals(sums, &min_contributing, &max_contributing);
+			reevaluate = scan_for_contributing_intervals(sums, min_contributing, max_contributing);
 		}
 
 		if(reevaluate)
 		{
-			int num_contributing = max_contributing - min_contributing + 1;
+			int num_contributing = *max_contributing - *min_contributing + 1;
 
-			calculate_integration_remainder(sums, &precalc, min_contributing, max_contributing, &previous_integration_remainder);
+			calculate_integration_remainder(sums, &precalc, *min_contributing, *max_contributing, &previous_integration_remainder);
 
-			precalc.ibegin = precalc.ibegin + min_contributing * precalc.subint_length;
+			precalc.ibegin = precalc.ibegin + *min_contributing * precalc.subint_length;
 			precalc.iend = precalc.ibegin + num_contributing * precalc.subint_length;
 		}
 	} while(reevaluate);
@@ -525,8 +529,10 @@ kernel void stable_points(constant struct stable_info* stable, constant cl_preci
 	size_t gk_point = get_local_id(0);
 	size_t point_index = get_group_id(0);
 	size_t subinterval_index = get_local_id(1);
+	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS];
+	local int max_contributing, min_contributing;
 
-	val = stable_get_value(stable, x[point_index]);
+	val = stable_get_value(stable, x[point_index], sums, &min_contributing, &max_contributing);
 
 	if(gk_point == 0 && subinterval_index == 0)
 	{
@@ -611,6 +617,8 @@ kernel void stable_quantile(constant struct stable_info* stable, constant cl_pre
 	cl_precision next_guess, error_priv;
 	local cl_precision guess, error;
 	size_t iterations = 0, max_iterations = 50;
+	local cl_vec sums[MAX_WORKGROUPS][KRONROD_EVAL_POINTS];
+	local int max_contributing, min_contributing;
 
 	guess = stable_quick_inv_point(stable, quantile, &error_priv);
 	error = error_priv;
@@ -619,7 +627,7 @@ kernel void stable_quantile(constant struct stable_info* stable, constant cl_pre
 	// Newton method.
 	while(error > stable->quantile_tolerance && iterations < max_iterations)
 	{
-		pcdf = stable_get_value(stable, guess);
+		pcdf = stable_get_value(stable, guess, sums, &min_contributing, &max_contributing);
 
 		if(gk_point == 0 && subinterval_index == 0)
 		{
