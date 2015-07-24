@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2015 - Naudit High Performance Computing and Networking
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef OPENCLENV_H
 #define OPENCLENV_H
 
@@ -52,7 +69,7 @@ typedef enum {
 #define STABLE_MIN_LOG 0
 #endif
 
-int opencl_initenv(struct openclenv* env);
+int opencl_initenv(struct openclenv* env, size_t platform_index);
 short opencl_load_kernel(struct openclenv* env, const char* bitcode_path, const char* kernname, size_t index);
 short opencl_set_current_queue(struct openclenv* env, size_t queue);
 short opencl_set_queues(struct openclenv* env, size_t new_count);

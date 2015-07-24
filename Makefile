@@ -7,11 +7,13 @@ DEBUG_CFLAGS = -ggdb -DSTABLE_MIN_LOG=0
 BENCHMARK_CFLAGS =  $(RELEASE_CFLAGS) -DBENCHMARK
 RELEASE_CFLAGS = -O3 -march=native -DSTABLE_MIN_LOG=1
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -ggdb -pg
+SIMULATOR_CFLAGS = $(DEBUG_CFLAGS) -DSIMULATOR_BUILD
 E_LIBS = $(shell pkg-config --libs gsl) -pthread
+LIBDIRS =
 
 PROJECT_NAME = libstable
 
-CONFS = debug release benchmark profile
+CONFS = debug release benchmark profile simulator
 DEFAULT_CONF = debug
 
 OBJDIR = obj
@@ -26,7 +28,7 @@ TARGETS = example fittest stable_array \
 			stable_test stable_performance stable_precision \
 			gpu_tests gpu_performance opencl_tests fitperf \
 			gpu_mpoints_perftest stable_plot gridfittest \
-			fit_eval gpu_precision
+			fit_eval gpu_precision quantile_eval quantile_perf
 INCLUDES = -I./includes/
 
 INCS := $(wildcard $(INCDIR)/*.h)
@@ -60,10 +62,11 @@ FMT_NORM := $(shell tput sgr0)
 
 TAR_EXCLUDES = bin obj doc .tar.gz .git tasks \
 		cscope.out $(PROJECT_NAME).sublime-project $(PROJECT_NAME).sublime-workspace \
-		*.dat callgrind.* gmon.out
+		*.dat callgrind.* gmon.out uva*
 TAR_EXCLUDES_ARG = $(addprefix --exclude=, $(TAR_EXCLUDES))
 
 include Makefile.$(shell uname)
+-include Makefile.$(shell hostname)
 
 ### Makefile plugins
 
@@ -72,7 +75,10 @@ include Makefile.$(shell uname)
 .PRECIOUS: %.o %.d %.g
 .PHONY: benchmark clean pack doxydoc docclean benchmark-run configs $(TARGETS) depend
 
-all: $(CONFS)
+default: $(DEFAULT_CONF)
+
+all: debug release
+full: $(CONFS)
 libs: $(LIBS)
 final: all docs pack
 
@@ -202,11 +208,11 @@ $(OBJDIR)/%.bc: $(CLDIR)/%.cl Makefile
 
 $(BINDIR)/%: | $(BINDIR) depend configs
 	@echo "$(FMT_BOLD)Building final target: $* $(FMT_NORM)"
-	@$(CC) $(CFLAGS) $(INCLUDES) $^ $(E_LIBS) -o $@
+	@$(CC) $(CFLAGS) $(INCLUDES) $^ $(LIBDIRS) $(E_LIBS) -o $@
 
 ## Packing
 
-pack: $(DOC_PDFS) codeclean
-	@cd ..; tar $(TAR_EXCLUDES_ARG) -czf $(PROJECT_NAME).tar.gz $(lastword $(notdir $(CURDIR)))
+pack: codeclean
+	@cd ..; tar $(TAR_EXCLUDES_ARG) -czvf $(PROJECT_NAME).tar.gz $(lastword $(notdir $(CURDIR)))
 	@echo "Packed $(PROJECT_NAME).tar.gz in parent directory."
 

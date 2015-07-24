@@ -1,7 +1,25 @@
+/*
+ * Copyright (C) 2015 - Naudit High Performance Computing and Networking
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef OPENCL_COMMON_H
 #define OPENCL_COMMON_H
 
 #define GK_USE_127_POINTS
+// #define GK_USE_61_POINTS
 
 #ifdef GK_USE_127_POINTS
 #define GK_POINTS 127
@@ -11,16 +29,44 @@
 #define GK_POINTS 61
 #endif
 
+// Mark the number of points that will be evaluated by each thread on the GPU.
+// The possibilities are 1, 2 or 4. The number of effective subdivisions of the
+// integration interval will be POINTS_EVAL * MAX_WORKGROUPS (see below).
 #define POINTS_EVAL 2
 
+#ifdef AMD_GPU
+#define MAX_WORKGROUPS 4
+#else
 #define MAX_WORKGROUPS 8
+#endif
+
 #define GK_SUBDIVISIONS (POINTS_EVAL * MAX_WORKGROUPS)
 #define KRONROD_EVAL_POINTS (GK_POINTS / 2 + 1)
 
-#define PDF_ALPHA_EQ1 1
+// Just byte markers: XYZ where
+//      Z == 1 if is an evaluation on α = 1 (0 if α ≠ 1),
+//      Y == 1 if PDF evaluation
+//      X == 1 if CDF evaluation
 #define PDF_ALPHA_NEQ1 2
+#define PDF_ALPHA_EQ1 3
+#define CDF_ALPHA_NEQ1 4
+#define CDF_ALPHA_EQ1 5
+#define PCDF_ALPHA_NEQ1 6
+#define PCDF_ALPHA_EQ1  7
 #define GPU_TEST_INTEGRAND 100
 #define GPU_TEST_INTEGRAND_SIMPLE 101
+
+#define MODEMARKER_PDF 2
+#define MODEMARKER_CDF 4
+#define MODEMARKER_PCDF (2 | 4)
+#define MODEMARKER_EQ1 1
+#define MODEMARKER_NEQ1 0
+
+#define is_integrand_pdf(integrand) (integrand & MODEMARKER_PDF)
+#define is_integrand_cdf(integrand) (integrand & MODEMARKER_CDF)
+#define is_integrand_eq1(integrand) (integrand & MODEMARKER_EQ1)
+#define is_integrand_neq1(integrand) (!is_integrand_eq1(integrand))
+#define is_integrand_pcdf(integrand) (is_integrand_cdf(integrand) && is_integrand_pdf(integrand))
 
 #if defined(FLOAT_GPU_UNIT) || (defined(__OPENCL_VERSION__) && !defined(cl_khr_fp64) && !defined(cl_amd_fp64))
 #define cl_precision float
@@ -48,22 +94,16 @@ struct stable_info {
     cl_precision xi;
     cl_precision xxi_th;
     cl_precision c2_part;
+    cl_precision c1;
     cl_precision THETA_TH;
     cl_precision beta;
     cl_precision xi_coef;
+    short is_xxi_negative;
     unsigned int integrand;
-};
-
-struct stable_precalc {
-    cl_precision theta0_;
-    cl_precision beta_;
-    cl_precision xxipow;
-    cl_precision ibegin;
-    cl_precision iend;
-    cl_precision subint_length;
-    cl_precision xxi;
-    cl_precision pdf_precalc;
-    cl_precision final_factor;
+    cl_precision final_pdf_factor;
+    cl_precision final_cdf_factor;
+    cl_precision final_cdf_addition;
+    cl_precision quantile_tolerance;
     size_t max_reevaluations;
 };
 

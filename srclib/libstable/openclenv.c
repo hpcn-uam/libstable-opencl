@@ -1,19 +1,40 @@
+/*
+ * Copyright (C) 2015 - Naudit High Performance Computing and Networking
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "openclenv.h"
 #include <stdarg.h>
 
-#ifndef OPENCL_FORCE_CPU
-#define OPENCL_FORCE_CPU 0
-#else
-#define OPENCL_FORCE_CPU 1
-#endif
-
 #define OPENCL_BUILD_OPTIONS "-cl-no-signed-zeros"
 
+#if defined(AMD_GPU)
+#define OPENCL_PLATFORM_SPECIFIC_OPTIONS "-DAMD_GPU"
+#elif defined(__APPLE__)
+#define OPENCL_PLATFORM_SPECIFIC_OPTIONS "-DINTEL"
+#else
+#define OPENCL_PLATFORM_SPECIFIC_OPTIONS ""
+#endif
+
 #define MAX_OPENCL_PLATFORMS 5
+#define MAX_BUILD_OPTS_LENGTH 1000
 
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 char *_read_file(const char *filename, size_t *contents_len)
 {
@@ -55,17 +76,17 @@ error:
     return NULL;
 }
 
-static void _opencl_kernel_info(cl_kernel kernel)
+static void _opencl_kernel_info(struct openclenv* env, cl_kernel kernel)
 {
-#if STABLE_MIN_LOG <= 0
+#if STABLE_MIN_LOG <= 0 && !defined(SIMULATOR_BUILD)
     int j;
     cl_int err;
     size_t wg_sizes[3], max_dims;
     cl_ulong local_memsize, priv_memsize;
 
-    err = clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_WORK_GROUP_SIZE, sizeof(wg_sizes), wg_sizes, &max_dims);
-    err |= clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_LOCAL_MEM_SIZE, sizeof(cl_ulong), &local_memsize, NULL);
-    err |= clGetKernelWorkGroupInfo(kernel, NULL, CL_KERNEL_PRIVATE_MEM_SIZE, sizeof(cl_ulong), &priv_memsize, NULL);
+    err = clGetKernelWorkGroupInfo(kernel, env->device, CL_KERNEL_WORK_GROUP_SIZE, sizeof(wg_sizes), wg_sizes, &max_dims);
+    err |= clGetKernelWorkGroupInfo(kernel, env->device, CL_KERNEL_LOCAL_MEM_SIZE, sizeof(cl_ulong), &local_memsize, NULL);
+    err |= clGetKernelWorkGroupInfo(kernel, env->device, CL_KERNEL_PRIVATE_MEM_SIZE, sizeof(cl_ulong), &priv_memsize, NULL);
 
     local_memsize /= 1024;
 
@@ -97,7 +118,7 @@ static void _opencl_device_info(cl_device_id device)
     clGetDeviceInfo(device, CL_DEVICE_NAME, 128 * sizeof(char), dev_name, NULL);
     clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof wg_sizes, wg_sizes, &max_dims);
 
-    stablecl_log(log_message, "Device obtained: %s", dev_name);
+    stablecl_log(log_message, "Device name: %s", dev_name);
 
     max_dims /= sizeof(size_t);
     stablecl_log(log_message, "Max dimensions: %zu.", max_dims);
@@ -121,7 +142,7 @@ static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_nu
     char version[500], name[500], vendor[500], extensions[500];
     cl_uint float_vecwidth = 0, double_vecwidth = 0;
 
-    stablecl_log(log_message, "Available platforms (OPENCL_FORCE_CPU = %d): %d", OPENCL_FORCE_CPU, platform_num);
+    stablecl_log(log_message, "Available platforms: %d", platform_num);
     for (i = 0; i < platform_num; i++)
     {
         clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 500, name, NULL);
@@ -131,19 +152,39 @@ static void _opencl_platform_info(cl_platform_id *platforms, cl_uint platform_nu
         clGetPlatformInfo(platforms[i], CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE, sizeof(cl_uint), &double_vecwidth, NULL);
         clGetPlatformInfo(platforms[i], CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT, sizeof(cl_uint), &float_vecwidth, NULL);
 
-        stablecl_log(log_message, "%d: %s, OpenCL version %s, vendor %s. Available extensions: %s", i, name, version, vendor, extensions);
-        stablecl_log(log_message, "Preferred vector widths: double %zu, float %zu.", double_vecwidth, float_vecwidth);
+        stablecl_log(log_message, "%d: %s, OpenCL version %s, vendor %s. Available extensions: %s. Vector widths: double %zu, float %zu.",
+         i, name, version, vendor, extensions, double_vecwidth, float_vecwidth);
 
     }
 #endif
 }
 
-int opencl_initenv(struct openclenv *env)
+static void _opencl_devices_info(cl_device_id* devices, cl_uint device_num)
+{
+#if STABLE_MIN_LOG <= 0
+    int i;
+
+    stablecl_log(log_message, "Available devices: %d", device_num);
+    for (i = 0; i < device_num; i++)
+    {
+        stablecl_log(log_message, "Information for device %d", i);
+        _opencl_device_info(devices[i]);
+    }
+#endif
+}
+
+int opencl_initenv(struct openclenv *env, size_t platform_index)
 {
     char *err_msg = NULL;
     int err = 0;
     cl_platform_id platforms[MAX_OPENCL_PLATFORMS];
-    cl_uint platform_num;
+    cl_device_id devices[MAX_OPENCL_PLATFORMS];
+    cl_uint platform_num, device_num;
+    size_t device_index = 0;
+
+#ifdef __APPLE__
+    device_index = 1;
+#endif
 
     err = clGetPlatformIDs(MAX_OPENCL_PLATFORMS, platforms, &platform_num);
 
@@ -155,7 +196,8 @@ int opencl_initenv(struct openclenv *env)
 
     _opencl_platform_info(platforms, platform_num);
 
-    err = clGetDeviceIDs(platforms[0], OPENCL_FORCE_CPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU, 1, &(env->device), NULL);
+
+    err = clGetDeviceIDs(platforms[platform_index], CL_DEVICE_TYPE_ALL, MAX_OPENCL_PLATFORMS, devices, &device_num);
 
     if (err)
     {
@@ -163,7 +205,11 @@ int opencl_initenv(struct openclenv *env)
         goto error;
     }
 
-    _opencl_device_info(env->device);
+    env->device = devices[device_index];
+
+    _opencl_devices_info(devices, device_num);
+
+    stablecl_log(log_message, "Chosen device %zu from platform %zu", device_index, platform_index);
 
     env->context = clCreateContext(0, 1, &env->device, NULL, NULL, &err);
     if (!env->context)
@@ -195,6 +241,26 @@ error:
     return err;
 }
 
+static void _opencl_generate_build_opts(char* build_opts, size_t build_opts_len)
+{
+#ifdef AMD_GPU
+    // AMD's OpenCL compiler doesn't know to search for includes in the current working
+    // directory, so we have to set that option explicitly.
+
+    char cwd[300];
+
+    if(getcwd(cwd, sizeof(cwd)) != NULL)
+        snprintf(build_opts, build_opts_len, "%s %s -I%s/", OPENCL_BUILD_OPTIONS, OPENCL_PLATFORM_SPECIFIC_OPTIONS, cwd);
+    else
+    {
+        stablecl_log(log_warning, "warning: getcwd failed with error %d: kernel compilation will probably fail", errno);
+        snprintf(build_opts, build_opts_len, OPENCL_BUILD_OPTIONS);
+    }
+#else
+    snprintf(build_opts, build_opts_len, "%s %s", OPENCL_BUILD_OPTIONS, OPENCL_PLATFORM_SPECIFIC_OPTIONS);
+#endif
+}
+
 short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const char *kernname, size_t index)
 {
     char *err_msg = NULL;
@@ -202,6 +268,7 @@ short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const 
     size_t pathlen = strlen(bitcode_path);
     char *build_log;
     size_t build_log_size;
+    char build_opts[MAX_BUILD_OPTS_LENGTH];
 
 
 #ifdef __APPLE__
@@ -229,9 +296,14 @@ short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const 
         goto error;
     }
 
-    stablecl_log(log_message, "Building kernel %s from %s...", kernname, bitcode_path);
-    err = clBuildProgram(env->program, 1, &env->device, OPENCL_BUILD_OPTIONS, NULL, NULL);
+    _opencl_generate_build_opts(build_opts, MAX_BUILD_OPTS_LENGTH);
 
+    stablecl_log(log_message, "Building kernel %s from %s...", kernname, bitcode_path);
+    stablecl_log(log_message, "Build options: %s", build_opts);
+
+    err = clBuildProgram(env->program, 1, &env->device, build_opts, NULL, NULL);
+
+#ifndef SIMULATOR_BUILD
     log_error = clGetProgramBuildInfo(env->program, env->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &build_log_size);
 
     if (log_error)
@@ -258,6 +330,7 @@ short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const 
             free(build_log);
         }
     }
+#endif
 
     if (err)
     {
@@ -273,7 +346,7 @@ short opencl_load_kernel(struct openclenv* env, const char *bitcode_path, const 
         goto error;
     }
 
-    _opencl_kernel_info(env->kernel[index]);
+    _opencl_kernel_info(env, env->kernel[index]);
 
     env->enabled_kernels[index] = 1;
     env->kernel_count++;

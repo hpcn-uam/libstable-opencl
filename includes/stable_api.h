@@ -175,6 +175,8 @@ struct StableDistStruct
     struct stable_clinteg cli;
     short gpu_enabled;
     short parallel_gridfit;
+    size_t gpu_platform;
+    size_t gpu_queues;
   };
 
 typedef struct StableDistStruct StableDist;
@@ -270,6 +272,10 @@ void stable_pdf(StableDist *dist, const double x[], const int Nx,
 void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
                 double *pdf, double *err);
 
+
+void stable_pcdf_gpu(StableDist *dist, const double x[], const int Nx,
+                double *pdf, double *cdf);
+
 /******************************************************************************/
 /*   PDF integrand functions                                                  */
 /******************************************************************************/
@@ -301,6 +307,9 @@ double stable_cdf_point(StableDist *dist, const double x, double *err);
 void stable_cdf(StableDist *dist, const double x[], const int Nx,
                 double *cdf, double *err);
 
+void stable_cdf_gpu(StableDist *dist, const double x[], const int Nx,
+                double *pdf, double *err);
+
 /******************************************************************************/
 /*   CDF integrad functions                                                   */
 /******************************************************************************/
@@ -314,6 +323,9 @@ double stable_cdf_g(double theta, void *dist);
 double stable_inv_point(StableDist * dist, const double q, double * err);
 void   stable_inv(StableDist *dist, const double q[], const int Nq,
                 double * inv, double * err);
+double stable_inv_point_gpu(StableDist* dist, const double q, double *err);
+void stable_inv_gpu(StableDist *dist, const double q[], const int Nq,
+                double *inv, double *err);
 
 /************************************************************************
  ************************************************************************

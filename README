@@ -1,134 +1,51 @@
-Libstable: Fast, Parallel and High-Precision Computation of alpha-Stable
-                 Distributions in C and MATLAB
+# Libstable-opencl
 
-   Alpha-stable distributions are a family of well-known probability
-distributions. However, the lack of closed analytical expressions
-hinders their application. Currently, several tools have been developed
-to numerically evaluate their density and distribution functions or
-to estimate their parameters, but available solutions either do not
-reach sufficient precision on their evaluations or are excessively
-slow for practical purposes. Moreover, they do not take full advantage
-of the parallel processing capabilities of current multi-core machines.
-Other solutions work only on a subset of the $\alpha$-stable parameter
-space. We present a C/C++ library and a MATLAB front-end that permits
-fully parallelized, fast and high precision evaluation of density,
-distribution and quantile functions (PDF, CDF and CDF$^{-1}$ respectively),
-random variable generation and parameter estimation of $\alpha$-stable
-distributions in their whole parameter space. The library here described
-can be easily integrated on third party developments.
+Libstable-opencl is a fork of the _libstable_ library to offload computations to OpenCL platforms (GPU and more).
 
-Keywords: alpha-stable distributions, numerical calculation,
-          parallel processing
+Original _libstable_ library by Javier Royuela del Val and Federico Simmross Wattenberg, available in http://www.lpi.tel.uva.es/stable.
 
-Copyright (C) 2013. Javier Royuela del Val
-                    Federico Simmross Wattenberg
+## Compilation
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 3 of the License, or (at
-your option) any later version.
+The compilation of libstable requires a C compiler (either GCC or Clang are compatible). The code has the following requirements:
 
-This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
+* [GNU Scientific Library](http://www.gnu.org/software/gsl/), both the library and header files. In Debian/Ubuntu, the package to install is named _libgsl0-dev_, _gsl-devel_ in Fedora and OS X (MacPorts).
+* OpenCL. Both libraries and headers are required. For the software to recognize the accelerator device (either GPU or CPU), the correspondent OpenCL drivers should be installed. You should ensure that the library paths are present in your platform's Makefile.
 
-You should have received a copy of the GNU General Public License
-along with this program; If not, see <http://www.gnu.org/licenses/>.
+Once all the requeriments are fulfilled, running `make` will compile the library and the sample programs. `make libs` will only build the library files. The programs will be saved in the _bin_ directory and the libraries in _lib_. Those directories contain different subdirectories corresponding to the different build configurations supported by our Makefile:
 
- Javier Royuela del Val.
- E.T.S.I. Telecomunicación
- Universidad de Valladolid
- Paseo de Belén 15, 47002 Valladolid, Spain.
- jroyval@lpi.tel.uva.es    
+* _debug_: Targeted for debugging the program. Includes debugging symbols, shows more log messages to follow the execution flow and disables compiler optimizations.
+* _release_: Configuration targeted for production releases. Compiled with full optimization and with _-march=native_ to improve performance.
 
+These two are the main configurations. There are others present just for support that are useful during development:
 
-=======================[Usage of libstable]=======================
+* _benchmark_: Activates macros in the code that will benchmark the running time of the code.
+* _profile_: Compiles a version of the software ready for profiling with [gprof](https://sourceware.org/binutils/docs/gprof) or [Valgrind](http://valgrind.org/): it uses compiler optimizations and also includes debugging symbols.
+* _simulator_: A build of the software targeted for the [GPGPU-Sim](https://github.com/gpgpu-sim/gpgpu-sim_distribution) GPU simulator: uses the same flags as the _debug_ configuration and also disables some incompatible OpenCL calls.
 
-Libstable has been developed at the Image Processing Laboratory (LPI)
-to give support for various research projects based on alpha-stable
-distributions, where it is used on a regular basis both in C/C++ and
-in MATLAB developments. It has been thoroughly tested on specific
-applications. Its source code and sample programs are publicly available
-at <http://www.lpi.tel.uva.es/stable> under the GPLv3 license.
+## Test programs
 
-====================== Compiling the library =====================
+Apart from the library, there are some test programs located in the _src_ directory:
 
-  Dependencies:
- ----------------
-Libstable depends on several numerical methods provided by the GNU
-Scientific Library (GSL) [1], which must be installed in the system.
-Its available at
+* _gpu_tests_: A sample to use the GPU in the PDF and CDF, comparing results with the CPU.
+* _gpu_performance_: Tests the GPU performance in the whole parameter space, printing detailed OpenCL profile information.
+* _gpu_mpoints_perftest_: Outputs the performance results of the library depending on the number of simultaneous points. The outputs are a series of rows containing the following data: _point-count gpu-duration gpu-time-per-point cpu-duration cpu-time-per-point cpu-multithreaded-duration cpu-multithreaded-time-per-point_.
+* _gpu_precision_: Outputs a comparison of the precision of the GPU against the CPU in different intervals.
+* _fit_eval_: Tests the different parameter estimators in the library and outputs a summary of the results.
+* _fitperf_: Outputs a summary of the performance of the different estimators.
+* _quantile_perf_: Shows the performance of the quantile function depending on the parameters.
+* _quantile_eval_: Evaluates the accuracy of the quantile function.
 
-        <http://www.gnu.org/gsl>
+## Library usage
 
-Pthreads [2] has been used to implement parallelism. More information
-about this library can be found at
+If you want to use the library along with your program, you should link it using the -lstable flag in the compiler. Ensure that the include and library paths are set correctly too, so your compiler can see the headers in the _include_ directory of libstable and the libraries in the _lib/release_ directory (although you may want to link agains debug builds using the _lib/debug_ path).
 
-        <https://computing.llnl.gov/tutorials/pthreads/>
+In your code, you can use the functions `stable_pdf_gpu, stable_cdf_gpu, stable_inv_gpu, _stable_fit_grid` to do calculations related with stable distributions (the last function is present in the _stable_gridfit.h_ header). Remember to activate the GPU before using these functions calling to `stable_activate_gpu`. You can also select the platform where you want the OpenCL code to run changing the `gpu_platform` variable in the `StableDist` struct before calling the GPU activation (you can see the available platforms in your GPU and their corresponding numbers running _bin/debug/gpu_tests_).
 
+## Possible bugs / failures
 
-  Compilation:
- ----------------
-Makefiles are provided so that the developed library can be easily
-compiled from the source code with the make command:
-
-        $ make
-
-After compilation, both shared libstable.so and static (libstable.a)
-versions of the library are produced. Several example programs to test
-the main functions of the library are also compiled against the static
-version of the library by default. They can be found under the tests
-folder.
-
- ================== Usage in C/C++ environments  ==================
-
-If the libstable header files and compiled library are not located on the
-standard search path of the compiler and linker respectively, their location
-must be provided as command line flag to compile and link C developments.
-The program must also be linked to the GSL and system's math libraries.
-Typical command for compilation and static linking of a source file example.c
-with the GNU C compiler gcc is:
-
-    $ gcc -O3 -I/path/to/headers -c example.c
-    $ gcc example.o /path/to/libstable/libstable.a -lgsl -lgslcblas -lm
-
-When linking with the shared version of the library, the path to libstable.so
-must be provided to the system's dynamic linker, typically by defining the
-shell variable LD_LIBRARY_PATH. The path to the shared library must also
-be provided when linking the program:
-
-    $ gcc -L/path/to/libstable example.o -lgsl -lgslcblas -lm -lstable
-
- ================== Usage in MATLAB environment  ==================
-
-MATLAB environment supports loading shared C libraries by means of the
-loadlibrary function. The shared version of the developed library (libstable.so)
-and the header file stable_api.h are required. In order to start using
-Libstable execute the following command in MATLAB environment:
-
-      >> loadlibrary('libstable','stable_api.h')
-
-Paths to libstable.so and stable_api.h must be in current folder or included
-in MATLAB search path.
-
-When the library is no longer needed, it can be unloaded by executing
-
-     >> unloadlibrary('libstable')
-
-Several MATLAB functions in the form of .m files are provided to access the
-capabilities of Libstable. These files can be easily modified by the user to
-adjust library parameters as needed.
-
-** Further documentation **
-
-Further documentation about the functions provided by Libstatble both in C/C++
-and MATLAB environments can be found in the documentation file provided
-within the library.
-
-   [1] GSL - GNU Scientific Library. On line: http://www.gnu.org/s/gsl.
-
-   [2] B. Barney, "POSIX Threads Programming Tutorial", On line:
-       https://computing.llnl.gov/tutorials/pthreads.
-
+* In some instances, the GPU seems to "hang" after running repeatedly the OpenCL kernels. The solution found was to reboot the system. It seems to be a bug with NVIDIA drivers.
+* Your GPU may not support the default workgroup sizes, printing an error about insufficient resources. You may try modifying in _includes/opencl_common.h_ the max workgroup sizes (`MAX_WORKGROUPS`) or reducing the number of Gauss-Kronrod points to 61 defining the `GK_USE_61_POINTS` (not recommended if you want to maintain precision).
+* Your GPU may not support double-precision numbers (seen on Intel Iris HD graphic cards). Our software detects it if it's the case, issuing a warning during the compilation of the OpenCL kernel (you may not see it if you're not running debug builds). However, the precision is severly affected and you may see weird results if your card doesn't support double-precision floating point numbers.
+* Some NVIDIA drivers cache the OpenCL kernels but don't rebuild correctly when included headers changes. If you change a header included in the OpenCL code (currently only _opencl_common.h, gk_points.h_ and _stable_inv_precalcs.h) remove the _$HOME/.nv_ folder to force a rebuild.
+* Some AMD drivers fail when including header files in OpenCL code. An easy workaround is to copy the included headers to the _/tmp_ folder, where AMD does the temporary copies when compiling code. Running _cp -r includes /tmp_ should suffice to work around this driver bug.
 

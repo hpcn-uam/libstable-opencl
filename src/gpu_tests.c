@@ -1,9 +1,5 @@
-/* tests/introexample
- *
- * Simple example program to introduce the use of Libstable.
- *
- * Copyright (C) 2013. Javier Royuela del Val
- *                     Federico Simmross Wattenberg
+/*
+ * Copyright (C) 2015 - Naudit High Performance Computing and Networking
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,13 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; If not, see <http://www.gnu.org/licenses/>.
- *
- *
- *  Javier Royuela del Val.
- *  E.T.S.I. Telecomunicación
- *  Universidad de Valladolid
- *  Paseo de Belén 15, 47002 Valladolid, Spain.
- *  jroyval@lpi.tel.uva.es
  */
 #include <stdio.h>
 #include <sys/time.h>
@@ -39,7 +28,9 @@ int main (int argc, char** argv)
     int param = 0;
     double x[] = { 1 };
     double pdf[3] = { 0,0,0 }, gpu_pdf[3] = { 0,0,0 };
-    double err[3] = { 0,0,0 }, gpu_err[3] = { 0,0,0 };
+    double cdf[3] = { 0,0,0 }, gpu_cdf[3] = { 0,0,0 };
+    double pdf_err[3] = { 0,0,0 }, gpu_pdf_err[3] = { 0,0,0 };
+    double cdf_err[3] = { 0,0,0 }, gpu_cdf_err[3] = { 0,0,0 };
     size_t num_points = sizeof x / sizeof(double);
     int i;
 
@@ -66,9 +57,8 @@ int main (int argc, char** argv)
 
     printf("Evaluating at α = %.3lf, β = %.3lf\n", alfa, beta);
 
-    for(i = 0; i < num_points; i++)
-        pdf[i] = stable_pdf_point(dist, x[i], err + i);
-
+    stable_pdf(dist, x, 3, pdf, pdf_err);
+    stable_cdf(dist, x, 3, cdf, cdf_err);
 
     if(stable_activate_gpu(dist))
     {
@@ -76,17 +66,36 @@ int main (int argc, char** argv)
         return 1;
     }
 
-    stable_clinteg_points(&dist->cli, x, gpu_pdf, gpu_err, num_points, dist);
+    stable_clinteg_set_mode(&dist->cli, mode_pdf);
+    if(stable_clinteg_points(&dist->cli, x, gpu_pdf, NULL, gpu_pdf_err, num_points, dist))
+    {
+        fprintf(stderr, "Stable-OpenCL error. Aborting.\n");
+        return 1;
+    }
+
+    stable_clinteg_set_mode(&dist->cli, mode_cdf);
+    if(stable_clinteg_points(&dist->cli, x, gpu_cdf, NULL, gpu_cdf_err, num_points, dist))
+    {
+        fprintf(stderr, "Stable-OpenCL error. Aborting.\n");
+        return 1;
+    }
+
     for(i = 0; i < sizeof x / sizeof(double); i++)
     {
-        double abserr = fabs(gpu_pdf[i] - pdf[i]);
-        printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e ± %1.2e\n",
-           x[i], alfa, beta, sigma, mu, pdf[i], err[i]);
-        printf("CPU relative error is %1.2e %%.\n\n", 100 * err[i] / pdf[i]);
-        printf("GPU PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e ± %1.2e\n",
-               x[i], alfa, beta, sigma, mu, gpu_pdf[i], gpu_err[i]);
-        printf("GPU relative error is %1.2e %%.\n\n", 100 * fabs(gpu_err[i] / gpu_pdf[i]));
-        printf("GPU / CPU difference: %3.3g abs, %3.3g rel\n\n", abserr, abserr / pdf[i]);
+        double abspdf_err = fabs(gpu_pdf[i] - pdf[i]);
+        printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
+           x[i], alfa, beta, sigma, mu, pdf[i], pdf_err[i]);
+        printf("GPU PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
+               x[i], alfa, beta, sigma, mu, gpu_pdf[i], gpu_pdf_err[i]);
+        printf("PDF GPU / CPU difference: %3.3g abs, %3.3g rel\n\n", abspdf_err, abspdf_err / pdf[i]);
+
+        double abscdf_err = fabs(gpu_cdf[i] - cdf[i]);
+
+        printf("CDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
+           x[i], alfa, beta, sigma, mu, cdf[i], cdf_err[i]);
+        printf("GPU CDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
+               x[i], alfa, beta, sigma, mu, gpu_cdf[i], gpu_cdf_err[i]);
+        printf("CDF GPU / CPU difference: %3.3g abs, %3.3g rel\n\n", abscdf_err, abscdf_err / cdf[i]);
     }
 
     stable_free(dist);

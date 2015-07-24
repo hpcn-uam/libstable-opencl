@@ -1,9 +1,28 @@
+/*
+ * Copyright (C) 2015 - Naudit High Performance Computing and Networking
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "stable_api.h"
 #include "benchmarking.h"
 #include "stable_gridfit.h"
 #include "sysutils.h"
 #include <time.h>
 #include <stdlib.h>
+
+#define COMPLETE_TEST
 
 typedef int (*fitter)(StableDist *, const double *, const unsigned int);
 
@@ -52,18 +71,33 @@ struct fitresult
 	variable ## _init += dist->variable; \
 } while(0)
 
+#ifdef COMPLETE_TEST
 #define ALFA_START 0.5
-#define ALFA_END 1.9
+#define ALFA_END 1.95
 #define ALPHA_INCR 0.05
 #define BETA_START 0
-#define BETA_END 0.9
+#define BETA_END 0.95
 #define BETA_INCR 0.05
-#define MU_START -10
-#define MU_END 10
-#define MU_INCR 1
-#define SIGMA_END 30
+#define MU_START -1
+#define MU_END 1
+#define MU_INCR 0.5
+#define SIGMA_END 3
 #define SIGMA_INCR 0.5
 #define SIGMA_START SIGMA_INCR
+#else
+#define ALFA_START 0.5
+#define ALFA_END 1.95
+#define ALPHA_INCR 0.15
+#define BETA_START 0
+#define BETA_END 0.95
+#define BETA_INCR 0.1
+#define MU_START 0
+#define MU_END 0
+#define MU_INCR 0.5
+#define SIGMA_END 1
+#define SIGMA_INCR 1
+#define SIGMA_START SIGMA_INCR
+#endif
 
 int main (int argc, char *argv[])
 {
@@ -72,14 +106,15 @@ int main (int argc, char *argv[])
 	int i = 1, iexp, N, Nexp;
 	int seed;
 	char testname[100];
+	size_t test_count = 0;
 	double total_duration, start, end;
 	struct fittest tests[] =
 	{
 		//{ stable_fit_mle, 0, "MLE" },
 		//{ stable_fit_mle2d, 0, "M2D"},
-		{ stable_fit_koutrouvelis, 0, "KTR"},
+		//{ stable_fit_koutrouvelis, 0, "KTR"},
 		//{ stable_fit_koutrouvelis, 1, "KTR"},
-		{ stable_fit_mle, 1, "MLE" },
+		//{ stable_fit_mle, 1, "MLE" },
 		// { stable_fit_mle2d, 1, "M2D"},
 		{ stable_fit_grid, 1, "GRD" },
 		// { stable_fit_grid, 0, "GRD" }
@@ -93,7 +128,7 @@ int main (int argc, char *argv[])
 	beta = 0.75;
 	sigma = 5.0;
 	mu_0 = 15.0;
-	N = 400;
+	N = 1000;
 	Nexp = 20;
 	seed = -1;
 
@@ -143,15 +178,20 @@ int main (int argc, char *argv[])
 
 		printf("Estimation evaluation for %s...\n", testname);
 
-		for(alfa = ALFA_START; alfa <= ALFA_END; alfa += ALPHA_INCR)
+		if (test->gpu_enabled)
+			stable_activate_gpu(dist);
+		else
+			stable_deactivate_gpu(dist);
+
+		for(alfa = ALFA_START; alfa <= ALFA_END + 2 * DBL_EPSILON; alfa += ALPHA_INCR)
 		{
-			for(beta = BETA_START; beta <= BETA_END; beta += BETA_INCR)
+			for(beta = BETA_START; beta <= BETA_END + 2 * DBL_EPSILON; beta += BETA_INCR)
 			{
 				mu_0 = 0;
 				sigma = 1;
-				//for(mu_0 = MU_START; mu_0 <= MU_END; mu_0 += MU_INCR)
+				for(mu_0 = MU_START; mu_0 <= MU_END + 2 * DBL_EPSILON; mu_0 += MU_INCR)
 				{
-				//	for(sigma = SIGMA_START; sigma <= SIGMA_END; sigma += SIGMA_INCR)
+					for(sigma = SIGMA_START; sigma <= SIGMA_END + 2 * DBL_EPSILON; sigma += SIGMA_INCR)
 					{
 						double alfa_est = 0, beta_est = 0, mu_0_est = 0, sigma_est = 0;
 						double alfa_est_err = 0, beta_est_err = 0, mu_0_est_err = 0, sigma_est_err = 0;
@@ -162,11 +202,6 @@ int main (int argc, char *argv[])
 						stable_rnd(dist, data, N * Nexp);
 
 						double ms_duration = 0;
-
-						if (test->gpu_enabled)
-							stable_activate_gpu(dist);
-						else
-							stable_deactivate_gpu(dist);
 
 						dist->parallel_gridfit = test->gpu_enabled; // Temporary.
 
@@ -210,6 +245,8 @@ int main (int argc, char *argv[])
 
 						fflush(out);
 						fflush(stdout);
+
+						test_count++;
 					}
 
 				}
@@ -217,7 +254,8 @@ int main (int argc, char *argv[])
 		}
 
 		fclose(out);
-		printf("Eval finished.\n");
+		printf("Eval finished: %zu sample points.\n", test_count);
+		test_count = 0;
 	}
 
 	printf("Done\n");

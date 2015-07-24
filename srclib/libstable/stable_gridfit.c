@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2015 - Naudit High Performance Computing and Networking
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "stable_gridfit.h"
 #include "mcculloch.h"
 
@@ -6,8 +23,8 @@
 #define DIM_MU 2
 #define DIM_SIGMA 3
 
-static double initial_point_separation[] = { 0.2, 0.2, 0.2, 0.4 };
-static double initial_contracting_coefs[] = { 0.7, 0.8, 0.6, 0.2 };
+static double initial_point_separation[] = { 0.025, 0.025, 0.2, 0.4 };
+static double initial_contracting_coefs[] = { 0.8, 0.9, 0.6, 0.2 };
 
 static void get_params_from_dist(StableDist* dist, double params[4])
 {
@@ -26,9 +43,8 @@ static short set_params_to_dist(StableDist* dist, double* params, size_t params_
 	for(size_t dim = 0; dim < params_count; dim++)
 		dist_current_params[dim] = params[dim];
 
-
 	return stable_setparams(dist, dist_current_params[DIM_ALPHA], dist_current_params[DIM_BETA],
-		dist_current_params[DIM_MU], dist_current_params[DIM_SIGMA], 0) == NOVALID;
+		dist_current_params[DIM_SIGMA], dist_current_params[DIM_MU], 0) == NOVALID;
 }
 
 static void calculate_upperleft_corner_point(struct stable_gridfit* gridfit)
@@ -83,6 +99,11 @@ static void sort_data(struct stable_gridfit* gridfit, const double* data)
 	gridfit->data = sorted;
 }
 
+static void prepare_mcculloch_statistics(struct stable_gridfit* gridfit)
+{
+	cztab(gridfit->data, gridfit->data_length, &gridfit->mc_c, &gridfit->mc_z);
+}
+
 static void gridfit_init(struct stable_gridfit* gridfit, StableDist *dist, const double *data, const unsigned int length)
 {
 	gridfit->data_length = length;
@@ -106,6 +127,9 @@ static void gridfit_init(struct stable_gridfit* gridfit, StableDist *dist, const
 
 	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
 		gridfit->fitter_dists[i] = stable_create(1, 0.5, 1, 1, 0);
+
+	if(ESTIMATING_PARAMS < 4)
+		prepare_mcculloch_statistics(gridfit);
 
 	stable_activate_gpu(dist);
 	gridfit->cli = &dist->cli;
@@ -140,10 +164,8 @@ static void estimate_remaining_parameters(struct stable_gridfit* gridfit)
 
 	double alfa = gridfit->centers[DIM_ALPHA];
 	double beta = gridfit->centers[DIM_BETA];
-	double current_sigma = gridfit->centers[DIM_SIGMA];
-	double current_mu = gridfit->centers[DIM_MU];
 
-	czab(alfa, beta, current_mu, current_sigma,
+	czab(alfa, beta, gridfit->mc_c, gridfit->mc_z,
 		gridfit->centers + DIM_MU, gridfit->centers + DIM_SIGMA);
 }
 
@@ -160,7 +182,7 @@ static void gridfit_iterate(struct stable_gridfit* gridfit)
 		dist = gridfit->fitter_dists[i];
 
 		if(prepare_grid_params_for_fitter(gridfit, i) == 0)
-			stable_clinteg_points(gridfit->cli, (double*) gridfit->data, pdf, NULL, gridfit->data_length, dist);
+			stable_clinteg_points(gridfit->cli, (double*) gridfit->data, pdf, NULL, NULL, gridfit->data_length, dist);
 		else
 			continue;
 
@@ -212,7 +234,7 @@ static void gridfit_iterate_parallel(struct stable_gridfit* gridfit)
 			continue;
 
 		opencl_set_current_queue(&gridfit->cli->env, i);
-		stable_clinteg_points_end(gridfit->cli, pdf, NULL, gridfit->data_length, dist, NULL);
+		stable_clinteg_points_end(gridfit->cli, pdf, NULL, NULL, gridfit->data_length, dist, NULL);
 
 		gridfit->likelihoods[i] = 0;
 
@@ -220,7 +242,10 @@ static void gridfit_iterate_parallel(struct stable_gridfit* gridfit)
 			gridfit->likelihoods[i] += -log(pdf[point]);
 
 		if(gridfit->likelihoods[i] > gridfit->max_likelihood)
+		{
 			gridfit->max_likelihood = gridfit->likelihoods[i];
+			gridfit->max_fitter = i;
+		}
 
 		if(gridfit->likelihoods[i] < gridfit->min_likelihood)
 		{
@@ -230,17 +255,37 @@ static void gridfit_iterate_parallel(struct stable_gridfit* gridfit)
 	}
 }
 
+static double calculate_params_distance(struct stable_gridfit* gridfit)
+{
+	double dst = 0;
+	double min_point[MAX_STABLE_PARAMS];
+	double max_point[MAX_STABLE_PARAMS];
+
+	get_params_from_dist(gridfit->fitter_dists[gridfit->min_fitter], min_point);
+	get_params_from_dist(gridfit->fitter_dists[gridfit->max_fitter], max_point);
+
+	for(size_t i = 0; i < MAX_STABLE_PARAMS; i++)
+		dst += pow(max_point[i] - min_point[i], 2);
+
+	return sqrt(dst);
+}
+
 int stable_fit_grid(StableDist *dist, const double *data, const unsigned int length)
 {
 	struct stable_gridfit gridfit;
 	double likelihood_diff = DBL_MAX;
+	double params_distance = DBL_MAX;
 	double best_params[MAX_STABLE_PARAMS];
 
 	gridfit_init(&gridfit, dist, data, length);
 	get_params_from_dist(dist, gridfit.centers);
 	gridfit.min_fitter = 0;
 
-	while(gridfit.current_iteration < MAX_ITERATIONS && likelihood_diff > WANTED_PRECISION)
+	stable_clinteg_set_mode(gridfit.cli, mode_pdf);
+
+	while(gridfit.current_iteration < MAX_ITERATIONS
+			&& params_distance > WANTED_PRECISION
+			&& likelihood_diff > MIN_LIKELIHOOD_DIFF)
 	{
 		calculate_upperleft_corner_point(&gridfit);
 
@@ -252,6 +297,8 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 		get_params_from_dist(gridfit.fitter_dists[gridfit.min_fitter], best_params);
 		set_new_center(&gridfit, best_params);
 		estimate_remaining_parameters(&gridfit);
+
+		params_distance = calculate_params_distance(&gridfit);
 
 		point_sep_iterate(&gridfit);
 

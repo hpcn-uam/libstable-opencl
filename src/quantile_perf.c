@@ -37,61 +37,9 @@ void profile_sum(struct opencl_profile* dest, struct opencl_profile* src)
     dest->profile_total += src->profile_total;
 }
 
-typedef void (*evaluator)(StableDist *, const double*, const int, double *, double *);
+typedef void (*evaluator)(StableDist *, const double, double *);
 
-static void _measure_gpu_performance(StableDist *gpu_dist, double* x, size_t nx, double alfa, double beta, struct opencl_profile* general_profile, evaluator fn)
-{
-    int i;
-    double gpu_start, gpu_end, gpu_duration;
-    struct opencl_profile current_prof_info;
-    double* dummya, *dummyb;
-
-    dummya = calloc(nx, sizeof(double));
-    dummyb = calloc(nx, sizeof(double));
-
-    bzero(&current_prof_info, sizeof(struct opencl_profile));
-    gpu_dist->cli.profile_enabled = 0;
-
-    stable_clinteg_set_mode(&gpu_dist->cli, mode_pdf);
-
-    gpu_start = get_ms_time();
-    for (i = 0; i < NUMTESTS; i++)
-        stable_clinteg_points(&gpu_dist->cli, x, dummya, NULL, dummyb, nx, gpu_dist);
-    gpu_end = get_ms_time();
-
-    gpu_duration = gpu_end - gpu_start;
-
-    gpu_dist->cli.profile_enabled = 1;
-
-    gpu_start = get_ms_time();
-    for (i = 0; i < NUMTESTS; i++)
-    {
-        fn(gpu_dist, x, nx, dummya, dummyb);
-        profile_sum(&current_prof_info, &gpu_dist->cli.profiling);
-    }
-    gpu_end = get_ms_time();
-
-    current_prof_info.profile_total = gpu_end - gpu_start;
-    current_prof_info.total = gpu_duration;
-
-    profile_sum(general_profile, &current_prof_info);
-
-    current_prof_info.total /= NUMTESTS * nx;
-    current_prof_info.submit_acum /= NUMTESTS * nx;
-    current_prof_info.start_acum /= NUMTESTS * nx;
-    current_prof_info.finish_acum /= NUMTESTS * nx;
-    current_prof_info.exec_time /= NUMTESTS * nx;
-    current_prof_info.argset /= NUMTESTS * nx;
-    current_prof_info.enqueue /= NUMTESTS * nx;
-    current_prof_info.buffer_read /= NUMTESTS * nx;
-    current_prof_info.set_results /= NUMTESTS * nx;
-
-    fprintf(stdout, "%.3f %.3f\t| %.3f | %.5f %.5f %.5f %.5f | %.5f %.5f %.5f %.5f\n", alfa, beta, current_prof_info.total,
-            current_prof_info.submit_acum, current_prof_info.start_acum, current_prof_info.finish_acum, current_prof_info.exec_time,
-            current_prof_info.argset, current_prof_info.enqueue, current_prof_info.buffer_read, current_prof_info.set_results);
-}
-
-static void _measure_cpu_performance(StableDist *dist, double* x, size_t nx, double alfa, double beta, struct opencl_profile* general_profile, evaluator fn)
+static void _measure_performance(StableDist *dist, double* x, size_t nx, double alfa, double beta, struct opencl_profile* general_profile, evaluator fn)
 {
     int i;
     double gpu_start, gpu_end;
@@ -103,13 +51,13 @@ static void _measure_cpu_performance(StableDist *dist, double* x, size_t nx, dou
     dist->cli.profile_enabled = 0;
 
     gpu_start = get_ms_time();
-    for (i = 0; i < NUMTESTS; i++)
-        fn(dist, x, nx, pdf, err);
+    for (i = 0; i < nx; i++)
+        fn(dist, x[i], err);
     gpu_end = get_ms_time();
 
     general_profile->total += gpu_end - gpu_start;
 
-    printf("%.3f %.3f\t| %.3f |\n", alfa, beta, (gpu_end - gpu_start) / (NUMTESTS * nx));
+    printf("%.3f %.3f\t| %.3f |\n", alfa, beta, (gpu_end - gpu_start) / nx);
 }
 
 static void fill(double* array, double begin, double end, size_t size)
@@ -136,7 +84,6 @@ int main (int argc, char** argv)
     double cpu_total;
     struct opencl_profile profile;
     double ms_per_point;
-    clinteg_mode mode = mode_pdf;
     short enable_cpu = 0;
     evaluator cpu_fn;
     evaluator gpu_fn;
@@ -154,28 +101,15 @@ int main (int argc, char** argv)
             alfas_len = 1;
             betas_len = 1;
         }
-        else if (strcmp(argv[i], "cdf") == 0)
-        {
-            mode = mode_cdf;
-        }
         else if(strcmp(argv[i], "cpu") == 0)
         {
             enable_cpu = 1;
         }
     }
 
-    if (mode == mode_pdf)
-    {
-        cpu_fn = stable_pdf;
-        gpu_fn = stable_pdf_gpu;
-        printf(" PDF precision testing\n");
-    }
-    else
-    {
-        cpu_fn = stable_cdf;
-        gpu_fn = stable_cdf_gpu;
-        printf(" CDF precision testing\n");
-    }
+
+    cpu_fn = (evaluator) stable_inv_point;
+    gpu_fn = (evaluator) stable_inv_point_gpu;
 
     fill(alfas, 0, 2, alfas_len);
     fill(betas, 0, 1, betas_len);
@@ -200,7 +134,7 @@ int main (int argc, char** argv)
             for (bi = 0; bi < betas_len; bi++)
             {
                 stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
-                _measure_cpu_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile, cpu_fn);
+                _measure_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile, cpu_fn);
             }
         }
     }
@@ -216,31 +150,26 @@ int main (int argc, char** argv)
     cpu_total = profile.total;
     bzero(&profile, sizeof profile);
 
-    fprintf(stdout, "α     β\t\t| time  | submit  start   finish  total   | argset  enqueue bufread setres\n");
+    fprintf(stdout, "α     β\t\t| time  |\n");
 
     for (ai = 0; ai < alfas_len; ai++)
     {
         for (bi = 0; bi < betas_len; bi++)
         {
             stable_setparams(dist, alfas[ai], betas[bi], sigma, mu, 0);
-            _measure_gpu_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile, gpu_fn);
+            _measure_performance(dist, ev_points, evpoints_len, alfas[ai], betas[bi], &profile, gpu_fn);
         }
     }
 
 
     fflush(stdout);
 
-    fprintf(stdout, "α     β\t\t| time  | submit  start   finish  total   | argset  enqueue bufread setres\n");
+    fprintf(stdout, "α     β\t\t| time  |\n");
     ms_per_point = profile.total / test_num;
     printf("\nTest finished: %ld total points.\n", test_num);
     printf("GPU: %10.2f pps, %.5f ms per point.\n", 1000 * test_num / profile.total, ms_per_point);
     printf("CPU: %10.2f pps, %.5f ms per point.\n", 1000 * test_num / cpu_total, cpu_total / test_num);
-    printf("\nDetailed GPU data:\n");
-    printf("Parameter\t| ms per point\t| %% point time\n");
-    printf("Kernel time\t| %.5f\t| %.2f\n", profile.exec_time / test_num, 100 * profile.exec_time / profile.profile_total);
-    printf("Buffer reading\t| %.5f\t| %.2f\n", profile.buffer_read / test_num, 100 * profile.buffer_read / profile.profile_total);
-    printf("Argset\t\t| %.5f\t| %.2f\n", profile.argset / test_num, 100 * profile.argset / profile.profile_total);
-    printf("H->D transfer\t| %.5f\t| %.2f\n", (profile.start_acum) / test_num, 100 * (profile.start_acum) / profile.profile_total);
+
     stable_free(dist);
 
     return 0;
