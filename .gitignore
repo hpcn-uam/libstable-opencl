@@ -13,6 +13,7 @@ errlog.txt
 results/*
 *.dat
 *.dat.1
+Makefile.neptuno
 
 # R Studio files
 .RData
@@ -25,3 +26,9 @@ results/*
 *.txt
 *.bz2
 *.pyc
+copy_results
+parse_results
+transfer_compile
+save_results
+plot
+GKPoints.nb

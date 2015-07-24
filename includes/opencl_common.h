@@ -19,6 +19,7 @@
 #define OPENCL_COMMON_H
 
 #define GK_USE_127_POINTS
+// #define GK_USE_61_POINTS
 
 #ifdef GK_USE_127_POINTS
 #define GK_POINTS 127
@@ -28,6 +29,9 @@
 #define GK_POINTS 61
 #endif
 
+// Mark the number of points that will be evaluated by each thread on the GPU.
+// The possibilities are 1, 2 or 4. The number of effective subdivisions of the
+// integration interval will be POINTS_EVAL * MAX_WORKGROUPS (see below).
 #define POINTS_EVAL 2
 
 #ifdef AMD_GPU
