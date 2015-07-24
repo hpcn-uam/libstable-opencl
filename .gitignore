@@ -13,6 +13,7 @@ errlog.txt
 results/*
 *.dat
 *.dat.1
+Makefile.neptuno
 
 # R Studio files
 .RData
