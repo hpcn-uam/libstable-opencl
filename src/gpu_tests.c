@@ -1,10 +1,4 @@
-/* tests/introexample
- *
- * Simple example program to introduce the use of Libstable.
- *
- * Copyright (C) 2013. Javier Royuela del Val
- *                     Federico Simmross Wattenberg
- *
+/*
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or (at
@@ -17,13 +11,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; If not, see <http://www.gnu.org/licenses/>.
- *
- *
- *  Javier Royuela del Val.
- *  E.T.S.I. Telecomunicación
- *  Universidad de Valladolid
- *  Paseo de Belén 15, 47002 Valladolid, Spain.
- *  jroyval@lpi.tel.uva.es
  */
 #include <stdio.h>
 #include <sys/time.h>
