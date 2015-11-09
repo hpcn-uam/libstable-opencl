@@ -551,6 +551,7 @@ double stable_minusloglikelihood(const gsl_vector * theta, void * p);
  ************************************************************************
  ************************************************************************/
 void stable_rnd(StableDist *dist, double*rnd, const unsigned int n);
+short stable_rnd_gpu(StableDist *dist, double*rnd, const unsigned int n);
 
 double stable_rnd_point(StableDist *dist);
 

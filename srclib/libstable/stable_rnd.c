@@ -28,7 +28,6 @@
  */
 #include "stable_api.h"
 #include <gsl/gsl_randist.h>
-#include
 
 void
 stable_rnd_seed(StableDist * dist, unsigned long int s)
@@ -58,4 +57,23 @@ stable_rnd(StableDist *dist, double *rnd, const unsigned int n)
 		rnd[i] = stable_rnd_point(dist);
 	}
 	return;
+}
+
+short stable_rnd_gpu(StableDist *dist, double *rnd, const unsigned int n)
+{
+	int i;
+	short retval = -1;
+	double* uniform = calloc(n, sizeof(double));
+
+	if(!uniform)
+		return -1;
+
+	for (i = 0; i < n; i++)
+		uniform[i] = gsl_rng_uniform(dist->gslrand);
+
+	retval = stable_inv_gpu(dist, uniform, n, rnd, NULL);
+
+	free(uniform);
+
+	return retval;
 }
