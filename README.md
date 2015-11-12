@@ -4,6 +4,14 @@ Libstable-opencl is a fork of the _libstable_ library to offload computations to
 
 Original _libstable_ library by Javier Royuela del Val and Federico Simmross Wattenberg, available in http://www.lpi.tel.uva.es/stable.
 
+Version: 1.0.1
+
+## Library usage
+
+If you want to use the library along with your program, you should link it using the -lstable flag in the compiler. Ensure that the include and library paths are set correctly too, so your compiler can see the headers in the _include_ directory of libstable and the libraries in the _lib/release_ directory (although you may want to link agains debug builds using the _lib/debug_ path).
+
+In your code, you can use the functions `stable_pdf_gpu, stable_cdf_gpu, stable_inv_gpu, stable_rnd_gpu` and `stable_fit_grid` to do calculations related with stable distributions (the last function is present in the _stable_gridfit.h_ header). Remember to activate the GPU before using these functions calling to `stable_activate_gpu`. You can also select the platform where you want the OpenCL code to run changing the `gpu_platform` variable in the `StableDist` struct before calling the GPU activation (you can see the available platforms in your GPU and their corresponding numbers running _bin/debug/gpu_tests_).
+
 ## Compilation
 
 The compilation of libstable requires a C compiler (either GCC or Clang are compatible). The code has the following requirements:
@@ -34,12 +42,6 @@ Apart from the library, there are some test programs located in the _src_ direct
 * _fitperf_: Outputs a summary of the performance of the different estimators.
 * _quantile_perf_: Shows the performance of the quantile function depending on the parameters.
 * _quantile_eval_: Evaluates the accuracy of the quantile function.
-
-## Library usage
-
-If you want to use the library along with your program, you should link it using the -lstable flag in the compiler. Ensure that the include and library paths are set correctly too, so your compiler can see the headers in the _include_ directory of libstable and the libraries in the _lib/release_ directory (although you may want to link agains debug builds using the _lib/debug_ path).
-
-In your code, you can use the functions `stable_pdf_gpu, stable_cdf_gpu, stable_inv_gpu, _stable_fit_grid` to do calculations related with stable distributions (the last function is present in the _stable_gridfit.h_ header). Remember to activate the GPU before using these functions calling to `stable_activate_gpu`. You can also select the platform where you want the OpenCL code to run changing the `gpu_platform` variable in the `StableDist` struct before calling the GPU activation (you can see the available platforms in your GPU and their corresponding numbers running _bin/debug/gpu_tests_).
 
 ## Possible bugs / failures
 
