@@ -324,7 +324,7 @@ double stable_inv_point(StableDist * dist, const double q, double * err);
 void   stable_inv(StableDist *dist, const double q[], const int Nq,
                 double * inv, double * err);
 double stable_inv_point_gpu(StableDist* dist, const double q, double *err);
-void stable_inv_gpu(StableDist *dist, const double q[], const int Nq,
+short stable_inv_gpu(StableDist *dist, const double q[], const int Nq,
                 double *inv, double *err);
 
 /************************************************************************
@@ -551,6 +551,7 @@ double stable_minusloglikelihood(const gsl_vector * theta, void * p);
  ************************************************************************
  ************************************************************************/
 void stable_rnd(StableDist *dist, double*rnd, const unsigned int n);
+short stable_rnd_gpu(StableDist *dist, double*rnd, const unsigned int n);
 
 double stable_rnd_point(StableDist *dist);
 
