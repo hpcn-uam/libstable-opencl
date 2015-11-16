@@ -71,7 +71,7 @@ int main (int argc, const char** argv)
         fprintf(stderr, "%.3lf %.3lf\n", tdiff, tdiff / batch_size);
     }
 
-    for(i = 0; i < batch_size; i++)
+    for(i = 0; i < 0; i++)
         printf("%.6lf\n", gpu_rands[i]);
 
     stable_free(dist);

@@ -673,3 +673,10 @@ kernel void stable_quantile(constant struct stable_info* stable, constant cl_pre
 		err[point_index] = error;
 	}
 }
+
+kernel void stable_rng(constant struct stable_info* stable, global cl_precision* results)
+{
+	size_t idx = get_local_id(0);
+
+	results[idx] = idx;
+}

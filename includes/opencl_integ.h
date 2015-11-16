@@ -26,7 +26,7 @@
 struct StableDistStruct;
 
 typedef enum {
-	error_from_results, error_is_gauss_array
+	error_from_results, error_is_gauss_array, error_none
 } error_mode;
 
 struct stable_clinteg {
@@ -53,6 +53,7 @@ struct stable_clinteg {
 	size_t kern_index;
 	unsigned short mode_bits;
 	short copy_gauss_array;
+	short mode_pointgenerator;
 	error_mode error_mode;
 };
 
@@ -60,7 +61,8 @@ typedef enum {
 	mode_pdf,
 	mode_cdf,
 	mode_pcdf,
-	mode_quantile
+	mode_quantile,
+	mode_rng
 } clinteg_mode;
 
 int stable_clinteg_init(struct stable_clinteg* cli, size_t platform_index);
