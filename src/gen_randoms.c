@@ -24,9 +24,9 @@
 
 int main (int argc, const char** argv)
 {
-    double alfa = 1.25;
+    double alfa = 2;
     double beta = 0.7;
-    size_t batches[] = { 100, 1000, 9000 };
+    size_t batches[] = { 100, 1000, 10000, 1000000 };
     size_t num_batches = sizeof(batches) / sizeof(size_t);
     double* cpu_rands = NULL;
     double* gpu_rands = NULL;
@@ -49,6 +49,9 @@ int main (int argc, const char** argv)
 
     stable_set_absTOL(1e-20);
     stable_set_relTOL(1.2e-10);
+    stable_rnd_seed(dist, time(NULL));
+
+    fprintf(stderr, "Count\tCPU-ms\tGPU-ms\n");
 
     for (i = 0; i < num_batches; i++)
     {
@@ -61,14 +64,14 @@ int main (int argc, const char** argv)
         end = get_ms_time();
         tdiff = end - start;
 
-        fprintf(stderr, "%zu\t %.3lf %.3lf ", batch_size, tdiff, tdiff / batch_size);
+        fprintf(stderr, "%zu\t%.3lf\t", batch_size, tdiff);
 
         start = get_ms_time();
         stable_rnd_gpu(dist, gpu_rands, batch_size);
         end = get_ms_time();
         tdiff = end - start;
 
-        fprintf(stderr, "%.3lf %.3lf\n", tdiff, tdiff / batch_size);
+        fprintf(stderr, "%.3lf\n", tdiff);
     }
 
     for(i = 0; i < batch_size; i++)

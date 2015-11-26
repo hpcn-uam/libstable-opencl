@@ -29,8 +29,10 @@
 
 #define KERNIDX_INTEGRATE 0
 #define KERNIDX_QUANTILE 2
+#define KERNIDX_RNG 3
 #define KERN_POINTS_NAME "stable_points"
 #define KERN_QUANTILE_NAME "stable_quantile"
+#define KERN_RNG_NAME "stable_rng"
 
 #define MIN_POINTS_PER_QUEUE 200
 
@@ -45,7 +47,7 @@ static int _stable_can_overflow(struct stable_clinteg *cli)
 
 static int _stable_create_points_array(struct stable_clinteg *cli, cl_precision *points, size_t num_points)
 {
-    int err;
+    int err = 0;
 
     if (cli->points)
         clReleaseMemObject(cli->points);
@@ -54,12 +56,14 @@ static int _stable_create_points_array(struct stable_clinteg *cli, cl_precision 
     if (cli->kronrod)
         clReleaseMemObject(cli->kronrod);
 
-    cli->points = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+    if(!cli->mode_pointgenerator)
+        cli->points = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
                                  sizeof(cl_precision) * num_points, points, &err);
 
     if (err) return err;
 
-    cli->gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
+    if(!cli->mode_pointgenerator)
+        cli->gauss = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
                                 sizeof(cl_precision) * num_points, NULL, &err);
 
     if (err) return err;
@@ -74,7 +78,9 @@ static int _stable_map_gk_buffers(struct stable_clinteg *cli, size_t points)
 {
     int err = 0;
 
-    cli->h_gauss = clEnqueueMapBuffer(opencl_get_queue(&cli->env), cli->gauss, CL_FALSE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
+    if(!cli->mode_pointgenerator)
+        cli->h_gauss = clEnqueueMapBuffer(opencl_get_queue(&cli->env), cli->gauss, CL_FALSE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
+
     cli->h_kronrod = clEnqueueMapBuffer(opencl_get_queue(&cli->env), cli->kronrod, CL_TRUE, CL_MAP_READ, 0, points * sizeof(cl_precision), 0, NULL, NULL, &err);
 
     return err;
@@ -83,8 +89,10 @@ static int _stable_map_gk_buffers(struct stable_clinteg *cli, size_t points)
 static int  _stable_unmap_gk_buffers(struct stable_clinteg* cli)
 {
 #ifndef SIMULATOR_BUILD
-    int err;
-    err = clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
+    int err = 0;
+
+    if(!cli->mode_pointgenerator)
+        err = clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
 
     if (err) return err;
     cli->h_gauss = NULL;
@@ -94,6 +102,29 @@ static int  _stable_unmap_gk_buffers(struct stable_clinteg* cli)
     if (err) return err;
     cli->h_kronrod = NULL;
 #endif
+
+    return 0;
+}
+
+static int _stable_clinteg_load_kernels(struct openclenv* env)
+{
+    char* kern_names[] = { KERN_POINTS_NAME, KERN_QUANTILE_NAME, KERN_RNG_NAME };
+    size_t kern_indexes[] = { KERNIDX_INTEGRATE, KERNIDX_QUANTILE, KERNIDX_RNG };
+    size_t kern_count = sizeof(kern_indexes) / sizeof(size_t);
+    size_t i;
+
+    for (i = 0; i < kern_count; i++)
+    {
+        if (opencl_load_kernel(env, "opencl/stable.cl", kern_names[i], kern_indexes[i]))
+        {
+            stablecl_log(log_err, "OpenCL kernel %s load failure.", kern_names[i]);
+            return -1;
+        }
+        else
+        {
+            stablecl_log(log_message, "OpenCL kernel %s loaded with index %zu.", kern_names[i], kern_indexes[i]);
+        }
+    }
 
     return 0;
 }
@@ -124,15 +155,9 @@ int stable_clinteg_init(struct stable_clinteg *cli, size_t platform_index)
         return -1;
     }
 
-    if (opencl_load_kernel(&cli->env, "opencl/stable.cl", KERN_POINTS_NAME, KERNIDX_INTEGRATE))
+    if(_stable_clinteg_load_kernels(&cli->env))
     {
-        stablecl_log(log_message, "OpenCL kernel %s load failure.", KERN_POINTS_NAME);
-        return -1;
-    }
-
-    if (opencl_load_kernel(&cli->env, "opencl/stable.cl", KERN_QUANTILE_NAME, KERNIDX_QUANTILE))
-    {
-        stablecl_log(log_message, "OpenCL kernel %s load failure.", KERN_QUANTILE_NAME);
+        stablecl_log(log_err, "Cannot load kernels.");
         return -1;
     }
 
@@ -200,6 +225,14 @@ static void _stable_clinteg_prepare_kernel_data(struct stable_info* info, Stable
     info->final_cdf_addition = dist->c1;
     info->quantile_tolerance = 1e-4;
 
+    if(dist->cli.mode_pointgenerator)
+    {
+        info->rng_seed_a = gsl_rng_uniform(dist->gslrand) * UINT32_MAX;
+        info->rng_seed_b = gsl_rng_uniform(dist->gslrand) * UINT32_MAX;
+        info->mu_0 = dist->mu_1;
+        stablecl_log(log_message, "Random seeds: %u, %u\n", info->rng_seed_a, info->rng_seed_b);
+    }
+
     if(dist->cli.mode_bits == MODEMARKER_PDF)
     {
         info->max_reevaluations = dist->alfa > 1 ? 2 : 1;
@@ -241,15 +274,21 @@ cl_precision* _stable_check_precision_type(double* values, size_t num_points)
 short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t num_points, struct StableDistStruct *dist, cl_event* event)
 {
     cl_int err = 0;
-    size_t work_threads[2] = { KRONROD_EVAL_POINTS * num_points, MAX_WORKGROUPS };
-    size_t workgroup_size[2] = { KRONROD_EVAL_POINTS, MAX_WORKGROUPS };
+    size_t regular_work_threads[2] = { KRONROD_EVAL_POINTS * num_points, MAX_WORKGROUPS };
+    size_t regular_workgroup_size[2] = { KRONROD_EVAL_POINTS, MAX_WORKGROUPS };
+    size_t pointgen_work_threads = num_points;
+    size_t* work_threads, *workgroup_size, dimensions;
     cl_precision* points = NULL;
 
     _stable_clinteg_prepare_kernel_data(cli->h_args, dist);
-    points = _stable_check_precision_type(x, num_points);
 
-    if(!points)
-        goto cleanup;
+    if(!cli->mode_pointgenerator)
+    {
+        points = _stable_check_precision_type(x, num_points);
+
+        if(!points)
+            goto cleanup;
+    }
 
     err |= clEnqueueWriteBuffer(opencl_get_queue(&cli->env), cli->args, CL_FALSE, 0, sizeof(struct stable_info), cli->h_args, 0, NULL, NULL);
     err |= _stable_create_points_array(cli, points, num_points);
@@ -265,8 +304,13 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
     bench_begin(cli->profiling.argset, cli->profile_enabled);
     int argc = 0;
     err |= clSetKernelArg(opencl_get_current_kernel(&cli->env), argc++, sizeof(cl_mem), &cli->args);
-    err |= clSetKernelArg(opencl_get_current_kernel(&cli->env), argc++, sizeof(cl_mem), &cli->points);
-    err |= clSetKernelArg(opencl_get_current_kernel(&cli->env), argc++, sizeof(cl_mem), &cli->gauss);
+
+    if(!cli->mode_pointgenerator)
+    {
+        err |= clSetKernelArg(opencl_get_current_kernel(&cli->env), argc++, sizeof(cl_mem), &cli->points);
+        err |= clSetKernelArg(opencl_get_current_kernel(&cli->env), argc++, sizeof(cl_mem), &cli->gauss);
+    }
+
     err |= clSetKernelArg(opencl_get_current_kernel(&cli->env), argc++, sizeof(cl_mem), &cli->kronrod);
     bench_end(cli->profiling.argset, cli->profile_enabled);
 
@@ -276,12 +320,28 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
         goto cleanup;
     }
 
-    stablecl_log(log_message, "Enqueing kernel %d - %zu × %zu work threads, %zu × %zu workgroup size",
+    if(cli->mode_pointgenerator)
+    {
+        work_threads = &pointgen_work_threads;
+        workgroup_size = NULL; // Let the driver decide.
+        dimensions = 1;
+
+        stablecl_log(log_message, "Enqueing p.gen. kernel %d - %zu work threads", cli->kern_index, work_threads[0]);
+    }
+    else
+    {
+        work_threads = regular_work_threads;
+        workgroup_size = regular_workgroup_size;
+        dimensions = 2;
+
+        stablecl_log(log_message, "Enqueing kernel %d - %zu × %zu work threads, %zu × %zu workgroup size",
                  cli->kern_index, work_threads[0], work_threads[1], workgroup_size[0], workgroup_size[1], cli->points_rule);
+    }
+
 
     bench_begin(cli->profiling.enqueue, cli->profile_enabled);
     err = clEnqueueNDRangeKernel(opencl_get_queue(&cli->env), opencl_get_current_kernel(&cli->env),
-                                 2, NULL, work_threads, workgroup_size, 0, NULL, event);
+                                 dimensions, NULL, work_threads, workgroup_size, 0, NULL, event);
     bench_end(cli->profiling.enqueue, cli->profile_enabled);
 
     if (err)
@@ -348,7 +408,10 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *results_1, d
 
 #if STABLE_MIN_LOG <= 0
         char msg[500];
-        snprintf(msg, 500, "Results set P%zu: kronrod_sum = %.3g, gauss_sum = %.3g", i, cli->h_kronrod[i], cli->h_gauss[i]);
+        snprintf(msg, 500, "Results set P%zu: kronrod = %.3g", i, cli->h_kronrod[i]);
+
+        if(!cli->mode_pointgenerator)
+            snprintf(msg + strlen(msg), 500 - strlen(msg), ", gauss = %.3g", cli->h_gauss[i]);
 #endif
 
         if (errs)
@@ -415,7 +478,7 @@ short stable_clinteg_points_parallel(struct stable_clinteg *cli, double *x, doub
     }
 
     if (processed_points != num_points)
-        stablecl_log(log_err, "QQQQQ");
+        stablecl_log(log_err, "ERROR: Not enough processed points.");
 
     processed_points = 0;
 
@@ -445,7 +508,7 @@ cleanup:
 void stable_clinteg_teardown(struct stable_clinteg *cli)
 {
 #ifndef SIMULATOR_BUILD
-    if (cli->h_gauss)
+    if (!cli->mode_pointgenerator && cli->h_gauss)
         clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->gauss, cli->h_gauss, 0, NULL, NULL);
 
     if (cli->h_kronrod)
@@ -454,7 +517,7 @@ void stable_clinteg_teardown(struct stable_clinteg *cli)
     clEnqueueUnmapMemObject(opencl_get_queue(&cli->env), cli->args, cli->h_args, 0, NULL, NULL);
 #endif
 
-    clReleaseMemObject(cli->gauss);
+    if(!cli->mode_pointgenerator) clReleaseMemObject(cli->gauss);
     clReleaseMemObject(cli->kronrod);
     clReleaseMemObject(cli->args);
 
@@ -471,16 +534,36 @@ void stable_clinteg_printinfo()
 
 void stable_clinteg_set_mode(struct stable_clinteg* cli, clinteg_mode mode)
 {
-    if(mode == mode_pdf)
+    if (mode == mode_pdf)
         cli->mode_bits = MODEMARKER_PDF;
-    else if(mode == mode_cdf)
+    else if (mode == mode_cdf)
         cli->mode_bits = MODEMARKER_CDF;
-    else // pcdf or quantile
+    else if (mode == mode_pcdf || mode == mode_quantile) // pcdf or quantile
         cli->mode_bits = MODEMARKER_PCDF;
+    else
+        cli->mode_bits = MODEMARKER_RNG;
 
-    cli->kern_index = mode == mode_quantile ? KERNIDX_QUANTILE : KERNIDX_INTEGRATE;
-    cli->copy_gauss_array = mode == mode_pcdf;
-    cli->error_mode = mode == mode_quantile ? error_is_gauss_array : error_from_results;
+    if (mode == mode_quantile)
+    {
+        cli->kern_index = KERNIDX_QUANTILE;
+        cli->copy_gauss_array = 0;
+        cli->mode_pointgenerator = 0;
+        cli->error_mode = error_is_gauss_array;
+    }
+    else if (mode == mode_rng)
+    {
+        cli->kern_index = KERNIDX_RNG;
+        cli->copy_gauss_array = 0;
+        cli->mode_pointgenerator = 1;
+        cli->error_mode = error_none;
+    }
+    else // PDF, CDF or both
+    {
+        cli->kern_index = KERNIDX_INTEGRATE;
+        cli->copy_gauss_array = mode == mode_pcdf;
+        cli->error_mode = error_from_results;
+        cli->mode_pointgenerator = 0;
+    }
 }
 
 const char* stable_mode_str(clinteg_mode mode)
@@ -491,5 +574,6 @@ const char* stable_mode_str(clinteg_mode mode)
         case mode_pcdf: return "PDF & CDF";
         case mode_pdf: return "PDF";
         case mode_quantile: return "INV";
+        case mode_rng: return "RNG";
     }
 }

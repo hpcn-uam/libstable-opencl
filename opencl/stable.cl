@@ -673,3 +673,125 @@ kernel void stable_quantile(constant struct stable_info* stable, constant cl_pre
 		err[point_index] = error;
 	}
 }
+
+#define RNG_MAX UINT_MAX
+
+// Random functions copied and adapted from GSL.
+
+uint rng(uint* seed)
+{
+	uint val = seed[0];
+ 	val = ((seed[0] * 1103515245) + 12345) & 0x7fffffff;
+ 	seed[0] = val;
+ 	return val;
+}
+
+cl_precision rng_uniform(uint* seed)
+{
+	return ((cl_precision)rng(seed)) / (RNG_MAX + 1.);
+}
+
+cl_precision rng_uniform_positive(uint* seed)
+{
+	cl_precision rnd;
+
+	do
+	{
+		rnd = rng_uniform(seed);
+	} while (rnd == 0);
+
+	return rnd;
+}
+
+cl_precision rng_exponential(uint* seed, const cl_precision mu)
+{
+	cl_precision u = rng_uniform (seed);
+
+  	return -mu * log1p (-u);
+}
+
+cl_precision rng_stable(uint* seed, const cl_precision sigma, const cl_precision alpha)
+{
+	cl_precision u, v, t, s;
+
+	u = M_PI * (rng_uniform (seed) - 0.5);
+
+	if (alpha == 1)               /* cauchy case */
+	{
+		t = tan (u);
+		return sigma * t;
+	}
+
+	do
+	{
+		v = rng_exponential (seed, 1.0);
+	}
+	while (v == 0);
+
+	if (alpha == 2)             /* gaussian case */
+	{
+		t = 2 * sin (u) * sqrt(v);
+		return sigma * t;
+	}
+
+	/* general case */
+
+	t = sin (alpha * u) / pow (cos (u), 1 / alpha);
+	s = pow (cos ((1 - alpha) * u) / v, (1 - alpha) / alpha);
+
+	return sigma * t * s;
+}
+
+cl_precision rng_stable_skew(uint* seed, const cl_precision sigma, const cl_precision alpha, const cl_precision beta)
+{
+	cl_precision V, W, X;
+
+	if (beta == 0)
+		return rng_stable (seed, sigma, alpha);
+
+	V = M_PI * (rng_uniform_positive (seed) - 0.5);
+
+	do
+	{
+		W = rng_exponential (seed, 1.0);
+	}
+	while (W == 0);
+
+	if (alpha == 1)
+	{
+		X = ((M_PI_2 + beta * V) * tan (V) -
+		beta * log (M_PI_2 * W * cos (V) / (M_PI_2 + beta * V))) / M_PI_2;
+		return sigma * (X + beta * log (sigma) / M_PI_2);
+	}
+	else
+	{
+		cl_precision t = beta * tan (M_PI_2 * alpha);
+		cl_precision B = atan (t) / alpha;
+		cl_precision S = pow (1 + t * t, 1 / (2 * alpha));
+
+		X = S * sin (alpha * (V + B)) / pow (cos (V), 1 / alpha)
+			* pow (cos (V - alpha * (V + B)) / W, (1 - alpha) / alpha);
+		return sigma * X;
+	}
+}
+
+uint gen_random_seed(uint seed_base_a, uint seed_base_b)
+{
+	size_t idx = get_local_id(0);
+
+	seed_base_a += idx;
+	seed_base_b -= idx;
+
+	uint t = seed_base_a ^ (seed_base_a << 11);
+	uint result = seed_base_b ^ (seed_base_b >> 19) ^ (t ^ (t >> 8));
+
+	return result;
+}
+
+kernel void stable_rng(constant struct stable_info* stable, global cl_precision* results)
+{
+	size_t idx = get_local_id(0);
+	uint seed = gen_random_seed(stable->rng_seed_a, stable->rng_seed_b);
+
+	results[idx] = stable->mu_0 + rng_stable_skew(&seed, stable->sigma, stable->alfa, stable->beta);
+}
