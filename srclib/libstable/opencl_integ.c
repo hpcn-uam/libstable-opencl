@@ -36,8 +36,6 @@
 
 #define MIN_POINTS_PER_QUEUE 200
 
-static int _stable_set_results(struct stable_clinteg *cli);
-
 static int _stable_can_overflow(struct stable_clinteg *cli)
 {
     cl_uint work_threads = cli->points_rule * cli->subdivisions;
@@ -251,7 +249,7 @@ static void _stable_clinteg_prepare_kernel_data(struct stable_info* info, Stable
 
 cl_precision* _stable_check_precision_type(double* values, size_t num_points)
 {
-    cl_precision* points = values;
+    cl_precision* points = (cl_precision*) values;
 
 #ifdef CL_PRECISION_IS_FLOAT
     stablecl_log(log_message, "Using floats, forcing cast.");

@@ -1,5 +1,5 @@
 /* tests/stable_array
- * 
+ *
  * This program generates an array complete set of PDF or CDF evaluations
  * of standard alpha-stable distributions on a regular swipe of the
  * alpha-beta parameter space.
@@ -9,17 +9,17 @@
  *
  * Copyright (C) 2013. Javier Royuela del Val
  *                     Federico Simmross Wattenberg
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; If not, see <http://www.gnu.org/licenses/>.
  *
@@ -28,7 +28,7 @@
  *  E.T.S.I. Telecomunicación
  *  Universidad de Valladolid
  *  Paseo de Belén 15, 47002 Valladolid, Spain.
- *  jroyval@lpi.tel.uva.es    
+ *  jroyval@lpi.tel.uva.es
  */
 
 #include "stable_api.h"
@@ -60,8 +60,8 @@ int main (int argc, char *argv[])
   FILE * ferr;
   FILE * ftiempos;
   FILE * flog;
-  FILE * finteg;
-  
+  FILE * finteg = NULL;
+
   printf("\n");
   printf("  Obtención de un array de pdf's o cdf's con stable_dist.\n");
   printf("    1 for pdf calculations\n");
@@ -100,7 +100,7 @@ int main (int argc, char *argv[])
     printf(" % 10.5lf:% 10.5lf:% 10.5lf",x[0],xD,x[Nx-1]);
     printf("\n");
   #endif
-   
+
   if (n==1)
     {
       func = &stable_pdf;
@@ -135,7 +135,7 @@ int main (int argc, char *argv[])
       exit(2);
     }
 
-  // Creacion de una distribucion estable	
+  // Creacion de una distribucion estable
   if((dist = stable_create(alfa[0],beta[0],gamma,delta,P)) == NULL)
     {
       printf("Distribution creation error");
@@ -147,7 +147,7 @@ int main (int argc, char *argv[])
   stable_set_relTOL(tol);
   stable_set_absTOL(atol);
   printf("FUNCTION=%d ALFAPOINTS=%d BETAPOINTS=%d XPOINTS=%d\n",n,Na,Nb,Nx);
-  
+
   fprintf(f,"FUNCTION=%d ALFAPOINTS=%d BETAPOINTS=%d XPOINTS=%d\n",n,Na,Nb,Nx);
   fprintf(ferr,"FUNCTION=%d ALFAPOINTS=%d BETAPOINTS=%d XPOINTS=%d\n",n,Na,Nb,Nx);
   tpdf=0;
@@ -166,10 +166,10 @@ int main (int argc, char *argv[])
           fprintf(ftiempos,"%lf %lf %lf",alfa[j],beta[i],tpdf);
         }
 
-      // Dump data to text file 
-      fprintf(f,"\nAlfa = %lf\n________x\\beta________\t",alfa[j]);      
+      // Dump data to text file
+      fprintf(f,"\nAlfa = %lf\n________x\\beta________\t",alfa[j]);
       fprintf(ferr,"\nAlfa = %lf\n________x\\beta________\t",alfa[j]);
-      fprintf(f,"%lf\t",alfa[j]);      
+      fprintf(f,"%lf\t",alfa[j]);
       fprintf(ferr,"%lf\t",alfa[j]);
       for(i=0;i<Nb;i++)
         {
@@ -190,7 +190,7 @@ int main (int argc, char *argv[])
           fprintf(f,"\n");
           fprintf(ferr,"\n");
         }
-      
+
     }
   gettimeofday(&t_2,NULL);
   t=t_2.tv_sec-t_1.tv_sec+(t_2.tv_usec-t_1.tv_usec)/1000000.0;

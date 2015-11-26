@@ -35,9 +35,8 @@ int main (int argc, char *argv[])
 {
 	double alfa, beta, sigma, mu_0;
 	double *data;
-	int i = 1, iexp, N, Nexp;
+	int N, Nexp;
 	int seed;
-	double acc_pdev;
 	double total_duration, start, end;
 	double *pdf;
 	double ms_duration;
