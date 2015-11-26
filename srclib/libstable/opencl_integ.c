@@ -225,6 +225,14 @@ static void _stable_clinteg_prepare_kernel_data(struct stable_info* info, Stable
     info->final_cdf_addition = dist->c1;
     info->quantile_tolerance = 1e-4;
 
+    if(dist->cli.mode_pointgenerator)
+    {
+        info->rng_seed_a = gsl_rng_uniform(dist->gslrand) * UINT32_MAX;
+        info->rng_seed_b = gsl_rng_uniform(dist->gslrand) * UINT32_MAX;
+        info->mu_0 = dist->mu_1;
+        stablecl_log(log_message, "Random seeds: %u, %u\n", info->rng_seed_a, info->rng_seed_b);
+    }
+
     if(dist->cli.mode_bits == MODEMARKER_PDF)
     {
         info->max_reevaluations = dist->alfa > 1 ? 2 : 1;

@@ -86,6 +86,9 @@
 #define cl_precision_type "double"
 #endif
 
+#ifndef __OPENCL_VERSION__
+typedef uint32_t uint;
+#endif
 
 struct stable_info {
     cl_precision k1;
@@ -108,6 +111,8 @@ struct stable_info {
     cl_precision final_cdf_addition;
     cl_precision quantile_tolerance;
     size_t max_reevaluations;
+    uint rng_seed_a;
+    uint rng_seed_b;
 };
 
 #endif
