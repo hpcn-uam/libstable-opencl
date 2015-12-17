@@ -1,22 +1,22 @@
 /* tests/stable_test
- * 
+ *
  * This program calculates the PDF and CDF of an alpha-stable distribution
  * whith given parameters. It also generates a random sample of desired
  * size.
  *
  * Copyright (C) 2013. Javier Royuela del Val
  *                     Federico Simmross Wattenberg
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or (at
  * your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; If not, see <http://www.gnu.org/licenses/>.
  *
@@ -25,10 +25,10 @@
  *  E.T.S.I. Telecomunicación
  *  Universidad de Valladolid
  *  Paseo de Belén 15, 47002 Valladolid, Spain.
- *  jroyval@lpi.tel.uva.es    
+ *  jroyval@lpi.tel.uva.es
  */
 #include "stable_api.h"
-
+#include "stable_integration.h"
 #include "methods.h"
 
 #include <stdio.h>
@@ -71,7 +71,7 @@ int main (int argc, char *argv[])
     return 0;
   }
 
-  if (argc>1) { alfa = strtod(argv[i],&aux); argc--; i++;}   else alfa=1.5;  
+  if (argc>1) { alfa = strtod(argv[i],&aux); argc--; i++;}   else alfa=1.5;
   if (argc>1) {  beta = strtod(argv[i],&aux); argc--; i++; } else beta=0.0;
   if (argc>1) { sigma = strtod(argv[i],&aux); argc--; i++; } else sigma=1.0;
   if (argc>1) {    mu = strtod(argv[i],&aux); argc--; i++; } else mu=0.0;
@@ -89,7 +89,7 @@ int main (int argc, char *argv[])
     else method2=STABLE_QAG2;
   if (argc>1) {     F = (int)strtod(argv[i],&aux); argc--; i++; } else F=15;
   if (argc>1) {     C = (int)strtod(argv[i],&aux); argc--; i++; } else C=70;
-  
+
   stable_set_FINTEG("data_integrando.txt");
   stable_set_FLOG("errlog.txt");
 
@@ -163,7 +163,7 @@ int main (int argc, char *argv[])
   // Y la cdf inversa
   // Prueba la aproximacion inicial poniendo inv_maxiter=0
   stable_set_INV_MAXITER(0);
-  
+
   //Primero la mediana
   double x50 = stable_inv_point(dist,0.5,NULL);
   printf("Mediana: x50 = %e\n",x50);
@@ -173,7 +173,7 @@ int main (int argc, char *argv[])
   double * q=(double*)malloc(nq*sizeof(double));
   int kq=0;
   for (kq=0;kq<nq;kq++) {
-     q[kq] = (kq+1.0)/(nq+1.0);  
+     q[kq] = (kq+1.0)/(nq+1.0);
   }
   double * inv = (double*)malloc(sizeof(double)*nq);
   gettimeofday(&t_1,NULL);
@@ -186,18 +186,18 @@ int main (int argc, char *argv[])
   for (i=0;i<nq;i++) {
     fprintf( f4,"%1.16lf\t%1.16e\t0.0e+00\n",q[i],inv[i]);
   }
-  
+
   //Ajuste de las muestras aleatorias creadas
   //Ojo que se alteran los parametros de la StableDist * dist
-  
+
   stable_fit_whole(dist,y,NR);
   printf ("Parametros estimados: %f %f %f %f\n",dist->alfa,dist->beta,dist->sigma,dist->mu_0);
-   
+
   fclose(f);
   fclose(f2);
   fclose(f3);
   fclose(f4);
-  
+
   i=print_arch(name,2,F,C);
   i=print_arch(name2,2,F,C);
   i=print_arch(name3,2,F,C);
@@ -209,6 +209,6 @@ int main (int argc, char *argv[])
   free(y);
   free(inv);
   free(q);
-  
+
   return 0;
 }

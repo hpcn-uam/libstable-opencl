@@ -43,10 +43,19 @@
 #define GK_SUBDIVISIONS (POINTS_EVAL * MAX_WORKGROUPS)
 #define KRONROD_EVAL_POINTS (GK_POINTS / 2 + 1)
 
+// Macros for the mode markers (bitwise fields)
+#define MODEMARKER_PDF 2
+#define MODEMARKER_CDF 4
+#define MODEMARKER_PCDF (2 | 4)
+#define MODEMARKER_EQ1 1
+#define MODEMARKER_NEQ1 0
+#define MODEMARKER_RNG 8
+
 // Just byte markers: XYZ where
 //      Z == 1 if is an evaluation on α = 1 (0 if α ≠ 1),
 //      Y == 1 if PDF evaluation
 //      X == 1 if CDF evaluation
+//  These are just combinations of the modemarkers above.
 #define PDF_ALPHA_NEQ1 2
 #define PDF_ALPHA_EQ1 3
 #define CDF_ALPHA_NEQ1 4
@@ -55,12 +64,6 @@
 #define PCDF_ALPHA_EQ1  7
 #define GPU_TEST_INTEGRAND 100
 #define GPU_TEST_INTEGRAND_SIMPLE 101
-
-#define MODEMARKER_PDF 2
-#define MODEMARKER_CDF 4
-#define MODEMARKER_PCDF (2 | 4)
-#define MODEMARKER_EQ1 1
-#define MODEMARKER_NEQ1 0
 
 #define is_integrand_pdf(integrand) (integrand & MODEMARKER_PDF)
 #define is_integrand_cdf(integrand) (integrand & MODEMARKER_CDF)
@@ -83,6 +86,9 @@
 #define cl_precision_type "double"
 #endif
 
+#ifndef __OPENCL_VERSION__
+typedef uint32_t uint;
+#endif
 
 struct stable_info {
     cl_precision k1;
@@ -105,6 +111,8 @@ struct stable_info {
     cl_precision final_cdf_addition;
     cl_precision quantile_tolerance;
     size_t max_reevaluations;
+    uint rng_seed_a;
+    uint rng_seed_b;
 };
 
 #endif

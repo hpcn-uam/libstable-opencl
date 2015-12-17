@@ -88,7 +88,6 @@ short test_kernel(const char* file, const char* kernel_name)
 {
 	struct openclenv ocl;
 	struct opencl_profile profiling;
-	size_t global_size;
 	char profile_fname[100];
 	FILE* profile_f;
 	size_t workgroup_sizes[] = { 64, 128, 256, 512, 1024 };

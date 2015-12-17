@@ -140,14 +140,6 @@ void fdf_wrap(double x, void * params, double * f, double * df) {
   return;
 }
 
-static int _dbl_compare (const void * a, const void * b)
-{
-    double da = *(const double *)a;
-    double db = *(const double *)b;
-
-    return (db < da) - (da < db);
-}
-
 static short _is_guess_valid(double val)
 {
     return fabs(val) < 1e-6;

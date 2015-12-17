@@ -4,7 +4,7 @@ Libstable-opencl is a fork of the _libstable_ library to offload computations to
 
 Original _libstable_ library by Javier Royuela del Val and Federico Simmross Wattenberg, available in http://www.lpi.tel.uva.es/stable.
 
-Version: 1.0.1
+Version: 1.0.2
 
 ## Library usage
 

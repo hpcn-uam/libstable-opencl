@@ -27,6 +27,7 @@
  *  jroyval@lpi.tel.uva.es
  */
 #include "stable_api.h"
+#include "opencl_integ.h"
 #include <gsl/gsl_randist.h>
 
 void
@@ -61,19 +62,9 @@ stable_rnd(StableDist *dist, double *rnd, const unsigned int n)
 
 short stable_rnd_gpu(StableDist *dist, double *rnd, const unsigned int n)
 {
-	int i;
-	short retval = -1;
-	double* uniform = calloc(n, sizeof(double));
+	stable_clinteg_set_mode(&dist->cli, mode_rng);
 
-	if(!uniform)
-		return -1;
-
-	for (i = 0; i < n; i++)
-		uniform[i] = gsl_rng_uniform(dist->gslrand);
-
-	retval = stable_inv_gpu(dist, uniform, n, rnd, NULL);
-
-	free(uniform);
-
-	return retval;
+    return stable_clinteg_points(&dist->cli, NULL, rnd, NULL, NULL, n, dist);
 }
+
+
