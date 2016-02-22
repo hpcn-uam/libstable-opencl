@@ -126,7 +126,7 @@ static void gridfit_init(struct stable_gridfit* gridfit, StableDist *dist, const
 	gridfit->likelihoods = calloc(gridfit->fitter_dist_count, sizeof(double));
 
 	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
-		gridfit->fitter_dists[i] = stable_create(1, 0.5, 1, 1, 0);
+		gridfit->fitter_dists[i] = stable_create(dist->alfa, dist->beta, dist->sigma, dist->mu_0, 0);
 
 	if(ESTIMATING_PARAMS < 4)
 		prepare_mcculloch_statistics(gridfit);
@@ -227,6 +227,9 @@ static void gridfit_iterate_parallel(struct stable_gridfit* gridfit)
 			fitter_enabled[i] = 0;
 		}
 	}
+
+	gridfit->max_fitter = 0;
+	gridfit->min_fitter = 0;
 
 	for(size_t i = 0; i < gridfit->fitter_dist_count; i++)
 	{
