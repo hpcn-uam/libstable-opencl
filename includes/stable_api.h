@@ -83,33 +83,33 @@ extern unsigned int integ_eval; // # of integrand evaluations
 /******************************************************************************/
 // Particular cases
 enum {
-	NOVALID = -1,
-	STABLE,
-	ALFA_1,
-	GAUSS ,
-	CAUCHY,
-	LEVY,
-	STABLE_B1,
-	ALFA_1_B1
+  NOVALID = -1,
+  STABLE,
+  ALFA_1,
+  GAUSS ,
+  CAUCHY,
+  LEVY,
+  STABLE_B1,
+  ALFA_1_B1
 };
 
 // Function to evaluate
 enum {
-	CDF,
-	PDF
+  CDF,
+  PDF
 };
 
 // Quadrature methods
 enum {
-	STABLE_QAG2 = 0,
-	STABLE_QUADSTEP,
-	STABLE_QROMBPOL,
-	STABLE_QROMBRAT,
-	STABLE_QNG,
-	STABLE_QAG1,
-	STABLE_QAG5,
-	STABLE_VECT,
-	STABLE_OCL
+  STABLE_QAG2 = 0,
+  STABLE_QUADSTEP,
+  STABLE_QROMBPOL,
+  STABLE_QROMBRAT,
+  STABLE_QNG,
+  STABLE_QAG1,
+  STABLE_QAG5,
+  STABLE_VECT,
+  STABLE_OCL
 };
 
 
@@ -126,56 +126,64 @@ enum {
 /*    Stable distribution structure.                                          */
 /******************************************************************************/
 struct StableDistStruct {
-	/* Parameters:
-	0-parametrization describen in Nolan, 1997 is employed by default
-	    alfa : stability index
-	    beta : skewness parameter
-	    scale: scale parameter
-	    mu_0 : 0-parametrization location parameter
-	    mu_1 : correspondig 1-parametrization location parameter    */
-	double alfa;
-	double beta;
-	double sigma;
-	double mu_0;
-	double mu_1;
+  /* Parameters:
+  0-parametrization describen in Nolan, 1997 is employed by default
+      alfa : stability index
+      beta : skewness parameter
+      scale: scale parameter
+      mu_0 : 0-parametrization location parameter
+      mu_1 : correspondig 1-parametrization location parameter    */
+  double alfa;
+  double beta;
+  double sigma;
+  double mu_0;
+  double mu_1;
 
+  short is_mixture;
+  struct StableDistStruct* mixture_components;
+  double* mixture_weights;
+  size_t num_mixture_components;
 
-	/* Particular cases indicator (Gauss, Cauchy, Levy distribution, alfa==1, etc.) */
-	int ZONE;
+  /* Particular cases indicator (Gauss, Cauchy, Levy distribution, alfa==1, etc.) */
+  int ZONE;
 
-	/* Pointers to pdf and cdf evaluation functions */
-	double(*stable_pdf_point)(struct StableDistStruct *, const double, double *);
-	double(*stable_cdf_point)(struct StableDistStruct *, const double, double *);
+  /* Pointers to pdf and cdf evaluation functions */
+  double(*stable_pdf_point)(struct StableDistStruct *, const double, double *);
+  double(*stable_cdf_point)(struct StableDistStruct *, const double, double *);
 
-	/* Precalculated values. */
-	double alfainvalfa1;  /* alfa/(alfa-1)*/
-	double xi;            /* -beta*tan(alfa*pi/2)*/
-	double theta0;        /* 1/alfa*atan(beta*(tan(alfa*pi/2))=atan(-xi)/alfa;*/
-	double c1, c2_part, c3;  /* additive and multiplicative constants*/
-	double k1;     /* cos(alfa*theta0)^(1/(alfa-1)) = (1+xi^2)^(-0.5/(alfa-1));*/
-	double S;     /* (1+xi^2)^(1/(2*alfa));*/
-	double Vbeta1; /*pow(1/dist->alfa,dist->alfainvalfa1) *
+  /* Precalculated values. */
+  double alfainvalfa1;  /* alfa/(alfa-1)*/
+  double xi;            /* -beta*tan(alfa*pi/2)*/
+  double theta0;        /* 1/alfa*atan(beta*(tan(alfa*pi/2))=atan(-xi)/alfa;*/
+  double c1, c2_part, c3;  /* additive and multiplicative constants*/
+  double k1;     /* cos(alfa*theta0)^(1/(alfa-1)) = (1+xi^2)^(-0.5/(alfa-1));*/
+  double S;     /* (1+xi^2)^(1/(2*alfa));*/
+  double Vbeta1; /*pow(1/dist->alfa,dist->alfainvalfa1) *
                      (dist->alfa-1)*pow(-cos(dist->alfa*PI_2),1/(dist->alfa-1))*/
 
-	/* These ones change from point to point of evaluation */
-	double theta0_; /* theta0_ = +-theta0 */
-	double beta_;
-	double xxipow;  /* (x-xi)^(alfa/(alfa-1))*/
+  /* These ones change from point to point of evaluation */
+  double theta0_; /* theta0_ = +-theta0 */
+  double beta_;
+  double xxipow;  /* (x-xi)^(alfa/(alfa-1))*/
 
-	/* gsl integration workspace */
-	gsl_integration_workspace * gslworkspace;
+  /* gsl integration workspace */
+  gsl_integration_workspace * gslworkspace;
 
-	/* gsl random numbers generator */
-	gsl_rng * gslrand;
+  /* gsl random numbers generator */
+  gsl_rng * gslrand;
 
-	struct stable_clinteg cli;
-	short gpu_enabled;
-	short parallel_gridfit;
-	size_t gpu_platform;
-	size_t gpu_queues;
+  struct stable_clinteg cli;
+  short gpu_enabled;
+  short parallel_gridfit;
+  size_t gpu_platform;
+  size_t gpu_queues;
 };
 
 typedef struct StableDistStruct StableDist;
+
+/** Function pointer for array evaluator (e.g., stable_pdf, stable_cdf) */
+typedef void(*array_evaluator)(StableDist *, const double*, const int, double*, double*);
+
 /******************************************************************************/
 /*        Auxiliary functions                                                 */
 /******************************************************************************/
@@ -223,7 +231,7 @@ FILE * stable_set_FLOG(char * filename);
 
 
 StableDist *stable_create(double alfa, double beta, double sigma, double mu,
-						  int parametrization);
+                          int parametrization);
 
 short stable_activate_gpu(StableDist* dist);
 void stable_deactivate_gpu(StableDist* dist);
@@ -233,14 +241,14 @@ StableDist *stable_copy(StableDist *src_dist);
 void stable_free(StableDist *dist);
 
 int stable_setparams(StableDist *dist,
-					 double alfa, double beta, double sigma, double mu,
-					 int parametrization);
+                     double alfa, double beta, double sigma, double mu,
+                     int parametrization);
 
 int stable_checkparams(double alfa, double beta, double sigma, double mu,
-					   int parametrization);
+                       int parametrization);
 
 void error_handler(const char * reason, const char * file,
-				   int line, int gsl_errno);
+                   int line, int gsl_errno);
 
 /******************************************************************************/
 /*   PDF in particular cases                                                  */
@@ -263,14 +271,14 @@ double stable_pdf_point_ALFA_1(StableDist *dist, const double x, double *err);
 double stable_pdf_point(StableDist *dist, const double x, double *err);
 
 void stable_pdf(StableDist *dist, const double x[], const int Nx,
-				double *pdf, double *err);
+                double *pdf, double *err);
 
 void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
-					double *pdf, double *err);
+                    double *pdf, double *err);
 
 
 void stable_pcdf_gpu(StableDist *dist, const double x[], const int Nx,
-					 double *pcdf, double *cdf);
+                     double *pcdf, double *cdf);
 
 /******************************************************************************/
 /*   PDF integrand functions                                                  */
@@ -301,10 +309,10 @@ double stable_cdf_point_ALFA_1(StableDist *dist, const double x, double *err);
 double stable_cdf_point(StableDist *dist, const double x, double *err);
 
 void stable_cdf(StableDist *dist, const double x[], const int Nx,
-				double *cdf, double *err);
+                double *cdf, double *err);
 
 void stable_cdf_gpu(StableDist *dist, const double x[], const int Nx,
-					double *cdf, double *err);
+                    double *cdf, double *err);
 
 /******************************************************************************/
 /*   CDF integrad functions                                                   */
@@ -318,10 +326,10 @@ double stable_cdf_g(double theta, void *dist);
 
 double stable_inv_point(StableDist * dist, const double q, double * err);
 void   stable_inv(StableDist *dist, const double q[], const int Nq,
-				  double * inv, double * err);
+                  double * inv, double * err);
 double stable_inv_point_gpu(StableDist* dist, const double q, double *err);
 short stable_inv_gpu(StableDist *dist, const double q[], const int Nq,
-					 double *inv, double *err);
+                     double *inv, double *err);
 
 /************************************************************************
  ************************************************************************
@@ -343,63 +351,63 @@ short stable_inv_gpu(StableDist *dist, const double q[], const int Nq,
 /* Stable distribution structure for vectorial methods*/
 
 typedef struct {
-	/* Parameters:
-	    0-parametrization describen in Nolan, 1997 is employed by default
-	        alfa : stability index
-	        beta : skewness parameter
-	        scale: scale parameter
-	        mu_0 : 0-parametrization location parameter
-	        mu_1 : correspondig 1-parametrization location parameter    */
-	double alfa;
-	double beta;
-	double sigma;
-	double mu_0;
-	double mu_1;
+  /* Parameters:
+      0-parametrization describen in Nolan, 1997 is employed by default
+          alfa : stability index
+          beta : skewness parameter
+          scale: scale parameter
+          mu_0 : 0-parametrization location parameter
+          mu_1 : correspondig 1-parametrization location parameter    */
+  double alfa;
+  double beta;
+  double sigma;
+  double mu_0;
+  double mu_1;
 
-	/* Particular cases indicator (Gauss, Cauchy, Levy distribution, alfa==1, etc.) */
-	int ZONE;
+  /* Particular cases indicator (Gauss, Cauchy, Levy distribution, alfa==1, etc.) */
+  int ZONE;
 
-	/* Pointers to pdf and cdf integrand functions */
-	double *(*stable_v_pdf_g)(double, void*, double*, size_t, unsigned int, unsigned int*);
-	double *(*stable_v_cdf_g)(double, void*, double*, size_t, unsigned int, unsigned int*);
+  /* Pointers to pdf and cdf integrand functions */
+  double *(*stable_v_pdf_g)(double, void*, double*, size_t, unsigned int, unsigned int*);
+  double *(*stable_v_cdf_g)(double, void*, double*, size_t, unsigned int, unsigned int*);
 
-	/* Precalculated values */
-	double alfainvalfa1;     /* alfa/(alfa-1)*/
-	double xi;               /* -beta*tan(alfa*pi/2)*/
-	double theta0;           /* 1/alfa*atan(beta*(tan(alfa*pi/2))=atan(-xi)/alfa;*/
-	double c1, c2_part, c3;  /* additive and multiplicative constants*/
-	double k1;               /* cos(alfa*theta0)^(1/(alfa-1)) = (1+xi^2)^(-0.5/(alfa-1));*/
-	double S;                /* (1+xi^2)^(1/(2*alfa));*/
-	double Vbeta1;           /*pow(1/dist->alfa,dist->alfainvalfa1) *
+  /* Precalculated values */
+  double alfainvalfa1;     /* alfa/(alfa-1)*/
+  double xi;               /* -beta*tan(alfa*pi/2)*/
+  double theta0;           /* 1/alfa*atan(beta*(tan(alfa*pi/2))=atan(-xi)/alfa;*/
+  double c1, c2_part, c3;  /* additive and multiplicative constants*/
+  double k1;               /* cos(alfa*theta0)^(1/(alfa-1)) = (1+xi^2)^(-0.5/(alfa-1));*/
+  double S;                /* (1+xi^2)^(1/(2*alfa));*/
+  double Vbeta1;           /*pow(1/dist->alfa,dist->alfainvalfa1) *
                                    (dist->alfa-1)*pow(-cos(dist->alfa*PI_2),1/(dist->alfa-1))*/
 
-	/* These ones change from point to point of evaluation */
-	double theta0_; /* theta0_ = +-theta0 */
-	double beta_;
-	double *xxipow;  /* (x-xi)^(alfa/(alfa-1))*/
+  /* These ones change from point to point of evaluation */
+  double theta0_; /* theta0_ = +-theta0 */
+  double beta_;
+  double *xxipow;  /* (x-xi)^(alfa/(alfa-1))*/
 
-	gsl_integration_workspace * gslworkspace;
-	gsl_rng * gslrand;
+  gsl_integration_workspace * gslworkspace;
+  gsl_rng * gslrand;
 }
 StableDistV;
 
 typedef struct {
-	double (*ptr_funcion)(StableDist *dist, const double x, double *err);
-	StableDist *dist;
-	const double *x;
-	int Nx;
-	double *pdf;
-	double *err;
+  double (*ptr_funcion)(StableDist *dist, const double x, double *err);
+  StableDist *dist;
+  const double *x;
+  int Nx;
+  double *pdf;
+  double *err;
 }
 StableArgsPdf;
 
 typedef struct {
-	double (*ptr_funcion)(StableDist *dist, const double x, double *err);
-	StableDist *dist;
-	const double *x;
-	int Nx;
-	double *cdf;
-	double *err;
+  double (*ptr_funcion)(StableDist *dist, const double x, double *err);
+  StableDist *dist;
+  const double *x;
+  int Nx;
+  double *cdf;
+  double *err;
 }
 StableArgsCdf;
 
@@ -444,18 +452,18 @@ FILE * stable_v_get_FLOG();
 FILE * stable_v_set_FLOG(char * filename);
 
 StableDistV *stable_v_create(double alfa, double beta, double sigma, double mu,
-							 int parametrization);
+                             int parametrization);
 
 StableDistV *stable_v_copy(StableDistV *src_dist);
 
 void stable_v_free(StableDistV *dist);
 
 int stable_v_setparams(StableDistV *dist,
-					   double alfa, double beta, double sigma, double mu,
-					   int parametrization);
+                       double alfa, double beta, double sigma, double mu,
+                       int parametrization);
 
 int stable_v_checkparams(double alfa, double beta, double sigma, double mu,
-						 int parametrization);
+                         int parametrization);
 
 double stable_v_pdf_point(StableDistV *dist, const double x, double *err);
 
@@ -464,17 +472,17 @@ double stable_v_cdf_point(StableDistV *dist, const double x, double *err);
 double stable_v_rnd_value(StableDistV *dist);
 
 void stable_v_pdf(StableDistV *dist, const double x[], const unsigned int Nx,
-				  double *pdf, double *err);
+                  double *pdf, double *err);
 
 void stable_v_cdf(StableDistV *dist, const double x[], const unsigned int Nx,
-				  double *cdf, double *err);
+                  double *cdf, double *err);
 
 double *stable_v_rnd(StableDistV *dist, const unsigned int n);
 
 void stable_v_integration(StableDistV *dist, double(func)(double, void*),
-						  double a, double b, double epsabs, double epsrel,
-						  unsigned short limit,
-						  double *result, double *abserr, unsigned short method);
+                          double a, double b, double epsabs, double epsrel,
+                          unsigned short limit,
+                          double *result, double *abserr, unsigned short method);
 //void stable_v_error_handler(int errnum);
 
 
@@ -489,20 +497,20 @@ void stable_v_integration(StableDistV *dist, double(func)(double, void*),
 /*        Parameter estimation structure                                      */
 /******************************************************************************/
 typedef struct {
-	StableDist *dist;
-	double *data;
-	double *pdf;
-	double *err;
-	unsigned int length;
-	double nu_c;
-	double nu_z;
+  StableDist *dist;
+  double *data;
+  double *pdf;
+  double *err;
+  unsigned int length;
+  double nu_c;
+  double nu_z;
 }
 stable_like_params;
 
 /* Estimation functions */
 
 short stable_fit_init(StableDist *dist, const double *data,
-					  const unsigned int length,  double *nu_c, double *nu_z);
+                      const unsigned int length,  double *nu_c, double *nu_z);
 
 int stable_fit_koutrouvelis(StableDist *dist, const double *data, const unsigned int length);
 
@@ -514,13 +522,15 @@ int stable_fit_mle2d(StableDist *dist, const double *data, const unsigned int le
 
 int stable_fit_whole(StableDist *dist, const double *data, const unsigned int length);
 
+int stable_fit_mixture(StableDist *dgpuist, const double* data, const unsigned int length);
+
 /* Auxiliary functions */
 
 gsl_complex stable_samplecharfunc_point(const double x[],
-										const unsigned int N, double t);
+                                        const unsigned int N, double t);
 
 void stable_samplecharfunc(const double x[], const unsigned int Nx,
-						   const double t[], const unsigned int Nt, gsl_complex * z);
+                           const double t[], const unsigned int Nt, gsl_complex * z);
 
 void stable_fft(double *data, const unsigned int length, double * y);
 
@@ -531,7 +541,7 @@ double stable_loglikelihood(StableDist *dist, double *data, const unsigned int l
 int stable_fit_iter_whole(StableDist *dist, const double * data, const unsigned int length);
 
 int stable_fit_iter(StableDist *dist, const double * data,
-					const unsigned int length, const double nu_c, const double nu_z);
+                    const unsigned int length, const double nu_c, const double nu_z);
 
 double stable_loglike_p(stable_like_params *params);
 
@@ -548,4 +558,27 @@ short stable_rnd_gpu(StableDist *dist, double*rnd, const unsigned int n);
 double stable_rnd_point(StableDist *dist);
 
 void stable_rnd_seed(StableDist * dist, unsigned long int s);
+
+/************************************************************************
+ ************************************************************************
+ * Mixtures
+ ************************************************************************
+ ************************************************************************/
+
+/**
+ * @internal
+ * A base function for evaluating mixtures.
+ *
+ * @param dist    Base distribution.
+ * @param x       Array with the points to be evaluated.
+ * @param Nx      Number of points in the array.
+ * @param result1 Result 1.
+ * @param result2 Result 2.
+ * @param eval    Evaluation function (e.g, stable_pdf, stable_cdf...)
+ */
+void _stable_evaluate_mixture(StableDist *dist, const double x[], const int Nx,
+                              double *result1, double *result2,
+                              array_evaluator eval);
+
+
 #endif //STABLE_API_H

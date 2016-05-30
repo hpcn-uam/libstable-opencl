@@ -93,7 +93,7 @@ double stable_pdf_g2(double theta, void *args)
 	cos_theta = cos(theta);
 	aux = (dist->theta0_ + theta) * dist->alfa;
 	V = log(cos_theta / sin(aux)) * dist->alfainvalfa1 +
-		+ log(cos(aux - theta) / cos_theta) + dist->k1;
+	    + log(cos(aux - theta) / cos_theta) + dist->k1;
 	//  }
 
 #ifdef DEBUG
@@ -165,7 +165,7 @@ double stable_g_aux2(double theta, void *args)
 	cos_theta = cos(theta);
 	aux = (dist->theta0_ + theta) * dist->alfa;
 	V = log(cos_theta / sin(aux)) * dist->alfainvalfa1 +
-		+ log(cos(aux - theta) / cos_theta) + dist->k1;
+	    + log(cos(aux - theta) / cos_theta) + dist->k1;
 
 	g = V + dist->xxipow;
 
@@ -195,7 +195,7 @@ void *thread_init_pdf(void *ptr_args)
 
 	while (counter_ < args->Nx) {
 		args->pdf[counter_] = (*(args->ptr_funcion))(args->dist, args->x[counter_],
-							  &(args->err[counter_]));
+		                      &(args->err[counter_]));
 		counter_++;
 	}
 
@@ -203,14 +203,19 @@ void *thread_init_pdf(void *ptr_args)
 }
 
 void stable_pdf(StableDist *dist, const double x[], const int Nx,
-				double *pdf, double *err)
+                double *pdf, double *err)
 {
 	int Nx_thread[THREADS],
-		initpoint[THREADS],
-		k, flag = 0;
+	    initpoint[THREADS],
+	    k, flag = 0;
 	void *status;
 	pthread_t threads[THREADS];
 	StableArgsPdf args[THREADS];
+
+	if (dist->is_mixture) {
+		_stable_evaluate_mixture(dist, x, Nx, pdf, err, stable_pdf);
+		return;
+	}
 
 	/* Si no se introduce el puntero para el error, se crea*/
 	if (err == NULL) {
@@ -271,14 +276,14 @@ void stable_pdf(StableDist *dist, const double x[], const int Nx,
 
 double
 stable_integration_pdf_low(StableDist *dist, double(*integrando)(double, void *),
-						   double(*integ_aux)(double, void *), double *err)
+                           double(*integ_aux)(double, void *), double *err)
 /*esta es estrategia de baja precision: 2 intervalos de integracion:simetrico en
 torno al maximo y el resto*/
 {
 	int warnz[5], k;
 	double pdf = 0,
-		   pdf_aux = 0, pdf1 = 0, /*pdf2=0.0,pdf3=0.0,*/
-		   err_aux = 0;
+	       pdf_aux = 0, pdf1 = 0, /*pdf2=0.0,pdf3=0.0,*/
+	       err_aux = 0;
 	double theta[5];
 	//int method_;
 
@@ -290,48 +295,48 @@ torno al maximo y el resto*/
 	warnz[0] = 0;
 	theta[4] = M_PI_2 - THETA_TH;
 	theta[2] = zbrent(integ_aux, (void *)dist, theta[0], theta[4],
-					  0.0, 1e-6 * (theta[4] - theta[0]), &k);
+	                  0.0, 1e-6 * (theta[4] - theta[0]), &k);
 
 	switch (k) {
-		case 0:   //Max en el interior del intervalo de integracion.
+	case 0:   //Max en el interior del intervalo de integracion.
 
-			// Crea intervalo simetrico entorno al maximo con el punto encontrado
-			// mas proximo a el y los otros intervalos:
-			if (theta[2] - theta[0] < theta[4] - theta[2])
-				theta[2] = theta[2] * 2.0 - theta[0];
-			else {
-				pdf_aux = theta[0];
-				theta[0] = theta[4];
-				theta[4] = pdf_aux;
-				theta[2] = theta[2] * 2.0 - theta[0];
-			}
+		// Crea intervalo simetrico entorno al maximo con el punto encontrado
+		// mas proximo a el y los otros intervalos:
+		if (theta[2] - theta[0] < theta[4] - theta[2])
+			theta[2] = theta[2] * 2.0 - theta[0];
+		else {
+			pdf_aux = theta[0];
+			theta[0] = theta[4];
+			theta[4] = pdf_aux;
+			theta[2] = theta[2] * 2.0 - theta[0];
+		}
 
-			break;
+		break;
 
-		case -2: //Max en el borde izquierdo del intervalo
-			// puede pasar si beta=+-1 y alfa<1        //  .
-			pdf1 = (integrando)(theta[0], (void *)dist);
+	case -2: //Max en el borde izquierdo del intervalo
+		// puede pasar si beta=+-1 y alfa<1        //  .
+		pdf1 = (integrando)(theta[0], (void *)dist);
 
-			theta[2] = zbrent(integrando, (void *)dist, theta[0], theta[4],
-							  pdf1 * 1e-6, 1e-6 * (theta[4] - theta[0]), &warnz[2]);
-			break;
+		theta[2] = zbrent(integrando, (void *)dist, theta[0], theta[4],
+		                  pdf1 * 1e-6, 1e-6 * (theta[4] - theta[0]), &warnz[2]);
+		break;
 
-		case  -1: //Max en el borde derecho del intervalo
-			// puede pasar si beta=+-1 y alfa<1
-			theta[1] = theta[4];
-			theta[4] = theta[0];
-			theta[0] = theta[1];
+	case  -1: //Max en el borde derecho del intervalo
+		// puede pasar si beta=+-1 y alfa<1
+		theta[1] = theta[4];
+		theta[4] = theta[0];
+		theta[0] = theta[1];
 
-			pdf1 = (integrando)(theta[0], (void *)dist);
+		pdf1 = (integrando)(theta[0], (void *)dist);
 
-			theta[2] = zbrent(integrando, (void *)dist, theta[4], theta[0],
-							  pdf1 * 1e-6, 1e-6 * (theta[0] - theta[4]), &warnz[2]);
-			break;
+		theta[2] = zbrent(integrando, (void *)dist, theta[4], theta[0],
+		                  pdf1 * 1e-6, 1e-6 * (theta[0] - theta[4]), &warnz[2]);
+		break;
 
-		default: // Nunca llegara aqui
-			theta[1] = 0.5 * (theta[4] - theta[2]);
-			theta[3] = 0.5 * (theta[2] + theta[0]);
-			break;
+	default: // Nunca llegara aqui
+		theta[1] = 0.5 * (theta[4] - theta[2]);
+		theta[3] = 0.5 * (theta[2] + theta[0]);
+		break;
 	}
 
 #ifdef DEBUG
@@ -340,8 +345,8 @@ torno al maximo y el resto*/
 #endif
 
 	stable_integration(dist, integrando, theta[0], theta[2],
-					   absTOL, relTOL, IT_MAX,
-					   &pdf_aux, &err_aux, STABLE_QAG2);
+	                   absTOL, relTOL, IT_MAX,
+	                   &pdf_aux, &err_aux, STABLE_QAG2);
 	pdf = fabs(pdf_aux);
 	*err = err_aux * err_aux;
 
@@ -354,8 +359,8 @@ torno al maximo y el resto*/
 	  getchar();
 	*/
 	stable_integration(dist, integrando, theta[2], theta[4],
-					   max(pdf * relTOL, absTOL) * 0.5, relTOL, IT_MAX,
-					   &pdf_aux, &err_aux, STABLE_QAG2);
+	                   max(pdf * relTOL, absTOL) * 0.5, relTOL, IT_MAX,
+	                   &pdf_aux, &err_aux, STABLE_QAG2);
 	pdf += fabs(pdf_aux);
 	*err += err_aux * err_aux;
 #ifdef DEBUG
@@ -370,8 +375,8 @@ torno al maximo y el resto*/
 	fprintf(FINTEG, " %+1.3e %+1.3e %+1.3e %+1.3e %+1.3e", theta[0], theta[1], theta[2], theta[3], theta[4]);
 	fprintf(FINTEG, " % 1.3e % 1.3e % 1.3e % 1.3e", pdf1, pdf2, pdf3, fabs(pdf_aux));
 	fprintf(FINTEG, " %d %d %d %d %d %d\n",
-			warnz[0], warnz[1], warnz[2], integ_eval, aux_eval,
-			warnz[0] + warnz[1] + warnz[2] + integ_eval + aux_eval);
+	        warnz[0], warnz[1], warnz[2], integ_eval, aux_eval,
+	        warnz[0] + warnz[1] + warnz[2] + integ_eval + aux_eval);
 	printf("abstols % 1.3e % 1.3e % 1.3e % 1.3e \n", absTOL, max(pdf1 * relTOL, absTOL) * 0.5, max((pdf2 + pdf1)*relTOL, absTOL) * 0.25, max((pdf3 + pdf2 + pdf1)*relTOL, absTOL) * 0.25);
 #endif
 
@@ -380,7 +385,7 @@ torno al maximo y el resto*/
 
 double
 stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
-					   double(*integ_aux)(double, void *), double *err) /* WTF is integ_aux */
+                       double(*integ_aux)(double, void *), double *err) /* WTF is integ_aux */
 {
 	/* Este caso se da en:
 	       x >> xi con alfa > 1
@@ -398,8 +403,8 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 
 	int warnz[5], k;
 	double pdf = 0,
-		   pdf_aux = 0, pdf1 = 0, pdf2 = 0.0, pdf3 = 0.0,
-		   err_aux = 0;
+	       pdf_aux = 0, pdf1 = 0, pdf2 = 0.0, pdf3 = 0.0,
+	       err_aux = 0;
 	double theta[5];
 	//int method_;
 
@@ -412,79 +417,79 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 	theta[4] = M_PI_2 - THETA_TH;
 
 	theta[2] = zbrent(integ_aux, (void *)dist, theta[0], theta[4],
-					  0.0, 1e-6 * (theta[4] - theta[0]), &k);
+	                  0.0, 1e-6 * (theta[4] - theta[0]), &k);
 
 	switch (k) {
-		case 0:   //Max en el interior del intervalo de integracion.
-			// Busca puntos donde integrando cae por debajo de umbral
-			pdf1 = (integ_aux)(theta[0], (void *)dist);
-			pdf2 = (integ_aux)(theta[4], (void *)dist);
+	case 0:   //Max en el interior del intervalo de integracion.
+		// Busca puntos donde integrando cae por debajo de umbral
+		pdf1 = (integ_aux)(theta[0], (void *)dist);
+		pdf2 = (integ_aux)(theta[4], (void *)dist);
 
-			if (fabs(AUX1) > fabs(pdf1)) {
-				//  printf("1 %1.1lf ",x);
-				theta[1] = theta[0] + 1e-2 * (theta[2] - theta[0]);
-			} else {
-				theta[1] = zbrent(integ_aux, (void *)dist, theta[0], theta[2],
-								  AUX1, 1e-6 * (theta[2] - theta[0]), &warnz[1]);
-			}
+		if (fabs(AUX1) > fabs(pdf1)) {
+			//  printf("1 %1.1lf ",x);
+			theta[1] = theta[0] + 1e-2 * (theta[2] - theta[0]);
+		} else {
+			theta[1] = zbrent(integ_aux, (void *)dist, theta[0], theta[2],
+			                  AUX1, 1e-6 * (theta[2] - theta[0]), &warnz[1]);
+		}
 
-			if (fabs(AUX2) > fabs(pdf2)) {
-				//  printf("2 %1.1lf ",x);
-				theta[3] = theta[4] - 1e-2 * (theta[4] - theta[2]);
-			} else {
-				theta[3] = zbrent(integ_aux, (void *)dist, theta[2], theta[4],
-								  AUX2, 1e-6 * (theta[4] - theta[2]), &warnz[3]);
-			}
+		if (fabs(AUX2) > fabs(pdf2)) {
+			//  printf("2 %1.1lf ",x);
+			theta[3] = theta[4] - 1e-2 * (theta[4] - theta[2]);
+		} else {
+			theta[3] = zbrent(integ_aux, (void *)dist, theta[2], theta[4],
+			                  AUX2, 1e-6 * (theta[4] - theta[2]), &warnz[3]);
+		}
 
-			// Crea intervalo simetrico entorno al maximo con el punto encontrado
-			// mas proximo a el y los otros intervalos:
-			if (theta[2] - theta[1] < theta[3] - theta[2])
-				theta[2] = theta[2] * 2.0 - theta[1];
-			else {
-				pdf_aux = theta[0];               //            .
-				theta[0] = theta[4];              //           /|\    .
-				theta[4] = pdf_aux;               //         /  | \   .
-				pdf_aux = theta[3];               //_______/ |  |  \___
-				theta[3] = theta[1];              //4      3 2  |   1 0
-				theta[1] = pdf_aux;
-				theta[2] = theta[2] * 2.0 - theta[1];
-			}
+		// Crea intervalo simetrico entorno al maximo con el punto encontrado
+		// mas proximo a el y los otros intervalos:
+		if (theta[2] - theta[1] < theta[3] - theta[2])
+			theta[2] = theta[2] * 2.0 - theta[1];
+		else {
+			pdf_aux = theta[0];               //            .
+			theta[0] = theta[4];              //           /|\    .
+			theta[4] = pdf_aux;               //         /  | \   .
+			pdf_aux = theta[3];               //_______/ |  |  \___
+			theta[3] = theta[1];              //4      3 2  |   1 0
+			theta[1] = pdf_aux;
+			theta[2] = theta[2] * 2.0 - theta[1];
+		}
 
-			break;
+		break;
 
-		case -2: //Max en el borde izquierdo del intervalo
-			// puede pasar si beta=+-1 y alfa<1        //  .
-			theta[1] = theta[0];
-			pdf1 = (integrando)(theta[1], (void *)dist);
+	case -2: //Max en el borde izquierdo del intervalo
+		// puede pasar si beta=+-1 y alfa<1        //  .
+		theta[1] = theta[0];
+		pdf1 = (integrando)(theta[1], (void *)dist);
 
-			theta[2] = zbrent(integrando, (void *)dist, theta[1], theta[4],
-							  pdf1 * 1e-6, 1e-6 * (theta[4] - theta[1]), &warnz[2]);
-			pdf1 = stable_pdf_g(theta[2], (void *)dist);
-			theta[3] = zbrent(integrando, (void *)dist, theta[2], theta[4],
-							  pdf1 * 1e-6, 1e-6 * (theta[4] - theta[2]), &warnz[2]);
-			pdf1 = stable_pdf_g(theta[3], (void *)dist);
+		theta[2] = zbrent(integrando, (void *)dist, theta[1], theta[4],
+		                  pdf1 * 1e-6, 1e-6 * (theta[4] - theta[1]), &warnz[2]);
+		pdf1 = stable_pdf_g(theta[2], (void *)dist);
+		theta[3] = zbrent(integrando, (void *)dist, theta[2], theta[4],
+		                  pdf1 * 1e-6, 1e-6 * (theta[4] - theta[2]), &warnz[2]);
+		pdf1 = stable_pdf_g(theta[3], (void *)dist);
 
-			break;
+		break;
 
-		case  -1: //Max en el borde derecho del intervalo
-			// puede pasar si beta=+-1 y alfa<1
-			theta[1] = theta[4];
-			theta[4] = theta[0];
-			pdf1 = (integrando)(theta[1], (void *)dist);
+	case  -1: //Max en el borde derecho del intervalo
+		// puede pasar si beta=+-1 y alfa<1
+		theta[1] = theta[4];
+		theta[4] = theta[0];
+		pdf1 = (integrando)(theta[1], (void *)dist);
 
-			theta[2] = zbrent(integrando, (void *)dist, theta[4], theta[1],
-							  pdf1 * 1e-6, 1e-6 * (theta[1] - theta[4]), &warnz[2]);
-			pdf1 = stable_pdf_g(theta[2], (void *)dist);
-			theta[3] = zbrent(integrando, (void *)dist, theta[4], theta[2],
-							  pdf1 * 1e-6, 1e-6 * (theta[2] - theta[4]), &warnz[3]);
+		theta[2] = zbrent(integrando, (void *)dist, theta[4], theta[1],
+		                  pdf1 * 1e-6, 1e-6 * (theta[1] - theta[4]), &warnz[2]);
+		pdf1 = stable_pdf_g(theta[2], (void *)dist);
+		theta[3] = zbrent(integrando, (void *)dist, theta[4], theta[2],
+		                  pdf1 * 1e-6, 1e-6 * (theta[2] - theta[4]), &warnz[3]);
 
-			theta[0] = theta[1];
-			break;
+		theta[0] = theta[1];
+		break;
 
-		default: // Nunca llegara aqui
-			theta[1] = 0.5 * (theta[4] - theta[2]);
-			theta[3] = 0.5 * (theta[2] + theta[0]);
-			break;
+	default: // Nunca llegara aqui
+		theta[1] = 0.5 * (theta[4] - theta[2]);
+		theta[3] = 0.5 * (theta[2] + theta[0]);
+		break;
 	}
 
 #ifdef DEBUG
@@ -497,9 +502,9 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 
 	i = 0;
 	stable_integration(dist, integrando, theta[1], theta[2],
-					   absTOL, relTOL, IT_MAX,
-					   &pdf_aux, &err_aux,
-					   integration_algorithms[i++]);
+	                   absTOL, relTOL, IT_MAX,
+	                   &pdf_aux, &err_aux,
+	                   integration_algorithms[i++]);
 	pdf1 = fabs(pdf_aux);
 	*err = err_aux * err_aux;
 
@@ -509,9 +514,9 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 #endif
 
 	stable_integration(dist, integrando, theta[2], theta[3],
-					   max(pdf1 * relTOL, absTOL) * 0.25, relTOL, IT_MAX,
-					   &pdf_aux, &err_aux,
-					   integration_algorithms[i++]);
+	                   max(pdf1 * relTOL, absTOL) * 0.25, relTOL, IT_MAX,
+	                   &pdf_aux, &err_aux,
+	                   integration_algorithms[i++]);
 	pdf2 = fabs(pdf_aux);
 	*err += err_aux * err_aux;
 #ifdef DEBUG
@@ -520,9 +525,9 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 #endif
 
 	stable_integration(dist, integrando, theta[3], theta[4],
-					   max((pdf2 + pdf1)*relTOL, absTOL) * 0.25, relTOL, IT_MAX,
-					   &pdf_aux, &err_aux,
-					   integration_algorithms[i++]);
+	                   max((pdf2 + pdf1)*relTOL, absTOL) * 0.25, relTOL, IT_MAX,
+	                   &pdf_aux, &err_aux,
+	                   integration_algorithms[i++]);
 	pdf3 = fabs(pdf_aux);
 	*err += err_aux * err_aux;
 #ifdef DEBUG
@@ -531,9 +536,9 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 #endif
 
 	stable_integration(dist, integrando, theta[0], theta[1],
-					   max((pdf3 + pdf2 + pdf1)*relTOL, absTOL) * 0.25, relTOL, IT_MAX,
-					   &pdf_aux, &err_aux,
-					   integration_algorithms[i++]);
+	                   max((pdf3 + pdf2 + pdf1)*relTOL, absTOL) * 0.25, relTOL, IT_MAX,
+	                   &pdf_aux, &err_aux,
+	                   integration_algorithms[i++]);
 	*err += err_aux * err_aux;
 
 	//Sumar de menor a mayor contribucion para minimizar error de redondeo.
@@ -549,8 +554,8 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 	fprintf(FINTEG, " %+1.3e %+1.3e %+1.3e %+1.3e %+1.3e", theta[0], theta[1], theta[2], theta[3], theta[4]);
 	fprintf(FINTEG, " % 1.3e % 1.3e % 1.3e % 1.3e", pdf1, pdf2, pdf3, fabs(pdf_aux));
 	fprintf(FINTEG, " %d %d %d %d %d %d\n",
-			warnz[0], warnz[1], warnz[2], integ_eval, aux_eval,
-			warnz[0] + warnz[1] + warnz[2] + integ_eval + aux_eval);
+	        warnz[0], warnz[1], warnz[2], integ_eval, aux_eval,
+	        warnz[0] + warnz[1] + warnz[2] + integ_eval + aux_eval);
 	printf("abstols % 1.3e % 1.3e % 1.3e % 1.3e \n", absTOL, max(pdf1 * relTOL, absTOL) * 0.5, max((pdf2 + pdf1)*relTOL, absTOL) * 0.25, max((pdf3 + pdf2 + pdf1)*relTOL, absTOL) * 0.25);
 
 #endif
@@ -559,8 +564,13 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 }
 
 void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
-					double *pdf, double *err)
+                    double *pdf, double *err)
 {
+	if (dist->is_mixture) {
+		_stable_evaluate_mixture(dist, x, Nx, pdf, err, stable_pdf_gpu);
+		return;
+	}
+
 	if (dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
 		stable_pdf(dist, x, Nx, pdf, err); // Rely on analytical formulae where possible
 	else {
@@ -575,8 +585,14 @@ void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
 
 
 void stable_pcdf_gpu(StableDist *dist, const double x[], const int Nx,
-					 double *pdf, double *cdf)
+                     double *pdf, double *cdf)
 {
+
+	if (dist->is_mixture) {
+		_stable_evaluate_mixture(dist, x, Nx, pdf, cdf, stable_pcdf_gpu);
+		return;
+	}
+
 	if (dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY) {
 		stable_pdf(dist, x, Nx, pdf, NULL); // Rely on analytical formulae where possible
 		stable_cdf(dist, x, Nx, cdf, NULL);
@@ -621,12 +637,12 @@ stable_pdf_point_LEVY(StableDist *dist, const double x, double *err)
 
 	if (xxi > 0 && dist->beta > 0)
 		return sqrt(dist->sigma * 0.5 * M_1_PI) *
-			   exp(-dist->sigma * 0.5 / (xxi * dist->sigma)) /
-			   pow(xxi * dist->sigma, 1.5);
+		       exp(-dist->sigma * 0.5 / (xxi * dist->sigma)) /
+		       pow(xxi * dist->sigma, 1.5);
 	else if (xxi < 0 && dist->beta < 0)
 		return sqrt(dist->sigma * 0.5 * M_1_PI) *
-			   exp(-dist->sigma * 0.5 / (fabs(xxi) * dist->sigma)) /
-			   pow(fabs(xxi) * dist->sigma, 1.5);
+		       exp(-dist->sigma * 0.5 / (fabs(xxi) * dist->sigma)) /
+		       pow(fabs(xxi) * dist->sigma, 1.5);
 	else return 0.0;
 }
 
@@ -706,7 +722,7 @@ double stable_pdf_point_STABLE(StableDist *dist, const double x, double *err)
 		*err = 0;
 		//      printf("_%lf_\n",x);
 		pdf = exp(gammaln(1.0 + 1.0 / dist->alfa)) *
-			  cos(dist->theta0) / (M_PI * dist->S);
+		      cos(dist->theta0) / (M_PI * dist->S);
 		/*
 		      if (xxi>0) pdf1 = stable_pdf_point(dist,(dist->xi+1.01*xxi_th)*dist->sigma,err);
 		      else if(xxi==0) pdf1=pdf;
@@ -717,10 +733,10 @@ double stable_pdf_point_STABLE(StableDist *dist, const double x, double *err)
 
 #ifdef DEBUG
 		printf("Aproximando x a zeta para alfa = %f, beta = %f, zeta = %f : pdf = %f\n",
-			   dist->alfa, dist->beta, dist->xi, pdf);
+		       dist->alfa, dist->beta, dist->xi, pdf);
 
 		fprintf(FINTEG, "%1.3e\t%1.3e\t%1.3e\t%1.3e\t%1.3e\t%1.3e\t%d\t%d\t%d\t%d\n",
-				x, pdf, *err, 0.0, 0.0, 0.0, aux_eval, 0, aux_eval, aux_eval << 1);
+		        x, pdf, *err, 0.0, 0.0, 0.0, aux_eval, 0, aux_eval, aux_eval << 1);
 #endif
 		return pdf / dist->sigma;
 	}

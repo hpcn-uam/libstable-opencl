@@ -75,7 +75,7 @@ double stable_cdf_g2(double theta, void *args)
 	cos_theta = cos(theta);
 	aux = (dist->theta0_ + theta) * dist->alfa;
 	V = log(cos_theta / sin(aux)) * dist->alfainvalfa1 +
-		+ log(cos(aux - theta) / cos_theta) + dist->k1;
+	    + log(cos(aux - theta) / cos_theta) + dist->k1;
 
 #ifdef DEBUG
 	integ_eval++;
@@ -136,7 +136,7 @@ double stable_cdf_g_aux2(double theta, void *args)
 	cos_theta = cos(theta);
 	aux = (dist->theta0_ + theta) * dist->alfa;
 	V = log(cos_theta / sin(aux)) * dist->alfainvalfa1 +
-		+ log(cos(aux - theta) / cos_theta) + dist->k1;
+	    + log(cos(aux - theta) / cos_theta) + dist->k1;
 
 	g = V + dist->xxipow;
 
@@ -166,7 +166,7 @@ void * thread_init_cdf(void *ptr_args)
 
 	while (counter_ < args->Nx) {
 		args->cdf[counter_] = (*(args->ptr_funcion))(args->dist, args->x[counter_],
-							  &(args->err[counter_]));
+		                      &(args->err[counter_]));
 		counter_++;
 	}
 
@@ -176,11 +176,16 @@ void * thread_init_cdf(void *ptr_args)
 void stable_cdf(StableDist *dist, const double x[], const int Nx, double *cdf, double *err)
 {
 	int Nx_thread[THREADS],
-		initpoint[THREADS],
-		k, flag = 0;
+	    initpoint[THREADS],
+	    k, flag = 0;
 	void *status;
 	pthread_t threads[THREADS];
 	StableArgsCdf args[THREADS];
+
+	if (dist->is_mixture) {
+		_stable_evaluate_mixture(dist, x, Nx, cdf, err, stable_cdf);
+		return;
+	}
 
 	/* Si no se quiere introduce el puntero para el error, se crea*/
 	if (err == NULL) {
@@ -240,7 +245,7 @@ void stable_cdf(StableDist *dist, const double x[], const int Nx, double *cdf, d
 
 double
 stable_integration_cdf(StableDist *dist, double(*integrando)(double, void*),
-					   double(*auxiliar)(double, void*), double *err)
+                       double(*auxiliar)(double, void*), double *err)
 {
 	int k, warnz[SUBS_def], method_[SUBS_def];
 	double cdf = 0, cdf1 = 0, err1 = 0;
@@ -260,16 +265,16 @@ stable_integration_cdf(StableDist *dist, double(*integrando)(double, void*),
 		for (k = SUBS_def - 1; k >= 0; k--) {
 			if (k > 0) {
 				theta[k] = zbrent(auxiliar, (void*)dist, theta[0], theta[k + 1],
-								  -log(g[k + 1] * 1e-2), 1e-3 * (theta[k + 1] - theta[0]), &warnz[k]);
+				                  -log(g[k + 1] * 1e-2), 1e-3 * (theta[k + 1] - theta[0]), &warnz[k]);
 			}
 
 
 			g[k] = stable_cdf_g(theta[k], (void*)dist);
 
 			stable_integration(dist, integrando,
-							   theta[k], theta[k + 1],
-							   max(cdf * relTOL, absTOL) / SUBS_def, relTOL, IT_MAX,
-							   &cdf1, &err1, method_[SUBS_def - k - 1]);
+			                   theta[k], theta[k + 1],
+			                   max(cdf * relTOL, absTOL) / SUBS_def, relTOL, IT_MAX,
+			                   &cdf1, &err1, method_[SUBS_def - k - 1]);
 			cdf += cdf1;
 			*err += err1 * err1;
 		}
@@ -282,15 +287,15 @@ stable_integration_cdf(StableDist *dist, double(*integrando)(double, void*),
 		for (k = 1; k <= SUBS_def; k++) {
 			if (k < SUBS_def) {
 				theta[k] = zbrent(auxiliar, (void*)dist, theta[k - 1], theta[SUBS_def],
-								  -log(g[k - 1] * 1e-2), 1e-3 * (theta[SUBS_def] - theta[k - 1]), &warnz[k]);
+				                  -log(g[k - 1] * 1e-2), 1e-3 * (theta[SUBS_def] - theta[k - 1]), &warnz[k]);
 			}
 
 			g[k] = stable_cdf_g(theta[k], (void*)dist);
 
 			stable_integration(dist, integrando,
-							   theta[k - 1], theta[k],
-							   max(cdf * relTOL, absTOL) / SUBS_def, relTOL, IT_MAX,
-							   &cdf1, &err1, method_[k - 1]);
+			                   theta[k - 1], theta[k],
+			                   max(cdf * relTOL, absTOL) / SUBS_def, relTOL, IT_MAX,
+			                   &cdf1, &err1, method_[k - 1]);
 			cdf += cdf1;
 			*err += err1 * err1;
 		}
@@ -440,8 +445,13 @@ stable_cdf_point(StableDist *dist, const double x, double *err)
 }
 
 void stable_cdf_gpu(StableDist *dist, const double x[], const int Nx,
-					double *cdf, double *err)
+                    double *cdf, double *err)
 {
+	if (dist->is_mixture) {
+		_stable_evaluate_mixture(dist, x, Nx, cdf, err, stable_cdf_gpu);
+		return;
+	}
+
 	if (dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
 		stable_cdf(dist, x, Nx, cdf, err); // Rely on analytical formulae where possible
 	else {

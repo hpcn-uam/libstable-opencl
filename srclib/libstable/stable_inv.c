@@ -103,8 +103,8 @@ double stable_quick_inv_point(StableDist *dist, const double q, double *err)
 		}
 
 		double p[8] = {precalc[iq][ib][ia],   precalc[iq][ib][ia + 1],   precalc[iq][ib + 1][ia],   precalc[iq][ib + 1][ia + 1],
-					   precalc[iq + 1][ib][ia], precalc[iq + 1][ib][ia + 1], precalc[iq + 1][ib + 1][ia], precalc[iq + 1][ib + 1][ia + 1]
-					  };
+		               precalc[iq + 1][ib][ia], precalc[iq + 1][ib][ia + 1], precalc[iq + 1][ib + 1][ia], precalc[iq + 1][ib + 1][ia + 1]
+		              };
 
 		//Trilinear interpolation
 		x0 = ((p[0] * (1.0 - xa) + p[1] * xa) * (1 - xb) + (p[2] * (1 - xa) + p[3] * xa) * xb) * (1 - xq) + ((p[4] * (1.0 - xa) + p[5] * xa) * (1 - xb) + (p[6] * (1 - xa) + p[7] * xa) * xb) * xq;
@@ -329,7 +329,7 @@ void * thread_init_inv(void *ptr_args)
 
 	while (counter_ < args->Nx) {
 		args->cdf[counter_] = (*(args->ptr_funcion))(args->dist, args->x[counter_],
-							  &(args->err[counter_]));
+		                      &(args->err[counter_]));
 		counter_++;
 	}
 
@@ -337,11 +337,11 @@ void * thread_init_inv(void *ptr_args)
 }
 
 void stable_inv(StableDist *dist, const double q[], const int Nq,
-				double *inv, double *err)
+                double *inv, double *err)
 {
 	int Nq_thread[THREADS],
-		initpoint[THREADS],
-		k, flag = 0;
+	    initpoint[THREADS],
+	    k, flag = 0;
 	void *status;
 	pthread_t threads[THREADS];
 	StableArgsCdf args[THREADS];
@@ -402,7 +402,7 @@ void stable_inv(StableDist *dist, const double q[], const int Nq,
 }
 
 short stable_inv_gpu(StableDist *dist, const double q[], const int Nq,
-					 double *inv, double *err)
+                     double *inv, double *err)
 {
 	if (dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY) {
 		stable_inv(dist, q, Nq, inv, err); // Rely on analytical formulae where possible
