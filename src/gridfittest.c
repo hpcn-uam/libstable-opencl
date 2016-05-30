@@ -31,7 +31,7 @@
 #include <time.h>
 #include <stdlib.h>
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	double alfa, beta, sigma, mu_0;
 	double *data;
@@ -59,8 +59,7 @@ int main (int argc, char *argv[])
 	printf("Size\t%d\n", N);
 	printf("\nWill perform %d experiments.\n\n", Nexp);
 
-	if ((dist = stable_create(alfa, beta, sigma, mu_0, 0)) == NULL)
-	{
+	if ((dist = stable_create(alfa, beta, sigma, mu_0, 0)) == NULL) {
 		printf("Error when creating the distribution");
 		exit(1);
 	}
@@ -95,7 +94,7 @@ int main (int argc, char *argv[])
 
 
 	printf("time = %lf\nα = %lf\nβ = %.2lf\nμ = %.2lf\nσ = %.2lf\n",
-	       ms_duration, dist->alfa, dist->beta, dist->sigma, dist->mu_0);
+		   ms_duration, dist->alfa, dist->beta, dist->sigma, dist->mu_0);
 
 	free(data);
 	stable_free(dist);

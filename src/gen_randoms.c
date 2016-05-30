@@ -22,61 +22,58 @@
 #include "benchmarking.h"
 #include "opencl_integ.h"
 
-int main (int argc, const char** argv)
+int main(int argc, const char** argv)
 {
-    double alfa = 2;
-    double beta = 0.7;
-    size_t batches[] = { 100, 1000, 10000, 1000000 };
-    size_t num_batches = sizeof(batches) / sizeof(size_t);
-    double* cpu_rands = NULL;
-    double* gpu_rands = NULL;
-    double start, end, tdiff;
-    size_t i, batch_size;
+	double alfa = 2;
+	double beta = 0.7;
+	size_t batches[] = { 100, 1000, 10000, 1000000 };
+	size_t num_batches = sizeof(batches) / sizeof(size_t);
+	double* cpu_rands = NULL;
+	double* gpu_rands = NULL;
+	double start, end, tdiff;
+	size_t i, batch_size;
 
-    StableDist *dist = stable_create(alfa, beta, 1, 0, 0);
+	StableDist *dist = stable_create(alfa, beta, 1, 0, 0);
 
-    if (!dist)
-    {
-        fprintf(stderr, "StableDist creation failure. Aborting.\n");
-        return 1;
-    }
+	if (!dist) {
+		fprintf(stderr, "StableDist creation failure. Aborting.\n");
+		return 1;
+	}
 
-    if(stable_activate_gpu(dist))
-    {
-        fprintf(stderr, "Couldn't initialize GPU.\n");
-        return 1;
-    }
+	if (stable_activate_gpu(dist)) {
+		fprintf(stderr, "Couldn't initialize GPU.\n");
+		return 1;
+	}
 
-    stable_set_absTOL(1e-20);
-    stable_set_relTOL(1.2e-10);
-    stable_rnd_seed(dist, time(NULL));
+	stable_set_absTOL(1e-20);
+	stable_set_relTOL(1.2e-10);
+	stable_rnd_seed(dist, time(NULL));
 
-    fprintf(stderr, "Count\tCPU-ms\tGPU-ms\n");
+	fprintf(stderr, "Count\tCPU-ms\tGPU-ms\n");
 
-    for (i = 0; i < num_batches; i++)
-    {
-        batch_size = batches[i];
-        cpu_rands = calloc(batch_size, sizeof(double));
-        gpu_rands = calloc(batch_size, sizeof(double));
+	for (i = 0; i < num_batches; i++) {
+		batch_size = batches[i];
+		cpu_rands = calloc(batch_size, sizeof(double));
+		gpu_rands = calloc(batch_size, sizeof(double));
 
-        start = get_ms_time();
-        stable_rnd(dist, cpu_rands, batch_size);
-        end = get_ms_time();
-        tdiff = end - start;
+		start = get_ms_time();
+		stable_rnd(dist, cpu_rands, batch_size);
+		end = get_ms_time();
+		tdiff = end - start;
 
-        fprintf(stderr, "%zu\t%.3lf\t", batch_size, tdiff);
+		fprintf(stderr, "%zu\t%.3lf\t", batch_size, tdiff);
 
-        start = get_ms_time();
-        stable_rnd_gpu(dist, gpu_rands, batch_size);
-        end = get_ms_time();
-        tdiff = end - start;
+		start = get_ms_time();
+		stable_rnd_gpu(dist, gpu_rands, batch_size);
+		end = get_ms_time();
+		tdiff = end - start;
 
-        fprintf(stderr, "%.3lf\n", tdiff);
-    }
+		fprintf(stderr, "%.3lf\n", tdiff);
+	}
 
-    for(i = 0; i < batch_size; i++)
-        printf("%.6lf\n", gpu_rands[i]);
+	for (i = 0; i < batch_size; i++)
+		printf("%.6lf\n", gpu_rands[i]);
 
-    stable_free(dist);
-    return 0;
+	stable_free(dist);
+	return 0;
 }

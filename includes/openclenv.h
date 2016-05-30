@@ -26,8 +26,7 @@
 
 #define MAX_KERNELS 5
 
-struct openclenv
-{
+struct openclenv {
 	int device_index;
 	cl_device_type device_type;
 	cl_device_id device;
@@ -42,8 +41,7 @@ struct openclenv
 	size_t current_kernel;
 };
 
-struct opencl_profile
-{
+struct opencl_profile {
 	cl_ulong queued;
 	cl_ulong submitted;
 	cl_ulong started;

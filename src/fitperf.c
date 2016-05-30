@@ -33,15 +33,13 @@
 
 typedef int (*fitter)(StableDist *, const double *, const unsigned int);
 
-struct fittest
-{
+struct fittest {
 	fitter func;
 	short gpu_enabled;
 	const char *name;
 };
 
-struct fitresult
-{
+struct fitresult {
 	double ms_duration;
 	double alfa;
 	double beta;
@@ -78,7 +76,7 @@ struct fitresult
 	variable ## _init += dist->variable; \
 } while(0)
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	double alfa, beta, sigma, mu_0;
 	double alfa_init = 0, beta_init = 0, sigma_init = 0, mu_0_init = 0;
@@ -87,8 +85,7 @@ int main (int argc, char *argv[])
 	int seed;
 	double acc_pdev;
 	double total_duration, start, end;
-	struct fittest tests[] =
-	{
+	struct fittest tests[] = {
 		//{ stable_fit_mle, 0, "MLE" },
 		//{ stable_fit_mle2d, 0, "M2D"},
 		//{ stable_fit_koutrouvelis, 0, "KTR"},
@@ -123,8 +120,7 @@ int main (int argc, char *argv[])
 	printf("Size\t%d\n", N);
 	printf("\nWill perform %d experiments for each fitter.\n\n", Nexp);
 
-	if ((dist = stable_create(alfa, beta, sigma, mu_0, 0)) == NULL)
-	{
+	if ((dist = stable_create(alfa, beta, sigma, mu_0, 0)) == NULL) {
 		printf("Error when creating the distribution");
 		exit(1);
 	}
@@ -146,14 +142,12 @@ int main (int argc, char *argv[])
 
 	printf("Fitter\tms/fit\t\tα\t\tβ\t\tμ\t\tσ\n");
 
-	for (i = 0; i < num_tests; i++)
-	{
+	for (i = 0; i < num_tests; i++) {
 		test = tests + i;
 		result = results + i;
 		total_duration = 0;
 
-		for (iexp = 0; iexp < Nexp; iexp++)
-		{
+		for (iexp = 0; iexp < Nexp; iexp++) {
 			stable_fit_init(dist, data, N, NULL, NULL);
 
 			add_initial_estimations(alfa);
@@ -192,11 +186,11 @@ int main (int argc, char *argv[])
 			printf("_GPU");
 
 		printf("\t%lf\t%.2lf ± %.2lf\t%.2lf ± %.2lf\t%.2lf ± %.2lf\t%.2lf ± %.2lf\n",
-		       result->ms_duration,
-		       result->alfa, result->alfa_err,
-		       result->beta, result->beta_err,
-		       result->sigma, result->sigma_err,
-		       result->mu_0, result->mu_0_err);
+			   result->ms_duration,
+			   result->alfa, result->alfa_err,
+			   result->beta, result->beta_err,
+			   result->sigma, result->sigma_err,
+			   result->mu_0, result->mu_0_err);
 	}
 
 	alfa_init /= Nexp * num_tests;
@@ -206,13 +200,12 @@ int main (int argc, char *argv[])
 
 	printf("\n\nInitial estimations: \n");
 	printf("α = %lf\nβ = %.2lf\nμ = %.2lf\nσ = %.2lf\n",
-	       alfa_init, beta_init, sigma_init, mu_0_init);
+		   alfa_init, beta_init, sigma_init, mu_0_init);
 
 	printf("\n\nComparison of actual vs. expected results:\n");
 	printf("Fitter\tα error\t\tβ error\t\tμ error\t\tσ error\t\tAverage %% error\n");
 
-	for(i = 0; i < num_tests; i++)
-	{
+	for (i = 0; i < num_tests; i++) {
 		result = results + i;
 		test = tests + i;
 		acc_pdev = 0;

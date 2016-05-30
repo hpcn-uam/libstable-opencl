@@ -41,195 +41,197 @@
 
 double stable_cdf_g1(double theta, void *args)
 {
-  StableDist *dist = (StableDist *)args;
-  double g, V, aux;
+	StableDist *dist = (StableDist *)args;
+	double g, V, aux;
 
-  aux = (dist->beta_*theta+M_PI_2)/cos(theta);
-  V = sin(theta)*aux/dist->beta_ + log(aux) + dist->k1;
+	aux = (dist->beta_ * theta + M_PI_2) / cos(theta);
+	V = sin(theta) * aux / dist->beta_ + log(aux) + dist->k1;
 
-  #ifdef DEBUG
-  integ_eval++;
-  #endif
+#ifdef DEBUG
+	integ_eval++;
+#endif
 
-  g = V + dist->xxipow;
-  //Taylor: exp(-x) ~ 1-x en x ~ 0
-  //Si g < 1.52e-8 -> exp(-g) = (1-g) con precision double.
-  //Asi nos ahorramos calcular una exponencial (que es costoso).
-  if((g=exp(g)) < 1.522e-8)
-    {
-      return (1.0-g);
-    }
+	g = V + dist->xxipow;
 
-  g = exp(-g);
+	//Taylor: exp(-x) ~ 1-x en x ~ 0
+	//Si g < 1.52e-8 -> exp(-g) = (1-g) con precision double.
+	//Asi nos ahorramos calcular una exponencial (que es costoso).
+	if ((g = exp(g)) < 1.522e-8)
+		return (1.0 - g);
 
-//  if (g > 1.0) return 1.0;
-//  else if(g < 0.0 || isnan(g)) return 0.0;
-//  else return g;
-  return g;
+	g = exp(-g);
+
+	//  if (g > 1.0) return 1.0;
+	//  else if(g < 0.0 || isnan(g)) return 0.0;
+	//  else return g;
+	return g;
 }
 
 double stable_cdf_g2(double theta, void *args)
 {
-  StableDist *dist = (StableDist *)args;
-  double g, cos_theta,aux,V;
+	StableDist *dist = (StableDist *)args;
+	double g, cos_theta, aux, V;
 
-  cos_theta = cos(theta);
-  aux = (dist->theta0_+theta)*dist->alfa;
-  V = log(cos_theta/sin(aux))*dist->alfainvalfa1 +
-       + log(cos(aux-theta)/cos_theta) + dist->k1;
+	cos_theta = cos(theta);
+	aux = (dist->theta0_ + theta) * dist->alfa;
+	V = log(cos_theta / sin(aux)) * dist->alfainvalfa1 +
+		+ log(cos(aux - theta) / cos_theta) + dist->k1;
 
-  #ifdef DEBUG
-  integ_eval++;
-  #endif
+#ifdef DEBUG
+	integ_eval++;
+#endif
 
-  g = V + dist->xxipow;
-  //Taylor: exp(-x) ~ 1-x en x ~ 0
-  //Si g < 1.52e-8 -> exp(-g) = (1-g) con precision double.
-  //Asi nos ahorramos calcular una exponencial (que es costoso).
-  if((g=exp(g)) < 1.522e-8)
-    {
-      return (1.0-g);
-    }
+	g = V + dist->xxipow;
 
-  g = exp(-g);
+	//Taylor: exp(-x) ~ 1-x en x ~ 0
+	//Si g < 1.52e-8 -> exp(-g) = (1-g) con precision double.
+	//Asi nos ahorramos calcular una exponencial (que es costoso).
+	if ((g = exp(g)) < 1.522e-8)
+		return (1.0 - g);
 
-//  if (g > 1.0) return 1.0;
-//  else if(g < 0.0 || isnan(g)) return 0.0;
-//  else return g;
-  return g;
+	g = exp(-g);
+
+	//  if (g > 1.0) return 1.0;
+	//  else if(g < 0.0 || isnan(g)) return 0.0;
+	//  else return g;
+	return g;
 }
 
 double stable_cdf_g(double theta, void *args)
 {
-  StableDist * dist = (StableDist *)args;
-  if (dist->ZONE == ALFA_1) {
-    return stable_cdf_g1(theta, args); }
-  else if (dist->ZONE == CAUCHY) {
-    return -1.0; }
-  else {
-    return stable_cdf_g2(theta, args); }
+	StableDist * dist = (StableDist *)args;
+
+	if (dist->ZONE == ALFA_1)
+		return stable_cdf_g1(theta, args);
+	else if (dist->ZONE == CAUCHY)
+		return -1.0;
+	else
+		return stable_cdf_g2(theta, args);
 }
 
 double stable_cdf_g_aux1(double theta, void *args)
 {
-  StableDist *dist = (StableDist *)args;
-  double g, V,aux;
+	StableDist *dist = (StableDist *)args;
+	double g, V, aux;
 
-  aux = (dist->beta_*theta+M_PI_2)/cos(theta);
-  V = sin(theta)*aux/dist->beta_ + log(aux) + dist->k1;
+	aux = (dist->beta_ * theta + M_PI_2) / cos(theta);
+	V = sin(theta) * aux / dist->beta_ + log(aux) + dist->k1;
 
-  g = V + dist->xxipow;
+	g = V + dist->xxipow;
 
-  #ifdef DEBUG
-  integ_eval++;
-  #endif
+#ifdef DEBUG
+	integ_eval++;
+#endif
 
-//  if (isnan(g)) { return -HUGE_VAL; }
-//  else return g;
-  return g;
+	//  if (isnan(g)) { return -HUGE_VAL; }
+	//  else return g;
+	return g;
 }
 
 double stable_cdf_g_aux2(double theta, void *args)
 {
-  StableDist *dist = (StableDist *)args;
-  double g, cos_theta,aux,V;
+	StableDist *dist = (StableDist *)args;
+	double g, cos_theta, aux, V;
 
-  cos_theta = cos(theta);
-  aux = (dist->theta0_+theta)*dist->alfa;
-  V = log(cos_theta/sin(aux))*dist->alfainvalfa1 +
-       + log(cos(aux-theta)/cos_theta) + dist->k1;
+	cos_theta = cos(theta);
+	aux = (dist->theta0_ + theta) * dist->alfa;
+	V = log(cos_theta / sin(aux)) * dist->alfainvalfa1 +
+		+ log(cos(aux - theta) / cos_theta) + dist->k1;
 
-  g = V + dist->xxipow;
+	g = V + dist->xxipow;
 
-  #ifdef DEBUG
-  integ_eval++;
-  #endif
-//  if (g > 1.0) return 1.0;
-//  else if(g < 0.0 || isnan(g)) return 0.0;
-//  else return g;
-  return g;
+#ifdef DEBUG
+	integ_eval++;
+#endif
+	//  if (g > 1.0) return 1.0;
+	//  else if(g < 0.0 || isnan(g)) return 0.0;
+	//  else return g;
+	return g;
 }
 
 double stable_cdf_g_aux(double theta, void *args)
 {
-  StableDist *dist = (StableDist *)args;
+	StableDist *dist = (StableDist *)args;
 
-  if (dist->ZONE==ALFA_1)
-    return stable_cdf_g_aux1(theta,args);
-  else
-    return stable_cdf_g_aux2(theta,args);
+	if (dist->ZONE == ALFA_1)
+		return stable_cdf_g_aux1(theta, args);
+	else
+		return stable_cdf_g_aux2(theta, args);
 }
 
 void * thread_init_cdf(void *ptr_args)
 {
-  StableArgsCdf *args = (StableArgsCdf *)ptr_args;
-  int counter_ = 0;
+	StableArgsCdf *args = (StableArgsCdf *)ptr_args;
+	int counter_ = 0;
 
-  while (counter_ < args->Nx)
-    {
-      args->cdf[counter_]=(*(args->ptr_funcion))(args->dist,args->x[counter_],
-                                                 &(args->err[counter_]));
-      counter_++;
-    }
-  pthread_exit(NULL);
+	while (counter_ < args->Nx) {
+		args->cdf[counter_] = (*(args->ptr_funcion))(args->dist, args->x[counter_],
+							  &(args->err[counter_]));
+		counter_++;
+	}
+
+	pthread_exit(NULL);
 }
 
 void stable_cdf(StableDist *dist, const double x[], const int Nx, double *cdf, double *err)
 {
-  int Nx_thread[THREADS],
-      initpoint[THREADS],
-      k,flag=0;
-  void *status;
-  pthread_t threads[THREADS];
-  StableArgsCdf args[THREADS];
+	int Nx_thread[THREADS],
+		initpoint[THREADS],
+		k, flag = 0;
+	void *status;
+	pthread_t threads[THREADS];
+	StableArgsCdf args[THREADS];
 
-/* Si no se quiere introduce el puntero para el error, se crea*/
-  if (err==NULL) {flag=1;err=malloc(Nx*sizeof(double));}
+	/* Si no se quiere introduce el puntero para el error, se crea*/
+	if (err == NULL) {
+		flag = 1;
+		err = malloc(Nx * sizeof(double));
+	}
 
-/* Reparto de los puntos de evaluacion entre los hilos disponibles */
+	/* Reparto de los puntos de evaluacion entre los hilos disponibles */
 
-  Nx_thread[0] = Nx/THREADS;
-  if (0 < Nx%THREADS) Nx_thread[0]++;
+	Nx_thread[0] = Nx / THREADS;
 
-  initpoint[0] = 0;
-  for(k=1;k<THREADS;k++)
-    {
-      Nx_thread[k] = Nx/THREADS;
-      if (k < Nx%THREADS) Nx_thread[k]++;
-      initpoint[k] = initpoint[k-1] + Nx_thread[k-1];
-    }
+	if (0 < Nx % THREADS) Nx_thread[0]++;
 
-/* Creacion de los hilos, pasando a cada uno una copia de la distribucion */
+	initpoint[0] = 0;
 
-  for(k=0; k<THREADS; k++)
-    {
-      args[k].ptr_funcion = dist->stable_cdf_point;
-      args[k].dist = stable_copy(dist);
-      args[k].cdf  = cdf+initpoint[k];
-      args[k].x    = x+initpoint[k];
-      args[k].Nx   = Nx_thread[k];
-      args[k].err  = err+initpoint[k];
+	for (k = 1; k < THREADS; k++) {
+		Nx_thread[k] = Nx / THREADS;
 
-      if(pthread_create(&threads[k], NULL, thread_init_cdf, (void *)&args[k]))
-        {
-          perror("Error en la creacion de hilo");
-          if (flag==1) free(err);
-          return;
-        }
-    }
+		if (k < Nx % THREADS) Nx_thread[k]++;
 
-/* Esperar a finalizacion de todos los hilos */
-  for(k=0; k<THREADS; k++)
-    {
-      pthread_join(threads[k], &status);
-    }
+		initpoint[k] = initpoint[k - 1] + Nx_thread[k - 1];
+	}
 
-/* Liberar las copias de la distribucion realizadas */
-  for(k=0; k<THREADS; k++)
-    {
-      stable_free(args[k].dist);
-    }
-  if (flag==1) free(err);
+	/* Creacion de los hilos, pasando a cada uno una copia de la distribucion */
+
+	for (k = 0; k < THREADS; k++) {
+		args[k].ptr_funcion = dist->stable_cdf_point;
+		args[k].dist = stable_copy(dist);
+		args[k].cdf  = cdf + initpoint[k];
+		args[k].x    = x + initpoint[k];
+		args[k].Nx   = Nx_thread[k];
+		args[k].err  = err + initpoint[k];
+
+		if (pthread_create(&threads[k], NULL, thread_init_cdf, (void *)&args[k])) {
+			perror("Error en la creacion de hilo");
+
+			if (flag == 1) free(err);
+
+			return;
+		}
+	}
+
+	/* Esperar a finalizacion de todos los hilos */
+	for (k = 0; k < THREADS; k++)
+		pthread_join(threads[k], &status);
+
+	/* Liberar las copias de la distribucion realizadas */
+	for (k = 0; k < THREADS; k++)
+		stable_free(args[k].dist);
+
+	if (flag == 1) free(err);
 }
 
 /******************************************************************************/
@@ -237,74 +239,72 @@ void stable_cdf(StableDist *dist, const double x[], const int Nx, double *cdf, d
 /******************************************************************************/
 
 double
-stable_integration_cdf(StableDist *dist, double(*integrando)(double,void*),
-                  double(*auxiliar)(double,void*), double *err)
+stable_integration_cdf(StableDist *dist, double(*integrando)(double, void*),
+					   double(*auxiliar)(double, void*), double *err)
 {
-  int k,warnz[SUBS_def],method_[SUBS_def];
-  double cdf=0,cdf1=0,err1=0;
-  double theta[SUBS_def+1],g[SUBS_def+1];
+	int k, warnz[SUBS_def], method_[SUBS_def];
+	double cdf = 0, cdf1 = 0, err1 = 0;
+	double theta[SUBS_def + 1], g[SUBS_def + 1];
 
-    theta[0]=-dist->theta0_+THETA_TH;
-    g[0]=stable_cdf_g(theta[0],(void*)dist);
+	theta[0] = -dist->theta0_ + THETA_TH;
+	g[0] = stable_cdf_g(theta[0], (void*)dist);
 
-    theta[SUBS_def]=M_PI_2-THETA_TH;
-    g[SUBS_def]=stable_cdf_g(theta[SUBS_def],(void*)dist);
+	theta[SUBS_def] = M_PI_2 - THETA_TH;
+	g[SUBS_def] = stable_cdf_g(theta[SUBS_def], (void*)dist);
 
-    method_[0] = STABLE_QAG2;
-    method_[1] = STABLE_QAG2;
-//    method_[2] = STABLE_QAG1;
+	method_[0] = STABLE_QAG2;
+	method_[1] = STABLE_QAG2;
+	//    method_[2] = STABLE_QAG1;
 
-    if (dist->alfa>1.0 || (dist->alfa==1 && dist->beta_<0)) //Entonces max a la derecha
-      {
-        for (k=SUBS_def-1;k>=0;k--)
-          {
-            if (k>0) {
-            theta[k]=zbrent(auxiliar,(void*)dist,theta[0],theta[k+1],
-                            -log(g[k+1]*1e-2),1e-3*(theta[k+1]-theta[0]),&warnz[k]);
-            }
+	if (dist->alfa > 1.0 || (dist->alfa == 1 && dist->beta_ < 0)) { //Entonces max a la derecha
+		for (k = SUBS_def - 1; k >= 0; k--) {
+			if (k > 0) {
+				theta[k] = zbrent(auxiliar, (void*)dist, theta[0], theta[k + 1],
+								  -log(g[k + 1] * 1e-2), 1e-3 * (theta[k + 1] - theta[0]), &warnz[k]);
+			}
 
 
-            g[k]=stable_cdf_g(theta[k],(void*)dist);
+			g[k] = stable_cdf_g(theta[k], (void*)dist);
 
-            stable_integration(dist,integrando,
-                               theta[k],theta[k+1],
-                               max(cdf*relTOL,absTOL)/SUBS_def,relTOL,IT_MAX,
-                               &cdf1,&err1,method_[SUBS_def-k-1]);
-            cdf+=cdf1;
-            *err+=err1*err1;
-          }
-          /*stable_integration(&F,&theta[0],SUBS_def+1,0.0,relTOL,
-                               IT_MAX,dist->gslworkspace,&cdf,&err);*/
-      }
+			stable_integration(dist, integrando,
+							   theta[k], theta[k + 1],
+							   max(cdf * relTOL, absTOL) / SUBS_def, relTOL, IT_MAX,
+							   &cdf1, &err1, method_[SUBS_def - k - 1]);
+			cdf += cdf1;
+			*err += err1 * err1;
+		}
 
-    else if(dist->alfa<1.0 || (dist->alfa==1 && dist->beta_>0)) //Entonces max a la izqda
-      {
-        for (k=1;k<=SUBS_def;k++)
-          {
-            if(k<SUBS_def){
-            theta[k]=zbrent(auxiliar,(void*)dist,theta[k-1],theta[SUBS_def],
-                            -log(g[k-1]*1e-2),1e-3*(theta[SUBS_def]-theta[k-1]),&warnz[k]);
-            }
+		/*stable_integration(&F,&theta[0],SUBS_def+1,0.0,relTOL,
+		                     IT_MAX,dist->gslworkspace,&cdf,&err);*/
+	}
 
-            g[k]=stable_cdf_g(theta[k],(void*)dist);
+	else if (dist->alfa < 1.0 || (dist->alfa == 1 && dist->beta_ > 0)) { //Entonces max a la izqda
+		for (k = 1; k <= SUBS_def; k++) {
+			if (k < SUBS_def) {
+				theta[k] = zbrent(auxiliar, (void*)dist, theta[k - 1], theta[SUBS_def],
+								  -log(g[k - 1] * 1e-2), 1e-3 * (theta[SUBS_def] - theta[k - 1]), &warnz[k]);
+			}
 
-            stable_integration(dist,integrando,
-                               theta[k-1],theta[k],
-                               max(cdf*relTOL,absTOL)/SUBS_def,relTOL,IT_MAX,
-                               &cdf1,&err1,method_[k-1]);
-            cdf+=cdf1;
-            *err+=err1*err1;
-          }
-      }
-  *err=sqrt(*err);
-  //freopen("data_integrando.txt","w",file_integ);
-  /*fprintf(FINTEG,"%le\t%le\t%le\t%le\t%le\t%le\t%le\t%le\t\n",
-          x,theta[0],theta[SUBS_def/2],theta[SUBS_def],g[0],g[SUBS_def/2],g[SUBS_def],pdf);*/
+			g[k] = stable_cdf_g(theta[k], (void*)dist);
 
-  if(isnan(cdf))
-    cdf = 0;
+			stable_integration(dist, integrando,
+							   theta[k - 1], theta[k],
+							   max(cdf * relTOL, absTOL) / SUBS_def, relTOL, IT_MAX,
+							   &cdf1, &err1, method_[k - 1]);
+			cdf += cdf1;
+			*err += err1 * err1;
+		}
+	}
 
-  return cdf;
+	*err = sqrt(*err);
+	//freopen("data_integrando.txt","w",file_integ);
+	/*fprintf(FINTEG,"%le\t%le\t%le\t%le\t%le\t%le\t%le\t%le\t\n",
+	        x,theta[0],theta[SUBS_def/2],theta[SUBS_def],g[0],g[SUBS_def/2],g[SUBS_def],pdf);*/
+
+	if (isnan(cdf))
+		cdf = 0;
+
+	return cdf;
 }
 
 
@@ -315,31 +315,31 @@ stable_integration_cdf(StableDist *dist, double(*integrando)(double,void*),
 double
 stable_cdf_point_GAUSS(StableDist *dist, const double x, double *err)
 {
-  double x_=(x-dist->mu_0)/dist->sigma;
-  *err = 0.0;
+	double x_ = (x - dist->mu_0) / dist->sigma;
+	*err = 0.0;
 
-  return 0.5+0.5*gsl_sf_erf(x_*0.5);
+	return 0.5 + 0.5 * gsl_sf_erf(x_ * 0.5);
 }
 
 double
 stable_cdf_point_CAUCHY(StableDist *dist, const double x, double *err)
 {
-  double x_=(x-dist->mu_0)/dist->sigma;
-  *err = 0.0;
+	double x_ = (x - dist->mu_0) / dist->sigma;
+	*err = 0.0;
 
-  return 0.5+M_1_PI*atan(x_);
+	return 0.5 + M_1_PI * atan(x_);
 }
 
 double
 stable_cdf_point_LEVY(StableDist *dist, const double x, double *err)
 {
-  double xxi=(x-dist->mu_0)/dist->sigma-dist->xi;
+	double xxi = (x - dist->mu_0) / dist->sigma - dist->xi;
 
-  if (xxi>0 && dist->beta>0)
-    return gsl_sf_erfc(sqrt(0.5/xxi));
-  else if (xxi<0 && dist->beta<0)
-    return gsl_sf_erfc(sqrt(-0.5/xxi));
-  else return 0.0;
+	if (xxi > 0 && dist->beta > 0)
+		return gsl_sf_erfc(sqrt(0.5 / xxi));
+	else if (xxi < 0 && dist->beta < 0)
+		return gsl_sf_erfc(sqrt(-0.5 / xxi));
+	else return 0.0;
 }
 
 /******************************************************************************/
@@ -348,86 +348,81 @@ stable_cdf_point_LEVY(StableDist *dist, const double x, double *err)
 double
 stable_cdf_point_ALFA_1(StableDist *dist, const double x, double *err)
 {
-  double cdf=0;
-  double x_;
+	double cdf = 0;
+	double x_;
 
-  double(*integrando)(double,void *) = &stable_cdf_g1;
-  double(*auxiliar)(double,void *)= &stable_cdf_g_aux1;
+	double(*integrando)(double, void *) = &stable_cdf_g1;
+	double(*auxiliar)(double, void *) = &stable_cdf_g_aux1;
 
-  x_=(x-dist->mu_0)/dist->sigma;
+	x_ = (x - dist->mu_0) / dist->sigma;
 
-  *err=0.0;
+	*err = 0.0;
 
-  if (dist->beta < 0.0)
-   {
-    x_ = -x_;
-    dist->beta_ = -dist->beta;
-   }
-  else dist->beta_ = dist->beta;
+	if (dist->beta < 0.0) {
+		x_ = -x_;
+		dist->beta_ = -dist->beta;
+	} else dist->beta_ = dist->beta;
 
-  //dist->xxipow = exp(-PI*x_*0.5/dist->beta_);
-  dist->xxipow = (-M_PI*x_*0.5/dist->beta_);
-  integrando = &stable_cdf_g1;
-  auxiliar = &stable_cdf_g_aux1;
+	//dist->xxipow = exp(-PI*x_*0.5/dist->beta_);
+	dist->xxipow = (-M_PI * x_ * 0.5 / dist->beta_);
+	integrando = &stable_cdf_g1;
+	auxiliar = &stable_cdf_g_aux1;
 
-  cdf = stable_integration_cdf(dist,integrando,auxiliar,err);
+	cdf = stable_integration_cdf(dist, integrando, auxiliar, err);
 
-  if (dist->beta>0)
-    cdf = dist->c3*cdf;
-  else
-    cdf = 1.0 - dist->c3*cdf;
+	if (dist->beta > 0)
+		cdf = dist->c3 * cdf;
+	else
+		cdf = 1.0 - dist->c3 * cdf;
 
-  if(isnan(cdf))
-    cdf = 0;
+	if (isnan(cdf))
+		cdf = 0;
 
-  return cdf;
+	return cdf;
 }
 
 double
 stable_cdf_point_STABLE(StableDist *dist, const double x, double *err)
 {
-  double cdf=0;
-  double x_, xxi;
+	double cdf = 0;
+	double x_, xxi;
 
-  double(*integrando)(double,void *) = &stable_cdf_g2;
-  double(*auxiliar)(double,void *)= &stable_cdf_g_aux2;
-  x_=(x-dist->mu_0)/dist->sigma;
-  xxi=x_-dist->xi;
-  *err=0.0;
+	double(*integrando)(double, void *) = &stable_cdf_g2;
+	double(*auxiliar)(double, void *) = &stable_cdf_g_aux2;
+	x_ = (x - dist->mu_0) / dist->sigma;
+	xxi = x_ - dist->xi;
+	*err = 0.0;
 
-        //xxi_th = pow(10,XXI_TH/fabs(dist->alfainvalfa1));//REVISAR CON NOLAN...
-        /*Si justo evaluo en o cerca de xi*/
-    if (fabs(xxi) < XXI_TH)
-      {
-       // printf("_%lf_\n",x);
-        cdf = M_1_PI*(M_PI_2-dist->theta0);
-        return cdf;
-      }
-    else if (xxi<0) /*F(x<xi,alfa,beta) = 1-F(-x,alfa,-beta)*/
-      {
-        dist->theta0_=-dist->theta0;/*theta0(alfa,-beta)=-theta0(alfa,beta)*/
-        dist->beta_=-dist->beta;
-      }
-    else
-      {
-        dist->theta0_=dist->theta0;
-        dist->beta_=dist->beta;
-        if (fabs(dist->theta0_+M_PI_2)<THETA_TH) return 1.0;
-      }
-    //dist->xxipow=pow(fabs(xxi),dist->alfainvalfa1);
-    dist->xxipow=dist->alfainvalfa1*log(fabs(xxi));
+	//xxi_th = pow(10,XXI_TH/fabs(dist->alfainvalfa1));//REVISAR CON NOLAN...
+	/*Si justo evaluo en o cerca de xi*/
+	if (fabs(xxi) < XXI_TH) {
+		// printf("_%lf_\n",x);
+		cdf = M_1_PI * (M_PI_2 - dist->theta0);
+		return cdf;
+	} else if (xxi < 0) { /*F(x<xi,alfa,beta) = 1-F(-x,alfa,-beta)*/
+		dist->theta0_ = -dist->theta0; /*theta0(alfa,-beta)=-theta0(alfa,beta)*/
+		dist->beta_ = -dist->beta;
+	} else {
+		dist->theta0_ = dist->theta0;
+		dist->beta_ = dist->beta;
 
-    //Solo si alfa1 o zona estable.
-    cdf = stable_integration_cdf(dist,integrando,auxiliar,err);
+		if (fabs(dist->theta0_ + M_PI_2) < THETA_TH) return 1.0;
+	}
 
-  if (xxi>0)
-    cdf = dist->c1+dist->c3*cdf;
-  else if (dist->alfa>1.0)
-    cdf = - dist->c3*cdf;
-  else// if (dist->alfa<1.0)
-    cdf = 0.5 - (dist->theta0 + cdf)*M_1_PI;
+	//dist->xxipow=pow(fabs(xxi),dist->alfainvalfa1);
+	dist->xxipow = dist->alfainvalfa1 * log(fabs(xxi));
 
-  return cdf;
+	//Solo si alfa1 o zona estable.
+	cdf = stable_integration_cdf(dist, integrando, auxiliar, err);
+
+	if (xxi > 0)
+		cdf = dist->c1 + dist->c3 * cdf;
+	else if (dist->alfa > 1.0)
+		cdf = - dist->c3 * cdf;
+	else// if (dist->alfa<1.0)
+		cdf = 0.5 - (dist->theta0 + cdf) * M_1_PI;
+
+	return cdf;
 }
 
 /******************************************************************************/
@@ -437,25 +432,25 @@ stable_cdf_point_STABLE(StableDist *dist, const double x, double *err)
 double
 stable_cdf_point(StableDist *dist, const double x, double *err)
 {
-  double temp;
+	double temp;
 
-  if (err==NULL) err=&temp;
+	if (err == NULL) err = &temp;
 
-  return (dist->stable_cdf_point)(dist,x,err);
+	return (dist->stable_cdf_point)(dist, x, err);
 }
 
 void stable_cdf_gpu(StableDist *dist, const double x[], const int Nx,
-                double *cdf, double *err)
+					double *cdf, double *err)
 {
-    if(dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
-        stable_cdf(dist, x, Nx, cdf, err); // Rely on analytical formulae where possible
-    else
-    {
-      stable_clinteg_set_mode(&dist->cli, mode_cdf);
-      if(dist->gpu_queues == 1)
-          stable_clinteg_points(&dist->cli, (double*) x, cdf, NULL, err, Nx, dist);
-      else
-          stable_clinteg_points_parallel(&dist->cli, (double*) x, cdf, NULL, err, Nx, dist, dist->gpu_queues);
-    }
+	if (dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
+		stable_cdf(dist, x, Nx, cdf, err); // Rely on analytical formulae where possible
+	else {
+		stable_clinteg_set_mode(&dist->cli, mode_cdf);
+
+		if (dist->gpu_queues == 1)
+			stable_clinteg_points(&dist->cli, (double*) x, cdf, NULL, err, Nx, dist);
+		else
+			stable_clinteg_points_parallel(&dist->cli, (double*) x, cdf, NULL, err, Nx, dist, dist->gpu_queues);
+	}
 }
 

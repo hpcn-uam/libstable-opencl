@@ -30,91 +30,127 @@
 #include <time.h>
 #include <stdlib.h>
 
-int main (int argc, char* argv[])
+int main(int argc, char* argv[])
 {
-  char *aux;
-  double alfa, beta, sigma, mu;
-  double ma = 0, mb = 0, ms = 0, mm = 0, va = 0, vb = 0, vs = 0, vm = 0;
-  double * data;
-  int i = 1, iexp, N, Nexp;
-  int seed;
+	char *aux;
+	double alfa, beta, sigma, mu;
+	double ma = 0, mb = 0, ms = 0, mm = 0, va = 0, vb = 0, vs = 0, vm = 0;
+	double * data;
+	int i = 1, iexp, N, Nexp;
+	int seed;
 
-  StableDist *dist = NULL;
+	StableDist *dist = NULL;
 
-  if (argc > 1) {  alfa = strtod(argv[i], &aux); argc--; i++; } else alfa = 0.1;
-  if (argc > 1) {  beta = strtod(argv[i], &aux); argc--; i++; } else beta = -0.9;
-  if (argc > 1) { sigma = strtod(argv[i], &aux); argc--; i++; } else sigma = 1.0;
-  if (argc > 1) {    mu = strtod(argv[i], &aux); argc--; i++; } else mu = 0.0;
-  if (argc > 1) {     N = (int)strtod(argv[i], &aux); argc--; i++; } else N = 1000;
-  if (argc > 1) {  Nexp = (int)strtod(argv[i], &aux); argc--; i++; } else Nexp = 1;
-  if (argc > 1) {  seed = (int)strtod(argv[i], &aux); argc--; i++; } else seed = -1;
+	if (argc > 1) {
+		alfa = strtod(argv[i], &aux);
+		argc--;
+		i++;
+	} else alfa = 0.1;
 
-  printf("%f %f %f %f %d %d\n", alfa, beta, sigma, mu, N, Nexp);
-  if ((dist = stable_create(alfa, beta, sigma, mu, 0)) == NULL) {
-    printf("Error when creating the distribution");
-    exit(1);
-  }
+	if (argc > 1) {
+		beta = strtod(argv[i], &aux);
+		argc--;
+		i++;
+	} else beta = -0.9;
 
-  stable_set_THREADS(1);
-  stable_set_absTOL(1e-16);
-  stable_set_relTOL(1e-8);
-  stable_set_FLOG("errlog.txt");
+	if (argc > 1) {
+		sigma = strtod(argv[i], &aux);
+		argc--;
+		i++;
+	} else sigma = 1.0;
 
-  if (seed < 0) stable_rnd_seed(dist, time(NULL));
-  else stable_rnd_seed(dist, seed);
+	if (argc > 1) {
+		mu = strtod(argv[i], &aux);
+		argc--;
+		i++;
+	} else mu = 0.0;
 
-  /* Random sample generation */
-  data = (double*)malloc(N * Nexp * sizeof(double));
+	if (argc > 1) {
+		N = (int)strtod(argv[i], &aux);
+		argc--;
+		i++;
+	} else N = 1000;
 
-  stable_rnd(dist, data, N * Nexp);
+	if (argc > 1) {
+		Nexp = (int)strtod(argv[i], &aux);
+		argc--;
+		i++;
+	} else Nexp = 1;
 
-  for (iexp = 0; iexp < Nexp; iexp++)
-  {
-    printf("o"); fflush(stdout);
+	if (argc > 1) {
+		seed = (int)strtod(argv[i], &aux);
+		argc--;
+		i++;
+	} else seed = -1;
 
-    stable_fit_init(dist, data + iexp * N, N, NULL, NULL);
+	printf("%f %f %f %f %d %d\n", alfa, beta, sigma, mu, N, Nexp);
 
-    stable_activate_gpu(dist);
+	if ((dist = stable_create(alfa, beta, sigma, mu, 0)) == NULL) {
+		printf("Error when creating the distribution");
+		exit(1);
+	}
 
-    /* Select estimation algorithm to test */
-    //stable_fit_mle(dist,data+iexp*N,N);
-    //stable_fit_mle2d(dist, data + iexp * N, N);
-    //stable_fit_koutrouvelis(dist,data+iexp*N,N);
-    stable_fit_grid(dist, data + iexp * N, N);
+	stable_set_THREADS(1);
+	stable_set_absTOL(1e-16);
+	stable_set_relTOL(1e-8);
+	stable_set_FLOG("errlog.txt");
 
-    ma += dist->alfa;
-    mb += dist->beta;
-    ms += dist->sigma;
-    mm += dist->mu_0;
+	if (seed < 0) stable_rnd_seed(dist, time(NULL));
+	else stable_rnd_seed(dist, seed);
 
-    va += dist->alfa * dist->alfa;
-    vb += dist->beta * dist->beta;
-    vs += dist->sigma * dist->sigma;
-    vm += dist->mu_0 * dist->mu_0;
+	/* Random sample generation */
+	data = (double*)malloc(N * Nexp * sizeof(double));
 
-    printf("\b.");
-    fflush(stdout);
-  }
-  printf(" DONE\n");
-  ma = ma / Nexp;
-  va = sqrt((va / Nexp - ma * ma) * Nexp / (Nexp - 1));
-  mb = mb / Nexp;
-  vb = sqrt((vb / Nexp - mb * mb) * Nexp / (Nexp - 1));
-  ms = ms / Nexp;
-  vs = sqrt((vs / Nexp - ms * ms) * Nexp / (Nexp - 1));
-  mm = mm / Nexp;
-  vm = sqrt((vm / Nexp - mm * mm) * Nexp / (Nexp - 1));
+	stable_rnd(dist, data, N * Nexp);
 
-  printf("-----------------------------------------------------------\n");
-  printf("Alpha = %f+-%f\n", ma, va);
-  printf("Beta  = %f+-%f\n", mb, vb);
-  printf("Sigma = %f+-%f\n", ms, vs);
-  printf("Mu    = %f+-%f\n", mm, vm);
+	for (iexp = 0; iexp < Nexp; iexp++) {
+		printf("o");
+		fflush(stdout);
 
-  free(data);
-  stable_free(dist);
+		stable_fit_init(dist, data + iexp * N, N, NULL, NULL);
 
-  fclose(stable_get_FLOG());
+		stable_activate_gpu(dist);
 
-  return 0;
+		/* Select estimation algorithm to test */
+		//stable_fit_mle(dist,data+iexp*N,N);
+		//stable_fit_mle2d(dist, data + iexp * N, N);
+		//stable_fit_koutrouvelis(dist,data+iexp*N,N);
+		stable_fit_grid(dist, data + iexp * N, N);
+
+		ma += dist->alfa;
+		mb += dist->beta;
+		ms += dist->sigma;
+		mm += dist->mu_0;
+
+		va += dist->alfa * dist->alfa;
+		vb += dist->beta * dist->beta;
+		vs += dist->sigma * dist->sigma;
+		vm += dist->mu_0 * dist->mu_0;
+
+		printf("\b.");
+		fflush(stdout);
+	}
+
+	printf(" DONE\n");
+	ma = ma / Nexp;
+	va = sqrt((va / Nexp - ma * ma) * Nexp / (Nexp - 1));
+	mb = mb / Nexp;
+	vb = sqrt((vb / Nexp - mb * mb) * Nexp / (Nexp - 1));
+	ms = ms / Nexp;
+	vs = sqrt((vs / Nexp - ms * ms) * Nexp / (Nexp - 1));
+	mm = mm / Nexp;
+	vm = sqrt((vm / Nexp - mm * mm) * Nexp / (Nexp - 1));
+
+	printf("-----------------------------------------------------------\n");
+	printf("Alpha = %f+-%f\n", ma, va);
+	printf("Beta  = %f+-%f\n", mb, vb);
+	printf("Sigma = %f+-%f\n", ms, vs);
+	printf("Mu    = %f+-%f\n", mm, vm);
+
+	free(data);
+	stable_free(dist);
+
+	fclose(stable_get_FLOG());
+
+	return 0;
 }

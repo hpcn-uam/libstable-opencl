@@ -22,82 +22,76 @@
 #include "opencl_integ.h"
 
 
-int main (int argc, char** argv)
+int main(int argc, char** argv)
 {
-    double alfa = 1.75, beta = 1, sigma = 1.0, mu = 0.0;
-    int param = 0;
-    double x[] = { 1 };
-    double pdf[3] = { 0,0,0 }, gpu_pdf[3] = { 0,0,0 };
-    double cdf[3] = { 0,0,0 }, gpu_cdf[3] = { 0,0,0 };
-    double pdf_err[3] = { 0,0,0 }, gpu_pdf_err[3] = { 0,0,0 };
-    double cdf_err[3] = { 0,0,0 }, gpu_cdf_err[3] = { 0,0,0 };
-    size_t num_points = sizeof x / sizeof(double);
-    int i;
+	double alfa = 1.75, beta = 1, sigma = 1.0, mu = 0.0;
+	int param = 0;
+	double x[] = { 1 };
+	double pdf[3] = { 0, 0, 0 }, gpu_pdf[3] = { 0, 0, 0 };
+	double cdf[3] = { 0, 0, 0 }, gpu_cdf[3] = { 0, 0, 0 };
+	double pdf_err[3] = { 0, 0, 0 }, gpu_pdf_err[3] = { 0, 0, 0 };
+	double cdf_err[3] = { 0, 0, 0 }, gpu_cdf_err[3] = { 0, 0, 0 };
+	size_t num_points = sizeof x / sizeof(double);
+	int i;
 
-    stable_clinteg_printinfo();
+	stable_clinteg_printinfo();
 
-    if(argc >= 3)
-    {
-        alfa = strtod(argv[1], NULL);
-        beta = strtod(argv[2], NULL);
-    }
+	if (argc >= 3) {
+		alfa = strtod(argv[1], NULL);
+		beta = strtod(argv[2], NULL);
+	}
 
-    if(argc >= 4)
-    {
-        x[0] = strtod(argv[3], NULL);
-    }
+	if (argc >= 4)
+		x[0] = strtod(argv[3], NULL);
 
-    StableDist *dist = stable_create(alfa, beta, sigma, mu, param);
+	StableDist *dist = stable_create(alfa, beta, sigma, mu, param);
 
-    if (!dist)
-    {
-        fprintf(stderr, "StableDist creation failure. Aborting.\n");
-        return 1;
-    }
+	if (!dist) {
+		fprintf(stderr, "StableDist creation failure. Aborting.\n");
+		return 1;
+	}
 
-    printf("Evaluating at α = %.3lf, β = %.3lf\n", alfa, beta);
+	printf("Evaluating at α = %.3lf, β = %.3lf\n", alfa, beta);
 
-    stable_pdf(dist, x, 3, pdf, pdf_err);
-    stable_cdf(dist, x, 3, cdf, cdf_err);
+	stable_pdf(dist, x, 3, pdf, pdf_err);
+	stable_cdf(dist, x, 3, cdf, cdf_err);
 
-    if(stable_activate_gpu(dist))
-    {
-        fprintf(stderr, "Couldn't initialize GPU.\n");
-        return 1;
-    }
+	if (stable_activate_gpu(dist)) {
+		fprintf(stderr, "Couldn't initialize GPU.\n");
+		return 1;
+	}
 
-    stable_clinteg_set_mode(&dist->cli, mode_pdf);
-    if(stable_clinteg_points(&dist->cli, x, gpu_pdf, NULL, gpu_pdf_err, num_points, dist))
-    {
-        fprintf(stderr, "Stable-OpenCL error. Aborting.\n");
-        return 1;
-    }
+	stable_clinteg_set_mode(&dist->cli, mode_pdf);
 
-    stable_clinteg_set_mode(&dist->cli, mode_cdf);
-    if(stable_clinteg_points(&dist->cli, x, gpu_cdf, NULL, gpu_cdf_err, num_points, dist))
-    {
-        fprintf(stderr, "Stable-OpenCL error. Aborting.\n");
-        return 1;
-    }
+	if (stable_clinteg_points(&dist->cli, x, gpu_pdf, NULL, gpu_pdf_err, num_points, dist)) {
+		fprintf(stderr, "Stable-OpenCL error. Aborting.\n");
+		return 1;
+	}
 
-    for(i = 0; i < sizeof x / sizeof(double); i++)
-    {
-        double abspdf_err = fabs(gpu_pdf[i] - pdf[i]);
-        printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
-           x[i], alfa, beta, sigma, mu, pdf[i], pdf_err[i]);
-        printf("GPU PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
-               x[i], alfa, beta, sigma, mu, gpu_pdf[i], gpu_pdf_err[i]);
-        printf("PDF GPU / CPU difference: %3.3g abs, %3.3g rel\n\n", abspdf_err, abspdf_err / pdf[i]);
+	stable_clinteg_set_mode(&dist->cli, mode_cdf);
 
-        double abscdf_err = fabs(gpu_cdf[i] - cdf[i]);
+	if (stable_clinteg_points(&dist->cli, x, gpu_cdf, NULL, gpu_cdf_err, num_points, dist)) {
+		fprintf(stderr, "Stable-OpenCL error. Aborting.\n");
+		return 1;
+	}
 
-        printf("CDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
-           x[i], alfa, beta, sigma, mu, cdf[i], cdf_err[i]);
-        printf("GPU CDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
-               x[i], alfa, beta, sigma, mu, gpu_cdf[i], gpu_cdf_err[i]);
-        printf("CDF GPU / CPU difference: %3.3g abs, %3.3g rel\n\n", abscdf_err, abscdf_err / cdf[i]);
-    }
+	for (i = 0; i < sizeof x / sizeof(double); i++) {
+		double abspdf_err = fabs(gpu_pdf[i] - pdf[i]);
+		printf("PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
+			   x[i], alfa, beta, sigma, mu, pdf[i], pdf_err[i]);
+		printf("GPU PDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
+			   x[i], alfa, beta, sigma, mu, gpu_pdf[i], gpu_pdf_err[i]);
+		printf("PDF GPU / CPU difference: %3.3g abs, %3.3g rel\n\n", abspdf_err, abspdf_err / pdf[i]);
 
-    stable_free(dist);
-    return 0;
+		double abscdf_err = fabs(gpu_cdf[i] - cdf[i]);
+
+		printf("CDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
+			   x[i], alfa, beta, sigma, mu, cdf[i], cdf_err[i]);
+		printf("GPU CDF(%g;%1.2f,%1.2f,%1.2f,%1.2f) = %1.15e, relerr %1.2e\n",
+			   x[i], alfa, beta, sigma, mu, gpu_cdf[i], gpu_cdf_err[i]);
+		printf("CDF GPU / CPU difference: %3.3g abs, %3.3g rel\n\n", abscdf_err, abscdf_err / cdf[i]);
+	}
+
+	stable_free(dist);
+	return 0;
 }

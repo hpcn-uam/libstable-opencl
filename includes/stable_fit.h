@@ -5,9 +5,9 @@
 
 
 gsl_complex stable_samplecharfunc_point(const double x[],
-            const unsigned int N, double t);
+										const unsigned int N, double t);
 
 void stable_samplecharfunc(const double x[], const unsigned int Nx,
-             const double t[], const unsigned int Nt, gsl_complex *z);
+						   const double t[], const unsigned int Nt, gsl_complex *z);
 
 #endif
