@@ -23,7 +23,7 @@ void _stable_evaluate_mixture(StableDist *dist, const double x[], const int Nx,
 		}
 
 		for (i = 0; i < dist->num_mixture_components; i++) {
-			eval(&dist->mixture_components[i], x, Nx, res1_component, res2_component);
+			eval(dist->mixture_components[i], x, Nx, res1_component, res2_component);
 
 			for (j = 0; j < Nx; j++) {
 				if (result1) result1[j] += res1_component[j] * dist->mixture_weights[i];

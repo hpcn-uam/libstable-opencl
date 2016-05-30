@@ -195,8 +195,8 @@ void stable_clear_LOG()
 }
 
 int stable_setparams(StableDist *dist,
-					 double alfa, double beta, double sigma, double mu,
-					 int parametrization)
+                     double alfa, double beta, double sigma, double mu,
+                     int parametrization)
 {
 	int zona;
 
@@ -216,123 +216,123 @@ int stable_setparams(StableDist *dist,
 	dist->sigma = sigma;
 
 	switch (zona) {
-		case STABLE_B1:
-			dist->beta = (dist->beta > 0) ? 1.0 : -1.0; // Avoid rounding errors maybe?
+	case STABLE_B1:
+		dist->beta = (dist->beta > 0) ? 1.0 : -1.0; // Avoid rounding errors maybe?
 
-		case STABLE:
-			dist->alfainvalfa1 = alfa / (alfa - 1.0);
-			dist->xi = -beta * tan(0.5 * alfa * M_PI);
-			dist->theta0 = atan(-dist->xi) / alfa;
-			//dist->k1 = pow(1.0+dist->xi*dist->xi,-0.5/(alfa-1.0));
-			dist->k1 = -0.5 / (alfa - 1.0) * log(1.0 + dist->xi * dist->xi);
-			dist->S = pow(1.0 + dist->xi * dist->xi, 0.5 / alfa);
-			dist->Vbeta1 = dist->k1 - dist->alfainvalfa1 * log(dist->alfa)
-						   + log(fabs(dist->alfa - 1.0));
-			dist->stable_pdf_point = &stable_pdf_point_STABLE;
-			dist->stable_cdf_point = &stable_cdf_point_STABLE;
+	case STABLE:
+		dist->alfainvalfa1 = alfa / (alfa - 1.0);
+		dist->xi = -beta * tan(0.5 * alfa * M_PI);
+		dist->theta0 = atan(-dist->xi) / alfa;
+		//dist->k1 = pow(1.0+dist->xi*dist->xi,-0.5/(alfa-1.0));
+		dist->k1 = -0.5 / (alfa - 1.0) * log(1.0 + dist->xi * dist->xi);
+		dist->S = pow(1.0 + dist->xi * dist->xi, 0.5 / alfa);
+		dist->Vbeta1 = dist->k1 - dist->alfainvalfa1 * log(dist->alfa)
+		               + log(fabs(dist->alfa - 1.0));
+		dist->stable_pdf_point = &stable_pdf_point_STABLE;
+		dist->stable_cdf_point = &stable_cdf_point_STABLE;
 
-			if (alfa < 1.0) {
-				dist->c1 = 0.5 - dist->theta0 * M_1_PI;
-				dist->c2_part = alfa / ((1.0 - alfa) * M_PI);
-				dist->c3 = M_1_PI;
-			} else {
-				dist->c1 = 1.0;
-				dist->c2_part = alfa / ((alfa - 1.0) * M_PI);
-				dist->c3 = -M_1_PI;
-			}
-
-			//XXI_TH = pow(10,EXP_MAX/fabs(dist->alfainvalfa1));//REVISAR CON NOLAN...
-			//XXI_TH = max(XXI_TH,10*EPS);
-
-			if (alfa > 1) {
-				AUX1 = log(log(8.5358 / (relTOL)) / 0.9599); /*3.76;*/
-				AUX2 = log(relTOL); /*-40;*/
-			} else {
-				AUX1 = log(relTOL); /*-40;*/
-				AUX2 = log(log(8.5358 / (relTOL)) / 0.9599); /*3.76;*/
-			}
-
-			break;
-
-		case ALFA_1_B1:
-			dist->beta = (dist->beta > 0) ? 1.0 : -1.0;
-
-		case ALFA_1:
-			dist->alfa = 1;
-			dist->c2_part = 0.5 / fabs(beta);
-			dist->alfainvalfa1 = 0.0;
-			dist->xi = 0.0;
-			dist->theta0 = M_PI_2;
-			dist->k1 = log(2.0 * M_1_PI);
-			//dist->k1 = 2.0*M_1_PI;
-			dist->S = 2.0 * M_1_PI;
-			dist->c1 = 0.0;
+		if (alfa < 1.0) {
+			dist->c1 = 0.5 - dist->theta0 * M_1_PI;
+			dist->c2_part = alfa / ((1.0 - alfa) * M_PI);
 			dist->c3 = M_1_PI;
-			dist->Vbeta1 = 2.0 * M_1_PI / M_E;
-			dist->stable_pdf_point = &stable_pdf_point_ALFA_1;
-			dist->stable_cdf_point = &stable_cdf_point_ALFA_1;
-
-			//XXI_TH = 10*EPS;
-			if (beta < 0) {
-				AUX1 = log(log(8.5358 / (relTOL)) / 0.9599); /*4;*/
-				AUX2 = log(relTOL); /*-25;*/
-			} else {
-				AUX1 = log(relTOL); /*-25;*/
-				AUX2 = log(log(8.5358 / (relTOL)) / 0.9599); /*4;*/
-			}
-
-			break;
-
-		case CAUCHY:
-			dist->beta = 0;
-			dist->alfa = 1;
-			dist->c2_part = 0.0;
-			dist->alfainvalfa1 = 0.0;
-			dist->xi = 0.0;
-			dist->theta0 = M_PI_2;
-			dist->k1 = log(2.0 * M_1_PI);
-			//dist->k1 = 2.0*M_1_PI;
-			dist->S = 2.0 * M_1_PI;
-			dist->c1 = 0.0;
-			dist->c3 = M_1_PI;
-			dist->Vbeta1 = 2.0 * M_1_PI / M_E;
-			dist->stable_pdf_point = &stable_pdf_point_CAUCHY;
-			dist->stable_cdf_point = &stable_cdf_point_CAUCHY;
-			break;
-
-		case GAUSS:
-			dist->alfa = 2;
-			dist->beta = 0.0;
-			dist->alfainvalfa1 = 2.0;
-			dist->xi = 0.0;
-			dist->theta0 = 0.0;
-			dist->k1 = log(2.0);
-			//dist->k1 = 2.0;
-			dist->S = 2.0;
+		} else {
 			dist->c1 = 1.0;
-			dist->c2_part = 2.0 * M_1_PI;
+			dist->c2_part = alfa / ((alfa - 1.0) * M_PI);
 			dist->c3 = -M_1_PI;
-			dist->Vbeta1 = 0.25;
-			dist->stable_pdf_point = &stable_pdf_point_GAUSS;
-			dist->stable_cdf_point = &stable_cdf_point_GAUSS;
-			break;
+		}
 
-		case LEVY:
-			dist->alfa = 0.5;
-			dist->beta = (2.0 * (beta > 0) - 1.0); //será 1 ó -1
-			dist->alfainvalfa1 = -1.0;
-			dist->xi = -dist->beta;
-			dist->theta0 = 0.5 * M_PI;
-			dist->k1 = 0.0;
-			dist->S = 1.0;
-			dist->c1 = 0.0;
-			dist->c2_part = 0.5 * M_1_PI;
-			dist->c3 = M_1_PI;
-			dist->Vbeta1 = dist->k1 - dist->alfainvalfa1 * log(dist->alfa)
-						   + log(fabs(dist->alfa - 1.0));
-			dist->stable_pdf_point = &stable_pdf_point_LEVY;
-			dist->stable_cdf_point = &stable_cdf_point_LEVY;
-			break;
+		//XXI_TH = pow(10,EXP_MAX/fabs(dist->alfainvalfa1));//REVISAR CON NOLAN...
+		//XXI_TH = max(XXI_TH,10*EPS);
+
+		if (alfa > 1) {
+			AUX1 = log(log(8.5358 / (relTOL)) / 0.9599); /*3.76;*/
+			AUX2 = log(relTOL); /*-40;*/
+		} else {
+			AUX1 = log(relTOL); /*-40;*/
+			AUX2 = log(log(8.5358 / (relTOL)) / 0.9599); /*3.76;*/
+		}
+
+		break;
+
+	case ALFA_1_B1:
+		dist->beta = (dist->beta > 0) ? 1.0 : -1.0;
+
+	case ALFA_1:
+		dist->alfa = 1;
+		dist->c2_part = 0.5 / fabs(beta);
+		dist->alfainvalfa1 = 0.0;
+		dist->xi = 0.0;
+		dist->theta0 = M_PI_2;
+		dist->k1 = log(2.0 * M_1_PI);
+		//dist->k1 = 2.0*M_1_PI;
+		dist->S = 2.0 * M_1_PI;
+		dist->c1 = 0.0;
+		dist->c3 = M_1_PI;
+		dist->Vbeta1 = 2.0 * M_1_PI / M_E;
+		dist->stable_pdf_point = &stable_pdf_point_ALFA_1;
+		dist->stable_cdf_point = &stable_cdf_point_ALFA_1;
+
+		//XXI_TH = 10*EPS;
+		if (beta < 0) {
+			AUX1 = log(log(8.5358 / (relTOL)) / 0.9599); /*4;*/
+			AUX2 = log(relTOL); /*-25;*/
+		} else {
+			AUX1 = log(relTOL); /*-25;*/
+			AUX2 = log(log(8.5358 / (relTOL)) / 0.9599); /*4;*/
+		}
+
+		break;
+
+	case CAUCHY:
+		dist->beta = 0;
+		dist->alfa = 1;
+		dist->c2_part = 0.0;
+		dist->alfainvalfa1 = 0.0;
+		dist->xi = 0.0;
+		dist->theta0 = M_PI_2;
+		dist->k1 = log(2.0 * M_1_PI);
+		//dist->k1 = 2.0*M_1_PI;
+		dist->S = 2.0 * M_1_PI;
+		dist->c1 = 0.0;
+		dist->c3 = M_1_PI;
+		dist->Vbeta1 = 2.0 * M_1_PI / M_E;
+		dist->stable_pdf_point = &stable_pdf_point_CAUCHY;
+		dist->stable_cdf_point = &stable_cdf_point_CAUCHY;
+		break;
+
+	case GAUSS:
+		dist->alfa = 2;
+		dist->beta = 0.0;
+		dist->alfainvalfa1 = 2.0;
+		dist->xi = 0.0;
+		dist->theta0 = 0.0;
+		dist->k1 = log(2.0);
+		//dist->k1 = 2.0;
+		dist->S = 2.0;
+		dist->c1 = 1.0;
+		dist->c2_part = 2.0 * M_1_PI;
+		dist->c3 = -M_1_PI;
+		dist->Vbeta1 = 0.25;
+		dist->stable_pdf_point = &stable_pdf_point_GAUSS;
+		dist->stable_cdf_point = &stable_cdf_point_GAUSS;
+		break;
+
+	case LEVY:
+		dist->alfa = 0.5;
+		dist->beta = (2.0 * (beta > 0) - 1.0); //será 1 ó -1
+		dist->alfainvalfa1 = -1.0;
+		dist->xi = -dist->beta;
+		dist->theta0 = 0.5 * M_PI;
+		dist->k1 = 0.0;
+		dist->S = 1.0;
+		dist->c1 = 0.0;
+		dist->c2_part = 0.5 * M_1_PI;
+		dist->c3 = M_1_PI;
+		dist->Vbeta1 = dist->k1 - dist->alfainvalfa1 * log(dist->alfa)
+		               + log(fabs(dist->alfa - 1.0));
+		dist->stable_pdf_point = &stable_pdf_point_LEVY;
+		dist->stable_cdf_point = &stable_cdf_point_LEVY;
+		break;
 	}
 
 	if (parametrization == 0) {
@@ -358,7 +358,7 @@ int stable_setparams(StableDist *dist,
 }
 
 int stable_checkparams(double alfa, double beta, double sigma, double mu,
-					   int parametrization)
+                       int parametrization)
 {
 	/*Check parameters*/
 	if (0.0 >= alfa || alfa > 2.0) {
@@ -398,7 +398,7 @@ int stable_checkparams(double alfa, double beta, double sigma, double mu,
 }
 
 StableDist * stable_create(double alfa, double beta, double sigma, double mu,
-						   int parametrization)
+                           int parametrization)
 {
 	/*gsl_error_handler_t * old_handler;
 	old_handler = */gsl_set_error_handler(&error_handler);
@@ -426,6 +426,11 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
 #else
 	dist->gpu_platform = 0;
 #endif
+
+	dist->num_mixture_components = 0;
+	dist->is_mixture = 0;
+	dist->mixture_weights = NULL;
+	dist->mixture_components = NULL;
 
 	//Allow the distribution to use THREADS threads.
 	stable_set_THREADS(THREADS);
@@ -461,7 +466,7 @@ StableDist * stable_copy(StableDist *src_dist)
 	StableDist *dist;
 
 	dist = stable_create(src_dist->alfa, src_dist->beta,
-						 src_dist->sigma, src_dist->mu_0, 0);
+	                     src_dist->sigma, src_dist->mu_0, 0);
 	return dist;
 }
 
@@ -473,7 +478,44 @@ void stable_free(StableDist *dist)
 	if (dist->gpu_enabled)
 		stable_deactivate_gpu(dist);
 
+	stable_set_mixture_components(dist, 0);
+
+	if (dist->mixture_weights)
+		free(dist->mixture_weights);
+
+	if (dist->mixture_components)
+		free(dist->mixture_components);
+
 	gsl_integration_workspace_free(dist->gslworkspace);
 	gsl_rng_free(dist->gslrand);
 	free(dist);
+}
+
+short stable_set_mixture_components(StableDist* dist, size_t num_components)
+{
+	size_t i;
+
+	if (num_components > dist->num_mixture_components) {
+		dist->mixture_components = realloc(dist->mixture_components, sizeof(StableDist*) * num_components);
+		dist->mixture_weights = realloc(dist->mixture_weights, sizeof(double) * num_components);
+
+		if (dist->mixture_components == NULL || dist->mixture_weights == NULL)
+			return 1;
+
+		for (i = dist->num_mixture_components; i < num_components; i++) {
+			dist->mixture_components[i] = stable_copy(dist);
+			dist->mixture_weights[i] = 0;
+
+			if (dist->mixture_components[i] == NULL)
+				return 1;
+		}
+	} else {
+		for (i = num_components; i < dist->num_mixture_components; i++) {
+			stable_free(dist->mixture_components[i]);
+		}
+	}
+
+	dist->num_mixture_components = num_components;
+
+	return 0;
 }

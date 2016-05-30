@@ -140,7 +140,7 @@ struct StableDistStruct {
   double mu_1;
 
   short is_mixture;
-  struct StableDistStruct* mixture_components;
+  struct StableDistStruct** mixture_components;
   double* mixture_weights;
   size_t num_mixture_components;
 
@@ -235,6 +235,17 @@ StableDist *stable_create(double alfa, double beta, double sigma, double mu,
 
 short stable_activate_gpu(StableDist* dist);
 void stable_deactivate_gpu(StableDist* dist);
+
+
+/**
+ * Enable the mixture and set the given number of components or, if the number is
+ * zero, disable the mixture.
+ *
+ * @param  dist           Stable distribution.
+ * @param  num_components Number of components in the mixture.
+ */
+short stable_set_mixture_components(StableDist* dist, size_t num_components);
+short stable_disable_mixture(StableDist* dist);
 
 StableDist *stable_copy(StableDist *src_dist);
 
@@ -522,7 +533,7 @@ int stable_fit_mle2d(StableDist *dist, const double *data, const unsigned int le
 
 int stable_fit_whole(StableDist *dist, const double *data, const unsigned int length);
 
-int stable_fit_mixture(StableDist *dgpuist, const double* data, const unsigned int length);
+int stable_fit_mixture(StableDist *dist, const double* data, const unsigned int length);
 
 /* Auxiliary functions */
 
