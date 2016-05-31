@@ -154,6 +154,8 @@ struct StableDistStruct {
   struct StableDistStruct** mixture_components;
   double* mixture_weights;
   size_t num_mixture_components;
+  size_t max_mixture_components;
+  double mixture_montecarlo_variance;
 
   /* Particular cases indicator (Gauss, Cauchy, Levy distribution, alfa==1, etc.) */
   int ZONE;
