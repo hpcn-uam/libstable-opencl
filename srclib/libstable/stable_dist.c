@@ -514,6 +514,7 @@ short stable_set_mixture_components(StableDist* dist, size_t num_components)
 			stable_free(dist->mixture_components[i]);
 	}
 
+	dist->is_mixture = num_components > 0;
 	dist->num_mixture_components = num_components;
 
 	return 0;
