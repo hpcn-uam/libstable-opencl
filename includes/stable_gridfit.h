@@ -21,7 +21,6 @@
 #include "opencl_integ.h"
 
 #define GRIDFIT_TEST_PER_DIM 3
-#define MAX_STABLE_PARAMS 4
 #define ESTIMATING_PARAMS 2
 #define MAX_ITERATIONS 10 // Tip: Use the iterations_calc script in scripts folder
 #define WANTED_PRECISION 0.015

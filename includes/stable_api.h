@@ -112,6 +112,17 @@ enum {
   STABLE_OCL
 };
 
+// Index of the parameters
+enum {
+  STABLE_PARAM_ALPHA = 0,
+  STABLE_PARAM_BETA = 1,
+  STABLE_PARAM_MU = 2,
+  STABLE_PARAM_SIGMA = 3
+};
+
+#define MAX_STABLE_PARAMS 4
+
+
 
 /************************************************************************
  ************************************************************************
@@ -260,6 +271,22 @@ int stable_checkparams(double alfa, double beta, double sigma, double mu,
 
 void error_handler(const char * reason, const char * file,
                    int line, int gsl_errno);
+
+/**
+ * Gets the parameters of the distribution in an array.
+ *
+ * Useful for iterating through the parameters programatically.
+ */
+void stable_getparams_array(StableDist* dist, double params[4]);
+
+/**
+ * Sets the parameter for the distirbution using the ones of the array.
+ *
+ * Useful for iterating through the parameters programatically.
+ *
+ * @return  0 if the parameters are valid, 1 if not
+ */
+short stable_setparams_array(StableDist* dist, double params[4]);
 
 /******************************************************************************/
 /*   PDF in particular cases                                                  */

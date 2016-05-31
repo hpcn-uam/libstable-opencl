@@ -18,33 +18,20 @@
 #include "stable_gridfit.h"
 #include "mcculloch.h"
 
-#define DIM_ALPHA 0
-#define DIM_BETA 1
-#define DIM_MU 2
-#define DIM_SIGMA 3
 
 static double initial_point_separation[] = { 0.025, 0.025, 0.2, 0.4 };
 static double initial_contracting_coefs[] = { 0.8, 0.9, 0.6, 0.2 };
-
-static void get_params_from_dist(StableDist* dist, double params[4])
-{
-	params[DIM_ALPHA] = dist->alfa;
-	params[DIM_BETA] = dist->beta;
-	params[DIM_MU] = dist->mu_0;
-	params[DIM_SIGMA] = dist->sigma;
-}
 
 static short set_params_to_dist(StableDist* dist, double* params, size_t params_count)
 {
 	double dist_current_params[MAX_STABLE_PARAMS];
 
-	get_params_from_dist(dist, dist_current_params);
+	stable_getparams_array(dist, dist_current_params);
 
 	for (size_t dim = 0; dim < params_count; dim++)
 		dist_current_params[dim] = params[dim];
 
-	return stable_setparams(dist, dist_current_params[DIM_ALPHA], dist_current_params[DIM_BETA],
-							dist_current_params[DIM_SIGMA], dist_current_params[DIM_MU], 0) == NOVALID;
+	return stable_setparams_array(dist, dist_current_params);
 }
 
 static void calculate_upperleft_corner_point(struct stable_gridfit* gridfit)
@@ -159,11 +146,11 @@ static void estimate_remaining_parameters(struct stable_gridfit* gridfit)
 	else if (gridfit->fitter_dimensions < 2)
 		abort(); // This should not happen. Aborting so we notice.
 
-	double alfa = gridfit->centers[DIM_ALPHA];
-	double beta = gridfit->centers[DIM_BETA];
+	double alfa = gridfit->centers[STABLE_PARAM_ALPHA];
+	double beta = gridfit->centers[STABLE_PARAM_BETA];
 
 	czab(alfa, beta, gridfit->mc_c, gridfit->mc_z,
-		 gridfit->centers + DIM_MU, gridfit->centers + DIM_SIGMA);
+	     gridfit->centers + STABLE_PARAM_MU, gridfit->centers + STABLE_PARAM_SIGMA);
 }
 
 static void gridfit_iterate(struct stable_gridfit* gridfit)
@@ -251,8 +238,8 @@ static double calculate_params_distance(struct stable_gridfit* gridfit)
 	double min_point[MAX_STABLE_PARAMS];
 	double max_point[MAX_STABLE_PARAMS];
 
-	get_params_from_dist(gridfit->fitter_dists[gridfit->min_fitter], min_point);
-	get_params_from_dist(gridfit->fitter_dists[gridfit->max_fitter], max_point);
+	stable_getparams_array(gridfit->fitter_dists[gridfit->min_fitter], min_point);
+	stable_getparams_array(gridfit->fitter_dists[gridfit->max_fitter], max_point);
 
 	for (size_t i = 0; i < MAX_STABLE_PARAMS; i++)
 		dst += pow(max_point[i] - min_point[i], 2);
@@ -268,14 +255,14 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 	double best_params[MAX_STABLE_PARAMS];
 
 	gridfit_init(&gridfit, dist, data, length);
-	get_params_from_dist(dist, gridfit.centers);
+	stable_getparams_array(dist, gridfit.centers);
 	gridfit.min_fitter = 0;
 
 	stable_clinteg_set_mode(gridfit.cli, mode_pdf);
 
 	while (gridfit.current_iteration < MAX_ITERATIONS
-		   && params_distance > WANTED_PRECISION
-		   && likelihood_diff > MIN_LIKELIHOOD_DIFF) {
+	        && params_distance > WANTED_PRECISION
+	        && likelihood_diff > MIN_LIKELIHOOD_DIFF) {
 		calculate_upperleft_corner_point(&gridfit);
 
 		if (gridfit.parallel)
@@ -283,7 +270,7 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 		else
 			gridfit_iterate(&gridfit);
 
-		get_params_from_dist(gridfit.fitter_dists[gridfit.min_fitter], best_params);
+		stable_getparams_array(gridfit.fitter_dists[gridfit.min_fitter], best_params);
 		set_new_center(&gridfit, best_params);
 		estimate_remaining_parameters(&gridfit);
 

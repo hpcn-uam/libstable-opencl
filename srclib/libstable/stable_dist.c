@@ -519,3 +519,17 @@ short stable_set_mixture_components(StableDist* dist, size_t num_components)
 
 	return 0;
 }
+
+void stable_getparams_array(StableDist* dist, double params[4])
+{
+	params[STABLE_PARAM_ALPHA] = dist->alfa;
+	params[STABLE_PARAM_BETA] = dist->beta;
+	params[STABLE_PARAM_MU] = dist->mu_0;
+	params[STABLE_PARAM_SIGMA] = dist->sigma;
+}
+
+short stable_setparams_array(StableDist* dist, double params[4])
+{
+	return stable_setparams(dist, params[STABLE_PARAM_ALPHA], params[STABLE_PARAM_BETA],
+	                        params[STABLE_PARAM_SIGMA], params[STABLE_PARAM_MU], 0) == NOVALID;
+}
