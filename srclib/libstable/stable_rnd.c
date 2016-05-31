@@ -44,8 +44,23 @@ stable_rnd_point(StableDist *dist)
 		   gsl_ran_levy_skew(dist->gslrand, dist->sigma, dist->alfa, dist->beta);
 }
 
-void
-stable_rnd(StableDist *dist, double *rnd, const unsigned int n)
+static short _stable_rnd_mixture(StableDist* dist, double* rnd, const size_t n, short(*rnd_gen)(StableDist*, double*, const unsigned int))
+{
+	size_t i, mixture_len;
+
+	for (i = 0; i < dist->num_mixture_components; i++) {
+		mixture_len = n * dist->mixture_weights[i];
+
+		if (rnd_gen(dist->mixture_components[i], rnd, mixture_len))
+			return -1;
+
+		rnd += mixture_len;
+	}
+
+	return 0;
+}
+
+short stable_rnd(StableDist *dist, double *rnd, const unsigned int n)
 {
 	//double *rnd;
 	int i;
@@ -53,17 +68,25 @@ stable_rnd(StableDist *dist, double *rnd, const unsigned int n)
 	//rnd = (double*)malloc(n*sizeof(double));
 	if (rnd == NULL) exit(2);
 
-	for (i = 0; i < n; i++)
-		rnd[i] = stable_rnd_point(dist);
+	if (dist->is_mixture)
+		return _stable_rnd_mixture(dist, rnd, n, stable_rnd);
+	else {
+		for (i = 0; i < n; i++)
+			rnd[i] = stable_rnd_point(dist);
+	}
 
-	return;
+	return 0;
 }
 
 short stable_rnd_gpu(StableDist *dist, double *rnd, const unsigned int n)
 {
-	stable_clinteg_set_mode(&dist->cli, mode_rng);
+	if (dist->is_mixture)
+		return _stable_rnd_mixture(dist, rnd, n, stable_rnd_gpu);
+	else {
+		stable_clinteg_set_mode(&dist->cli, mode_rng);
 
-	return stable_clinteg_points(&dist->cli, NULL, rnd, NULL, NULL, n, dist);
+		return stable_clinteg_points(&dist->cli, NULL, rnd, NULL, NULL, n, dist);
+	}
 }
 
 
