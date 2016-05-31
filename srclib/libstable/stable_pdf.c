@@ -370,16 +370,6 @@ torno al maximo y el resto*/
 
 	*err = sqrt(*err) / pdf;
 
-#ifdef DEBUG
-	fprintf(FINTEG, "%+1.3e % 1.3e % 1.3e", x, pdf, *err);
-	fprintf(FINTEG, " %+1.3e %+1.3e %+1.3e %+1.3e %+1.3e", theta[0], theta[1], theta[2], theta[3], theta[4]);
-	fprintf(FINTEG, " % 1.3e % 1.3e % 1.3e % 1.3e", pdf1, pdf2, pdf3, fabs(pdf_aux));
-	fprintf(FINTEG, " %d %d %d %d %d %d\n",
-			warnz[0], warnz[1], warnz[2], integ_eval, aux_eval,
-			warnz[0] + warnz[1] + warnz[2] + integ_eval + aux_eval);
-	printf("abstols % 1.3e % 1.3e % 1.3e % 1.3e \n", absTOL, max(pdf1 * relTOL, absTOL) * 0.5, max((pdf2 + pdf1)*relTOL, absTOL) * 0.25, max((pdf3 + pdf2 + pdf1)*relTOL, absTOL) * 0.25);
-#endif
-
 	return pdf;
 }
 

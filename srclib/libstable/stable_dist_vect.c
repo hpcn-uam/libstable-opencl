@@ -227,7 +227,7 @@ double *stable_v_pdf_g_mat2_max(const double *theta, size_t Nth, void *args, dou
 	//Bucles sin if para facil vectorizacion
 	for (l = 0; l < Nth; l++) {
 #ifdef DEBUG
-		fprintf(FINTEG, "%e\t", theta);
+		fprintf(FINTEG, "%e\t", *theta);
 #endif
 
 		for (k = 0; k < Nx; k++) {
@@ -285,7 +285,7 @@ stable_v_pdf_g_mat2(const double *theta, void *args, size_t Nth, size_t Nx,
 	//bucles sin if para facil vectorizacion
 	for (l = 0; l < Nth; l++) {
 #ifdef DEBUG
-		fprintf(FINTEG, "%e\t", theta);
+		fprintf(FINTEG, "%e\t", *theta);
 #endif
 
 		for (k = 0; k < Nx; k++) {
