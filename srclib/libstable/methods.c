@@ -344,10 +344,6 @@ and x2. The root, returned as zbrent, will be refined until its accuracy is tol.
 
 	if ((fa > 0.0 && fb > 0.0) || (fa < 0.0 && fb < 0.0)) {
 		//nrerror("Root must be bracketed in zbrent");
-#ifdef DEBUG
-		printf("f(a=%1.16lf)=%e, f(b=%1.16lf)=%1.16e, value=%1.16e, Root must be bracketed in zbrent\n",
-			   x1, fa + value, x2, fb + value, value);
-#endif
 
 		if (fabs(fa) < fabs(fb)) {
 			*warn = -2;

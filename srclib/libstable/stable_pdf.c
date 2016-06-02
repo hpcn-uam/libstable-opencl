@@ -539,17 +539,6 @@ stable_integration_pdf(StableDist *dist, double(*integrando)(double, void *),
 	//pdf=pdf2+pdf1;
 	*err = sqrt(*err) / pdf;
 
-#ifdef DEBUG
-	// fprintf(FINTEG, "%+1.3e % 1.3e % 1.3e", x, pdf, *err);
-	fprintf(FINTEG, " %+1.3e %+1.3e %+1.3e %+1.3e %+1.3e", theta[0], theta[1], theta[2], theta[3], theta[4]);
-	fprintf(FINTEG, " % 1.3e % 1.3e % 1.3e % 1.3e", pdf1, pdf2, pdf3, fabs(pdf_aux));
-	fprintf(FINTEG, " %d %d %d %d %d %d\n",
-			warnz[0], warnz[1], warnz[2], integ_eval, aux_eval,
-			warnz[0] + warnz[1] + warnz[2] + integ_eval + aux_eval);
-	printf("abstols % 1.3e % 1.3e % 1.3e % 1.3e \n", absTOL, max(pdf1 * relTOL, absTOL) * 0.5, max((pdf2 + pdf1)*relTOL, absTOL) * 0.25, max((pdf3 + pdf2 + pdf1)*relTOL, absTOL) * 0.25);
-
-#endif
-
 	return pdf;
 }
 
@@ -724,9 +713,6 @@ double stable_pdf_point_STABLE(StableDist *dist, const double x, double *err)
 #ifdef DEBUG
 		printf("Aproximando x a zeta para alfa = %f, beta = %f, zeta = %f : pdf = %f\n",
 			   dist->alfa, dist->beta, dist->xi, pdf);
-
-		fprintf(FINTEG, "%1.3e\t%1.3e\t%1.3e\t%1.3e\t%1.3e\t%1.3e\t%d\t%d\t%d\t%d\n",
-				x, pdf, *err, 0.0, 0.0, 0.0, aux_eval, 0, aux_eval, aux_eval << 1);
 #endif
 		return pdf / dist->sigma;
 	}

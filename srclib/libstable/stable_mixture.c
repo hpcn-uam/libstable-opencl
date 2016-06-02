@@ -3,15 +3,15 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
-#define MAX_MIXTURE_ITERATIONS 1000
+#define MAX_MIXTURE_ITERATIONS 10000
 #define NUM_ALTERNATIVES_PARAMETER 1 // Number of alternative parameter values considered.
 
 /**
  * A common function for evaluation of mixtures, calling a base function.
  */
 void _stable_evaluate_mixture(StableDist *dist, const double x[], const int Nx,
-                              double *result1, double *result2,
-                              array_evaluator eval)
+							  double *result1, double *result2,
+							  array_evaluator eval)
 {
 	size_t i, j;
 	double* res1_component = NULL;
@@ -33,22 +33,39 @@ void _stable_evaluate_mixture(StableDist *dist, const double x[], const int Nx,
 
 			for (j = 0; j < Nx; j++) {
 				if (result1) result1[j] += res1_component[j] * dist->mixture_weights[i];
+
 				if (result2) result2[j] += res2_component[j] * dist->mixture_weights[i];
 			}
 		}
 	}
 }
 
-static double _draw_rand(StableDist* dist, double mn, double mx, double mean) {
+static double _draw_rand(StableDist* dist, double mn, double mx, double mean)
+{
 	double rnd = gsl_ran_gaussian(dist->gslrand, dist->mixture_montecarlo_variance) + mean;
 
-	return max(mx, min(mn, rnd));
+	return min(mx, max(mn, rnd));
 }
 
-static double _draw_rand_alpha(StableDist *dist) { return _draw_rand(dist, 0.05, 1.95, dist->alfa); }
-static double _draw_rand_beta(StableDist *dist) { return _draw_rand(dist, -0.95, 0.95, dist->beta); }
-static double _draw_rand_mu(StableDist *dist) { return _draw_rand(dist, DBL_MIN, DBL_MAX, dist->mu_0); }
-static double _draw_rand_sigma(StableDist *dist) { return _draw_rand(dist, DBL_MIN, DBL_MAX, dist->sigma); }
+static double _draw_rand_alpha(StableDist *dist)
+{
+	return _draw_rand(dist, 0.0, 2.0, dist->alfa);
+}
+
+static double _draw_rand_beta(StableDist *dist)
+{
+	return _draw_rand(dist, -1, 1, dist->beta);
+}
+
+static double _draw_rand_mu(StableDist *dist)
+{
+	return _draw_rand(dist, DBL_MIN, DBL_MAX, dist->mu_0);
+}
+
+static double _draw_rand_sigma(StableDist *dist)
+{
+	return _draw_rand(dist, DBL_MIN, DBL_MAX, dist->sigma);
+}
 
 typedef double (*new_rand_param)(StableDist*);
 
@@ -72,44 +89,53 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 	double dist_params[MAX_STABLE_PARAMS], new_params[MAX_STABLE_PARAMS];
 	size_t num_fitter_dists = dist->max_mixture_components * MAX_STABLE_PARAMS * NUM_ALTERNATIVES_PARAMETER;
 	StableDist* component;
-	double previous_likelihoods[num_fitter_dists];
+	double previous_pdf[num_fitter_dists][length];
 	double likelihood;
 	double changed_parameters[num_fitter_dists];
 	double pdf[length];
 	double jump_probability;
+	size_t streak_without_change = 0;
+	size_t num_changes = 0;
+
+#ifdef DEBUG
+	FILE* debug_data = fopen("mixture_debug.dat", "w");
+#endif
 
 	// Only set a random number of components initially when the jump on the number is done
 	// via MonteCarlo reversible jumps.
 	// initial_components = gsl_rng_uniform_int(dist->gslrand, dist->max_mixture_components) + 1;
 	// stable_set_mixture_components(dist, initial_components);
 
-	// Configure the GPU
-	stable_activate_gpu(dist);
-	opencl_set_queues(&dist->cli.env, num_fitter_dists);
-	stable_clinteg_set_mode(&dist->cli, mode_pdf);
+
+
+	// stable_activate_gpu(dist);
+	stable_set_THREADS(1);
 
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		// Initialize the weights as random.
-		dist->mixture_weights[i] = ((double) 1) / dist->num_mixture_components;
+		// dist->mixture_weights[i] = ((double) 1) / dist->num_mixture_components;
 
 		// Prepare a random distribution for the parameters of each component
-		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++)
+		stable_getparams_array(dist->mixture_components[i], new_params);
+
+		for (param_idx = 0; param_idx < 2; param_idx++)
 			new_params[param_idx] = rand_generators[param_idx](dist->mixture_components[i]);
 
 		stable_setparams_array(dist->mixture_components[i], new_params);
+		dist->mixture_components[i]->mixture_montecarlo_variance = 2;
 	}
 
 	for (i = 0; i < MAX_MIXTURE_ITERATIONS; i++) {
 		// Async launch of all the integration orders.
-		for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
-			component = dist->mixture_components[comp_idx];
+		for (param_idx = 0; param_idx < 2; param_idx++) {
+			for (j = 0; j < NUM_ALTERNATIVES_PARAMETER; j++) {
+				for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
+					component = dist->mixture_components[comp_idx];
 
-			stable_getparams_array(component, dist_params);
+					stable_getparams_array(component, dist_params);
 
-			for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
-				for (j = 0; j < NUM_ALTERNATIVES_PARAMETER; j++) {
-					fitter_idx = comp_idx * MAX_STABLE_PARAMS * NUM_ALTERNATIVES_PARAMETER
-					             + param_idx * NUM_ALTERNATIVES_PARAMETER + j;
+					fitter_idx = param_idx * dist->num_mixture_components * NUM_ALTERNATIVES_PARAMETER
+								 + j * dist->num_mixture_components + comp_idx;
 
 					memcpy(new_params, dist_params, sizeof new_params);
 
@@ -117,48 +143,63 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 					new_params[param_idx] = rand_generators[param_idx](component);
 					changed_parameters[fitter_idx] = new_params[param_idx];
 
-					// Calculate the PDF in those points, asynchronously
-					stable_setparams_array(dist, new_params);
-					opencl_set_current_queue(&dist->cli.env, fitter_idx);
-					stable_clinteg_points_async(&dist->cli, (double*) data, length, dist, NULL);
-				}
-			}
-		}
+					stable_setparams_array(component, new_params);
 
-		// Now let's collect the results
-		for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
-			component = dist->mixture_components[comp_idx];
+#ifdef DEBUG
+					fprintf(stderr, "Iter %zu: Fitter %zu testing component %zu, param %zu, alt %zu\n",
+							i, fitter_idx, comp_idx, param_idx, j);
+#endif
+					stable_pdf(dist, data, length, pdf, NULL);
 
-			stable_getparams_array(component, new_params);
-
-			for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
-				for (j = 0; j < NUM_ALTERNATIVES_PARAMETER; j++) {
-					fitter_idx = comp_idx * MAX_STABLE_PARAMS * NUM_ALTERNATIVES_PARAMETER
-					             + param_idx * NUM_ALTERNATIVES_PARAMETER + j;
-
-					opencl_set_current_queue(&dist->cli.env, fitter_idx);
-					stable_clinteg_points_end(&dist->cli, pdf, NULL, NULL, length, dist, NULL);
-
-					likelihood = 0;
+					jump_probability = 1;
 
 					for (k = 0; k < length; k++)
-						likelihood += pdf[k];
+						jump_probability *= pdf[k] / previous_pdf[fitter_idx][k];
+
+					printf("Jump %lf\n", jump_probability);
 
 					// Only try to do the jump if we have previous likelihoods
 					if (i > 0) {
-						jump_probability = likelihood / previous_likelihoods[fitter_idx];
-
-						if (rand_event(dist->gslrand, jump_probability))
-							new_params[param_idx] = changed_parameters[fitter_idx];
+						if (rand_event(dist->gslrand, jump_probability)) {
+							num_changes++;
+							memcpy(previous_pdf[fitter_idx], pdf, sizeof(double) * length);
+						} else   // Change not accepted, revert to the previous value
+							stable_setparams_array(component, dist_params);
 					}
 
-					previous_likelihoods[fitter_idx] = likelihood;
 				}
 			}
+		}
 
-			stable_setparams_array(component, new_params);
+		if (num_changes == 0)
+			streak_without_change++;
+		else
+			streak_without_change = 0;
+
+#ifdef DEBUG
+		fprintf(debug_data, "%zu", num_changes);
+
+		for (j = 0; j < dist->num_mixture_components; j++) {
+			fprintf(debug_data, " %lf %lf %lf %lf", num_changes,
+					dist->mixture_components[j]->alfa, dist->mixture_components[j]->beta,
+					dist->mixture_components[j]->mu_0, dist->mixture_components[j]->sigma);
+		}
+
+		fprintf(debug_data, "\n");
+		fflush(debug_data);
+#endif
+
+		num_changes = 0;
+
+		for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
+			component = dist->mixture_components[comp_idx];
+			component->mixture_montecarlo_variance *= 0.9999;
 		}
 	}
+
+#ifdef DEBUG
+	fclose(debug_data);
+#endif
 
 	return 0;
 }

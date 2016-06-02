@@ -431,6 +431,7 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
 	dist->is_mixture = 0;
 	dist->mixture_weights = NULL;
 	dist->mixture_components = NULL;
+	dist->max_mixture_components = 10;
 
 	//Allow the distribution to use THREADS threads.
 	stable_set_THREADS(THREADS);
