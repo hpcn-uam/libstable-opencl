@@ -33,6 +33,10 @@ int main(int argc, char **argv)
 	double sigmas[] = { 0.5, 0.8, 0.2 };
 	double weights[] = { 0.2, 0.5, 0.3 };
 	double rnd[num_points];
+	double pdf[num_points];
+	double x[num_points];
+	double mn = -5, mx = 5;
+
 	FILE* outfile;
 	int retval = EXIT_SUCCESS;
 
@@ -50,7 +54,7 @@ int main(int argc, char **argv)
 
 	stable_set_mixture_components(dist, num_components);
 
-	for (i = 0; i < num_components; i++) {
+	for (i = 0; i < dist->num_mixture_components; i++) {
 		dist->mixture_weights[i] = weights[i];
 		stable_setparams(dist->mixture_components[i], alphas[i], betas[i], sigmas[i], mus[i], 0);
 	}
@@ -68,6 +72,18 @@ int main(int argc, char **argv)
 	for (i = 0; i < num_points; i++)
 		fprintf(outfile, "%lf\n", rnd[i]);
 
+	fclose(outfile);
+	outfile = fopen("mixtures_dat.dat", "w");
+
+	for (i = 0; i < num_points; i++)
+		x[i] = mn + i * (mx - mn) / num_points;
+
+	stable_pdf(dist, x, num_points, pdf, NULL);
+
+	for (i = 0; i < num_points; i++)
+		fprintf(outfile, "%lf %lf\n", x[i], pdf[i]);
+
+	fclose(outfile);
 
 	stable_fit_mixture(dist, rnd, num_points);
 
