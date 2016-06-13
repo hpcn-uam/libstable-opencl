@@ -34,6 +34,7 @@ int main(int argc, char **argv)
 	double weights[] = { 0.2, 0.5, 0.3 };
 	double rnd[num_points];
 	double pdf[num_points];
+	double pdf_predicted[num_points];
 	double x[num_points];
 	double mn = -5, mx = 5;
 
@@ -80,11 +81,6 @@ int main(int argc, char **argv)
 
 	stable_pdf(dist, x, num_points, pdf, NULL);
 
-	for (i = 0; i < num_points; i++)
-		fprintf(outfile, "%lf %lf\n", x[i], pdf[i]);
-
-	fclose(outfile);
-
 	stable_fit_mixture(dist, rnd, num_points);
 
 	printf("Mixture estimation results:\n");
@@ -95,6 +91,13 @@ int main(int argc, char **argv)
 			   dist->mixture_components[i]->alfa, dist->mixture_components[i]->beta,
 			   dist->mixture_components[i]->mu_0, dist->mixture_components[i]->sigma);
 	}
+
+	stable_pdf(dist, x, num_points, pdf_predicted, NULL);
+
+	for (i = 0; i < num_points; i++)
+		fprintf(outfile, "%lf %lf %lf\n", x[i], pdf[i], pdf_predicted[i]);
+
+	fclose(outfile);
 
 	printf("Done\n");
 out:
