@@ -11,6 +11,9 @@
 #define MAX_MIXTURE_ITERATIONS 10000
 #define NUM_ALTERNATIVES_PARAMETER 1 // Number of alternative parameter values considered.
 
+// #define DO_WEIGHT_ESTIMATION
+// #define DECREMENT_GENERATION_VARIANCE
+
 /**
  * A common function for evaluation of mixtures, calling a base function.
  */
@@ -147,7 +150,9 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		// TODO: More magic.
-		// dist->mixture_weights[i] = ((double) 1) / dist->num_mixture_components;
+#ifdef DO_WEIGHT_ESTIMATION
+		dist->mixture_weights[i] = ((double) 1) / dist->num_mixture_components;
+#endif
 
 		// Prepare a random distribution for the parameters of each component
 		stable_getparams_array(dist->mixture_components[i], new_params);
@@ -222,27 +227,28 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		}
 
 		// Estimate the weights. TODO: Not completely sure of this.
-		if (0) {
-			memcpy(previous_weights, dist->mixture_weights, dist->max_mixture_components * sizeof(double));
+#ifdef DO_WEIGHT_ESTIMATION
+		memcpy(previous_weights, dist->mixture_weights, dist->max_mixture_components * sizeof(double));
 
-			for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++)
-				dirichlet_params[comp_idx] = dirichlet_initial + length * dist->mixture_weights[comp_idx];
+		for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++)
+			dirichlet_params[comp_idx] = dirichlet_initial + length * dist->mixture_weights[comp_idx];
 
-			gsl_ran_dirichlet(dist->gslrand, dist->num_mixture_components, dirichlet_params, dist->mixture_weights);
+		gsl_ran_dirichlet(dist->gslrand, dist->num_mixture_components, dirichlet_params, dist->mixture_weights);
 
-			stable_pdf_gpu(dist, data, length, pdf, NULL);
+		stable_pdf_gpu(dist, data, length, pdf, NULL);
 
-			jump_probability = 1;
+		jump_probability = 1;
 
-			for (k = 0; k < length; k++)
-				jump_probability *= pdf[k] / previous_pdf[k];
+		for (k = 0; k < length; k++)
+			jump_probability *= pdf[k] / previous_pdf[k];
 
-			if (rand_event(dist->gslrand, jump_probability)) {
-				num_changes++;
-				memcpy(previous_pdf, pdf, sizeof(double) * length);
-			} else   // Change not accepted, revert to the previous value
-				memcpy(dist->mixture_weights, previous_weights, dist->max_mixture_components * sizeof(double));
-		}
+		if (rand_event(dist->gslrand, jump_probability)) {
+			num_changes++;
+			memcpy(previous_pdf, pdf, sizeof(double) * length);
+		} else   // Change not accepted, revert to the previous value
+			memcpy(dist->mixture_weights, previous_weights, dist->max_mixture_components * sizeof(double));
+
+#endif
 
 		if (num_changes == 0)
 			streak_without_change++;
@@ -265,7 +271,9 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 		for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
 			component = dist->mixture_components[comp_idx];
-			// component->mixture_montecarlo_variance *= 0.99999;
+#ifdef DECREMENT_GENERATION_VARIANCE
+			component->mixture_montecarlo_variance *= 0.99999;
+#endif
 		}
 	}
 
