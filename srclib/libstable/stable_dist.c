@@ -421,6 +421,8 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
 	dist->gpu_enabled = 0;
 	dist->gpu_queues = 1;
 
+	gsl_rng_set(dist->gslrand, time(NULL));
+
 #ifdef DEFAULT_ACCELERATOR
 	dist->gpu_platform = DEFAULT_ACCELERATOR;
 #else
@@ -512,6 +514,7 @@ short stable_set_mixture_components(StableDist* dist, size_t num_components)
 
 		for (i = dist->num_mixture_components; i < num_components; i++) {
 			dist->mixture_components[i] = stable_copy(dist);
+			gsl_rng_set(dist->mixture_components[i]->gslrand, time(NULL));
 			dist->mixture_weights[i] = 0;
 
 			if (dist->mixture_components[i] == NULL)
