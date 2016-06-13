@@ -441,10 +441,17 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
 
 short stable_activate_gpu(StableDist* dist)
 {
+	size_t i;
+
 	if (dist->gpu_enabled)
 		return 0;
 
 	short error = stable_clinteg_init(&dist->cli, dist->gpu_platform);
+
+	if (dist->is_mixture) {
+		for (i = 0; i < dist->num_mixture_components; i++)
+			stable_activate_gpu(dist->mixture_components[i]);
+	}
 
 	if (!error)
 		dist->gpu_enabled = 1;
