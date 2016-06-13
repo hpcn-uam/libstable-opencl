@@ -59,12 +59,12 @@ static double _draw_rand_beta(StableDist *dist)
 
 static double _draw_rand_mu(StableDist *dist)
 {
-	return _draw_rand(dist, DBL_MIN, DBL_MAX, dist->mu_0);
+	return _draw_rand(dist, -DBL_MAX, DBL_MAX, dist->mu_0);
 }
 
 static double _draw_rand_sigma(StableDist *dist)
 {
-	return _draw_rand(dist, DBL_MIN, DBL_MAX, dist->sigma);
+	return _draw_rand(dist, 0, DBL_MAX, dist->sigma);
 }
 
 typedef double (*new_rand_param)(StableDist*);
