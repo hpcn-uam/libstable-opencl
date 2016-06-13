@@ -29,7 +29,6 @@
  * bandwith estimator for the R 'density' function.  */
 double nrd0(double x[], const int N)
 {
-	gsl_sort(x, 1, N);
 	double hi = gsl_stats_sd(x, 1, N);
 	double iqr =
 		gsl_stats_quantile_from_sorted_data(x, 1, N, 0.75) -
@@ -45,12 +44,11 @@ double gauss_kernel(double x)
 	return exp(-(gsl_pow_2(x) / 2)) / (M_SQRT2 * sqrt(M_PI));
 }
 
-double kerneldensity(double *samples, double obs, size_t n)
+double kerneldensity(double *samples, double obs, size_t n, double bw_adjust)
 {
 	size_t i;
-	double h = GSL_MAX(nrd0(samples, n), 1e-6);
+	double h = GSL_MAX(nrd0(samples, n), 1e-6) * bw_adjust;
 	double prob = 0;
-	printf("%lf\n", h);
 
 	for (i = 0; i < n; i++)
 		prob += gauss_kernel((samples[i] - obs) / h) / (n * h);

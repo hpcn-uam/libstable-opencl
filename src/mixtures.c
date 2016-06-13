@@ -21,6 +21,7 @@
 #include "stable_api.h"
 #include "benchmarking.h"
 #include "opencl_integ.h"
+#include "kde.h"
 
 int main(int argc, char **argv)
 {
@@ -36,6 +37,7 @@ int main(int argc, char **argv)
 	double pdf[num_points];
 	double pdf_predicted[num_points];
 	double x[num_points];
+	double epdf[num_points];
 	double mn = -5, mx = 5;
 
 	FILE* outfile;
@@ -61,6 +63,7 @@ int main(int argc, char **argv)
 	}
 
 	stable_rnd(dist, rnd, num_points);
+	gsl_sort(rnd, 1, num_points);
 
 	outfile = fopen("mixtures_rnd.dat", "w");
 
@@ -76,8 +79,10 @@ int main(int argc, char **argv)
 	fclose(outfile);
 	outfile = fopen("mixtures_dat.dat", "w");
 
-	for (i = 0; i < num_points; i++)
+	for (i = 0; i < num_points; i++) {
 		x[i] = mn + i * (mx - mn) / num_points;
+		epdf[i] = kerneldensity(rnd, x[i], num_points, 0.5);
+	}
 
 	stable_pdf(dist, x, num_points, pdf, NULL);
 
@@ -95,7 +100,7 @@ int main(int argc, char **argv)
 	stable_pdf(dist, x, num_points, pdf_predicted, NULL);
 
 	for (i = 0; i < num_points; i++)
-		fprintf(outfile, "%lf %lf %lf\n", x[i], pdf[i], pdf_predicted[i]);
+		fprintf(outfile, "%lf %lf %lf %lf\n", x[i], pdf[i], pdf_predicted[i], epdf[i]);
 
 	fclose(outfile);
 

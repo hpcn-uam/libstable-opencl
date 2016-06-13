@@ -5,14 +5,14 @@
  * Estimates the kernel density p(x) at a given value x from
  * an array of sample points.  Uses the default algorithm from
  * the R langauge's 'density' function.  Requires the GSL statistics
- * library.  
- *   
+ * library.
+ *
  * @section LICENCE
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 3 of
  * the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
@@ -28,4 +28,4 @@
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_math.h>
 
-double kerneldensity(double *samples, double obs, size_t n);
+double kerneldensity(double *samples, double obs, size_t n, double bw_adjust);
