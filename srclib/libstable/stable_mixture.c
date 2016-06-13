@@ -82,6 +82,13 @@ static short rand_event(gsl_rng* rnd, double prob_event)
 	return gsl_rng_uniform(rnd) <= prob_event;
 }
 
+volatile sig_atomic_t stop = 0;
+
+void handle_signal(int sig)
+{
+	stop = 1;
+}
+
 int stable_fit_mixture(StableDist * dist, const double * data, const unsigned int length)
 {
 	// size_t initial_components;
@@ -125,7 +132,10 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		dist->mixture_components[i]->mixture_montecarlo_variance = 2;
 	}
 
-	for (i = 0; i < MAX_MIXTURE_ITERATIONS; i++) {
+	signal(SIGINT, handle_signal);
+	signal(SIGTERM, handle_signal);
+
+	for (i = 0; i < MAX_MIXTURE_ITERATIONS && !stop; i++) {
 		// Async launch of all the integration orders.
 		for (param_idx = 0; param_idx < 2; param_idx++) {
 			for (j = 0; j < NUM_ALTERNATIVES_PARAMETER; j++) {
