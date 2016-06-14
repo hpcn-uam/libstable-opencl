@@ -9,6 +9,7 @@
 #include <gsl/gsl_statistics_double.h>
 
 #define MAX_MIXTURE_ITERATIONS 10000
+#define BURNIN_PERIOD 500
 #define NUM_ALTERNATIVES_PARAMETER 1 // Number of alternative parameter values considered.
 
 // #define DO_WEIGHT_ESTIMATION
@@ -48,31 +49,31 @@ void _stable_evaluate_mixture(StableDist *dist, const double x[], const int Nx,
 	}
 }
 
-static double _draw_rand(StableDist* dist, double mn, double mx, double mean)
+static double _draw_rand(StableDist* dist, double mn, double mx, double mean, double std)
 {
-	double rnd = gsl_ran_gaussian(dist->gslrand, dist->mixture_montecarlo_variance) + mean;
+	double rnd = gsl_ran_gaussian(dist->gslrand, std) + mean;
 
 	return min(mx, max(mn, rnd));
 }
 
 static double _draw_rand_alpha(StableDist *dist)
 {
-	return _draw_rand(dist, 0.0, 2.0, dist->alfa);
+	return _draw_rand(dist, 0.0, 2.0, dist->alfa, 1);
 }
 
 static double _draw_rand_beta(StableDist *dist)
 {
-	return _draw_rand(dist, -1, 1, dist->beta);
+	return _draw_rand(dist, -1, 1, dist->beta, 0.6);
 }
 
 static double _draw_rand_mu(StableDist *dist)
 {
-	return _draw_rand(dist, -DBL_MAX, DBL_MAX, dist->mu_0);
+	return _draw_rand(dist, -DBL_MAX, DBL_MAX, dist->mu_0, 0.1);
 }
 
 static double _draw_rand_sigma(StableDist *dist)
 {
-	return _draw_rand(dist, 0, DBL_MAX, dist->sigma);
+	return _draw_rand(dist, 0, DBL_MAX, dist->sigma, 0.5);
 }
 
 typedef double (*new_rand_param)(StableDist*);
@@ -118,6 +119,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 	double param_probability;
 	double data_mean, data_variance;
 	double previous_weights[dist->max_mixture_components];
+	double param_values[dist->max_mixture_components][MAX_STABLE_PARAMS][MAX_MIXTURE_ITERATIONS];
 
 	FILE* debug_data = fopen("mixture_debug.dat", "w");
 
@@ -134,11 +136,11 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 	data_variance = gsl_stats_variance(data, 1, length);
 
 	prior_mu_mean = 0;
-	prior_mu_variance = 5;
+	prior_mu_variance = 0.5;
 
 	// TODO: Wild guess. Probably really wrong.
 	prior_sigma_mean = 0.5;
-	prior_sigma_variance = 4;
+	prior_sigma_variance = 1;
 
 	// Solve for α, β in the equations for mean and variance of the inverse gamma.
 	prior_sigma_alpha = prior_sigma_mean / prior_sigma_variance + 2;
@@ -156,19 +158,21 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 		// Prepare a random distribution for the parameters of each component
 		stable_getparams_array(dist->mixture_components[i], new_params);
+		dist->mixture_components[i]->mixture_montecarlo_variance = 0.2;
 
-		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++)
-			new_params[param_idx] = rand_generators[param_idx](dist->mixture_components[i]);
-
+		new_params[STABLE_PARAM_ALPHA] = gsl_rng_uniform(dist->gslrand) * 2;
+		new_params[STABLE_PARAM_BETA] = gsl_rng_uniform(dist->gslrand) * 2 - 1;
+		new_params[STABLE_PARAM_MU] = gsl_rng_uniform(dist->gslrand) * 5 - 2.5;
+		new_params[STABLE_PARAM_SIGMA] = gsl_rng_uniform(dist->gslrand) * 3;
+		printf("Comp %zu: %lf %lf %lf %lf\n", i, new_params[0], new_params[1], new_params[2], new_params[3]);
 		stable_setparams_array(dist->mixture_components[i], new_params);
-		dist->mixture_components[i]->mixture_montecarlo_variance = 5;
 		previous_param_probs[i] = 1;
 	}
 
 	signal(SIGINT, handle_signal);
 	signal(SIGTERM, handle_signal);
 
-	for (i = 0; i < MAX_MIXTURE_ITERATIONS && !stop; i++) {
+	for (i = 0; i < BURNIN_PERIOD + MAX_MIXTURE_ITERATIONS && !stop; i++) {
 		// Async launch of all the integration orders.
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
 			for (j = 0; j < NUM_ALTERNATIVES_PARAMETER; j++) {
@@ -222,6 +226,8 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 					} else
 						memcpy(previous_pdf, pdf, sizeof(double) * length);
 
+					if (i >= BURNIN_PERIOD)
+						param_values[comp_idx][param_idx][i - BURNIN_PERIOD] = new_params[param_idx];
 				}
 			}
 		}
@@ -276,6 +282,28 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 #endif
 		}
 	}
+
+
+	if (i > BURNIN_PERIOD) {
+		printf("Mixture estimation results:\n");
+		printf("Component |      α -  std  |      β -  std  |      μ -  std  |      σ -  std  \n");
+
+		for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
+			printf("%9zu", comp_idx);
+
+			for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
+				double param_avg = gsl_stats_mean(param_values[comp_idx][param_idx], 1, i - BURNIN_PERIOD);
+				double param_sd = gsl_stats_sd_m(param_values[comp_idx][param_idx], 1, i - BURNIN_PERIOD, param_avg);
+
+				printf(" | %6.2lf - %5.2lf", param_avg, param_sd);
+				new_params[param_idx] = param_avg;
+			}
+
+			stable_setparams_array(dist->mixture_components[comp_idx], new_params);
+			printf("\n");
+		}
+	} else
+		printf("WARNING: Burn-in period not passed.\n");
 
 #ifdef DEBUG
 	fclose(debug_data);

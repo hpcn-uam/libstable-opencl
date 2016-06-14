@@ -88,15 +88,6 @@ int main(int argc, char **argv)
 
 	stable_fit_mixture(dist, rnd, num_points);
 
-	printf("Mixture estimation results:\n");
-	printf("Component |      α |      β |      μ |      σ\n");
-
-	for (i = 0; i < num_components; i++) {
-		printf("%9zu | %6.2lf | %6.2lf | %6.2lf | %6.2lf\n", i,
-			   dist->mixture_components[i]->alfa, dist->mixture_components[i]->beta,
-			   dist->mixture_components[i]->mu_0, dist->mixture_components[i]->sigma);
-	}
-
 	stable_pdf(dist, x, num_points, pdf_predicted, NULL);
 
 	for (i = 0; i < num_points; i++)
