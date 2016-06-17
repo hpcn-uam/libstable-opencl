@@ -1,5 +1,8 @@
 #include "stable_api.h"
 #include "gamma.h"
+#include "kde.h"
+#include "stable_gridfit.h"
+#include "methods.h"
 
 #include <signal.h>
 #include <unistd.h>
@@ -7,6 +10,9 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_statistics_double.h>
+#include <gsl/gsl_statistics.h>
+#include <gsl/gsl_sort.h>
+#include <gsl/gsl_math.h>
 
 #define MAX_MIXTURE_ITERATIONS 10000
 #define BURNIN_PERIOD 500
@@ -73,7 +79,7 @@ static double _draw_rand_mu(StableDist *dist)
 
 static double _draw_rand_sigma(StableDist *dist)
 {
-	return _draw_rand(dist, 0, DBL_MAX, dist->sigma, 0.5);
+	return _draw_rand(dist, 0, DBL_MAX, dist->sigma, 1);
 }
 
 typedef double (*new_rand_param)(StableDist*);
@@ -96,6 +102,143 @@ volatile sig_atomic_t stop = 0;
 void handle_signal(int sig)
 {
 	stop = 1;
+}
+
+static short _is_local_min(double* data, size_t pos)
+{
+	return data[pos] <= data[pos + 1] && data[pos] <= data[pos - 1];
+}
+
+static short _is_local_max(double* data, size_t pos)
+{
+	return data[pos] >= data[pos + 1] && data[pos] >= data[pos - 1];
+}
+
+void _prepare_initial_estimation(StableDist* dist, const double* data, const unsigned int length)
+{
+	size_t epdf_points = 5000;
+	double samples[length];
+	double epdf_x[epdf_points];
+	double epdf[epdf_points];
+	double epdf_start, epdf_end, epdf_step;
+	double component_points[length];
+	size_t maxs[length], mins[length], valid_max[length], valid_min[length];
+	size_t max_idx = 0, min_idx = 0, total_max;
+	size_t i;
+	double minmax_coef_threshold = 0.8;
+	short searching_min = 0, searching_max = 1; // Assume we're starting at a minimum.
+	double max_value = - DBL_MAX;
+	double max_x, min_left_x, min_right_x;
+	size_t current_lowest_min_pos;
+	StableDist* comp;
+
+	memcpy(samples, data, sizeof(double) * length);
+
+	printf("Begin initial estimation\n");
+
+	gsl_sort(samples, 1, length);
+
+	epdf_start = gsl_stats_quantile_from_sorted_data(samples, 1, length, 0.02);
+	epdf_end = gsl_stats_quantile_from_sorted_data(samples, 1, length, 0.98);
+
+	epdf_step = (epdf_end - epdf_start) / epdf_points;
+
+	printf("Study range is [%lf, %lf], %zu points with step %lf\n", epdf_start, epdf_end, epdf_points, epdf_step);
+
+	for (i = 0; i < epdf_points; i++) {
+		epdf_x[i] = epdf_start + i * epdf_step;
+		epdf[i] = kerneldensity(samples, epdf_x[i], length, 0.4); // Silverman's bandwidth estimator is too high for skewed, multimodal distributions.
+
+		// Assume we start at a minimum
+		if (i == 0) {
+			mins[0] = 0;
+			min_idx++;
+
+			searching_max = 1;
+			searching_min = 0;
+		} else if (i > 1 && i < length - 1) {
+			if (searching_max && epdf[i - 1] > 0.01 && _is_local_max(epdf, i - 1)) {
+				if (epdf[i - 1] * minmax_coef_threshold > epdf[mins[min_idx - 1]]) {
+					// If this is a big enough maximum, mark it and start searching
+					// for the next minimum
+					searching_max = 0;
+					searching_min = 1;
+
+					printf("Found max %zu at %lf = %lf\n", max_idx, epdf_x[i - 1], epdf[i - 1]);
+					maxs[max_idx] = i - 1;
+					max_idx++;
+
+				}
+			} else if (searching_min && _is_local_min(epdf, i - 1)) {
+				if (epdf[i - 1] > epdf[maxs[max_idx - 1]] * minmax_coef_threshold) {
+					max_idx--;  // If the difference with the previous max is not big enough, cancel the previous maximum
+					printf("Max discard\n");
+				} else {
+					// If the difference is good enough, mark it as a minimum.
+					mins[min_idx] = i - 1;
+					printf("Found min %zu at %lf = %lf\n", max_idx, epdf_x[i - 1], epdf[i - 1]);
+					min_idx++;
+				}
+
+				// In any case, we need to search for the maximum: if the previous was suppressed we need
+				// a new one; and if we found a minimum we also need another one.
+				searching_max = 1;
+				searching_min = 0;
+			}
+		} else if (i == length - 1 && searching_min) {
+			// Mark a minimum at the end of the data if we are searching for one.
+			mins[min_idx] = i;
+			min_idx++;
+		}
+
+		if (epdf[i] > max_value)
+			max_value = epdf[i];
+	}
+
+	total_max = max_idx;
+	max_idx = 0;
+	current_lowest_min_pos = mins[0];
+
+	// The initial search of maximums is complete.
+	// Now let's filter and get only those big enough
+	for (i = 0; i < total_max; i++) {
+		if (epdf[current_lowest_min_pos] > epdf[mins[i]])
+			current_lowest_min_pos = mins[i];
+
+		if (epdf[maxs[i]] > 0.3 * max_value) {
+			valid_max[max_idx] = maxs[i];
+			valid_min[max_idx] = current_lowest_min_pos;
+			max_idx++;
+			printf("Found valid max %zu at %lf = %lf\n", max_idx, epdf_x[maxs[i]], epdf[maxs[i]]);
+		}
+	}
+
+	valid_min[max_idx] = mins[max_idx]; // Add the last minimum (there must be n max, n + 1 mins).
+
+	total_max = max_idx;
+
+	stable_set_mixture_components(dist, total_max);
+
+	for (i = 0; i < dist->num_mixture_components; i++) {
+		comp = dist->mixture_components[i];
+
+		max_x = epdf_x[valid_max[i]];
+		min_left_x = epdf_x[valid_min[i]];
+		min_right_x = epdf_x[valid_min[i + 1]];
+
+		comp->mu_0 = max_x;
+		continue;
+		size_t copy_start = binary_search_nearest(samples, length, min_left_x, 0);
+		size_t copy_end = binary_search_nearest(samples, length, min_right_x, 1);
+		size_t copy_length = copy_end - copy_start;
+
+		memcpy(component_points, samples + copy_start, copy_length * sizeof(double));
+
+		printf("Gridfit for component %zu with %zu points\n", i, copy_length);
+		stable_fit_grid(comp, component_points, copy_length);
+
+		printf("C%zu initial %lf %lf %lf %lf\n", i, comp->alfa, comp->beta, comp->mu_0, comp->sigma);
+	}
 }
 
 int stable_fit_mixture(StableDist * dist, const double * data, const unsigned int length)
@@ -123,12 +266,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 	FILE* debug_data = fopen("mixture_debug.dat", "w");
 
-	// Only set a random number of components initially when the jump on the number is done
-	// via MonteCarlo reversible jumps.
-	if (dist->num_mixture_components == 0) {
-		initial_components = gsl_rng_uniform_int(dist->gslrand, dist->max_mixture_components) + 1;
-		stable_set_mixture_components(dist, initial_components);
-	}
+	_prepare_initial_estimation(dist, data, length);
 
 	// Prepare the arguments for the priors.
 	// TODO: Do something better than this for the estimation.
@@ -162,7 +300,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 		new_params[STABLE_PARAM_ALPHA] = gsl_rng_uniform(dist->gslrand) * 2;
 		new_params[STABLE_PARAM_BETA] = gsl_rng_uniform(dist->gslrand) * 2 - 1;
-		new_params[STABLE_PARAM_MU] = gsl_rng_uniform(dist->gslrand) * 5 - 2.5;
+		// new_params[STABLE_PARAM_MU] = gsl_rng_uniform(dist->gslrand) * 5 - 2.5;
 		new_params[STABLE_PARAM_SIGMA] = gsl_rng_uniform(dist->gslrand) * 3;
 		printf("Comp %zu: %lf %lf %lf %lf\n", i, new_params[0], new_params[1], new_params[2], new_params[3]);
 		stable_setparams_array(dist->mixture_components[i], new_params);
@@ -171,6 +309,13 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 	signal(SIGINT, handle_signal);
 	signal(SIGTERM, handle_signal);
+
+	for (j = 0; j < dist->num_mixture_components; j++) {
+		fprintf(debug_data, " %lf %lf %lf %lf %lf",
+				dist->mixture_components[j]->alfa, dist->mixture_components[j]->beta,
+				dist->mixture_components[j]->mu_0, dist->mixture_components[j]->sigma,
+				dist->mixture_weights[j]);
+	}
 
 	for (i = 0; i < BURNIN_PERIOD + MAX_MIXTURE_ITERATIONS && !stop; i++) {
 		// Async launch of all the integration orders.
@@ -212,8 +357,6 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 					jump_probability *= (param_probability) / (previous_param_probs[param_idx]);
 					// jump_probability = exp(jump_probability);
-
-					printf("Jump %lf\n", jump_probability);
 
 					// Only try to do the jump if we have previous likelihoods
 					if (i > 0) {
@@ -261,6 +404,8 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		else
 			streak_without_change = 0;
 
+		printf("\rIter %zu - %zu changes", i, num_changes);
+		fflush(stdout);
 		fprintf(debug_data, "%zu", num_changes);
 
 		for (j = 0; j < dist->num_mixture_components; j++) {
@@ -283,6 +428,8 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		}
 	}
 
+
+	printf("\n");
 
 	if (i > BURNIN_PERIOD) {
 		printf("Mixture estimation results:\n");
