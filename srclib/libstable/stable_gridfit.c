@@ -150,7 +150,7 @@ static void estimate_remaining_parameters(struct stable_gridfit* gridfit)
 	double beta = gridfit->centers[STABLE_PARAM_BETA];
 
 	czab(alfa, beta, gridfit->mc_c, gridfit->mc_z,
-	     gridfit->centers + STABLE_PARAM_MU, gridfit->centers + STABLE_PARAM_SIGMA);
+		 gridfit->centers + STABLE_PARAM_MU, gridfit->centers + STABLE_PARAM_SIGMA);
 }
 
 static void gridfit_iterate(struct stable_gridfit* gridfit)
@@ -261,8 +261,8 @@ int stable_fit_grid(StableDist *dist, const double *data, const unsigned int len
 	stable_clinteg_set_mode(gridfit.cli, mode_pdf);
 
 	while (gridfit.current_iteration < MAX_ITERATIONS
-	        && params_distance > WANTED_PRECISION
-	        && likelihood_diff > MIN_LIKELIHOOD_DIFF) {
+		   && params_distance > WANTED_PRECISION
+		   && likelihood_diff > MIN_LIKELIHOOD_DIFF) {
 		calculate_upperleft_corner_point(&gridfit);
 
 		if (gridfit.parallel)
