@@ -35,6 +35,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <gsl/gsl_sf_gamma.h>
+
 
 #define FUNC(x) ((*func)(x,args))
 
@@ -573,3 +575,31 @@ void vector_npoints(double **x, double min, double max, int n, double * step)
 
 	return;
 }
+
+size_t binary_search_nearest(double* data, size_t length, double value, short round_up)
+{
+	size_t left = 0, right = length;
+	size_t middle;
+
+	while (right - left > 0) {
+		middle = (right + left) / 2;
+
+		if (data[middle] == value)
+			return middle;
+		else if (data[middle] > value)
+			right = middle;
+		else
+			left = middle;
+	}
+
+	if (round_up)
+		return right;
+	else
+		return left;
+}
+
+double invgamma_pdf(double alpha, double beta, double x)
+{
+	return exp(alpha * log(beta) - gsl_sf_gamma(alpha) + (alpha + 1) * log(1 / x) - beta / x);
+}
+

@@ -56,4 +56,27 @@ void medfilt(const double xa[], const double ya[], int n, double N);
 void vector_step(double **x, double min, double max, double step, int *n);
 
 void vector_npoints(double **x, double min, double max, int n, double * step);
+
+/**
+ * Does a binary search, returning the nearest element to the searched one.
+ * @param  data     Array with the numbers.
+ * @param  length   Length of the data array.
+ * @param  value    Value to search.
+ * @param  round_up If 1, return the nearest element greater than value. If 0, the nearest
+ *                  and less than value.
+ * @return          Position in the array of the nearest element.
+ */
+size_t binary_search_nearest(double* data, size_t length, double value, short round_up);
+
+
+/**
+ * Return the inverse Gamma PDF at the given point.
+ * @param  alpha Parameter alpha of the IG distr.
+ * @param  beta  Parameter beta of the IG distr.
+ * @param  x     Point at which the PDF should be evaluated.
+ * @return       PDF value.
+ */
+double invgamma_pdf(double alpha, double beta, double x);
+
+
 #endif
