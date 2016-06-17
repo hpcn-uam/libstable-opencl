@@ -23,30 +23,46 @@
 #include "opencl_integ.h"
 #include "kde.h"
 
+#define MAX_POINTS 5000
+
 int main(int argc, char **argv)
 {
 	size_t num_points = 5000;
-	size_t num_components = 3;
+	size_t num_components = 2;
 	size_t i;
+	/*
 	double alphas[] = { 1.2, 0.8, 2 };
 	double betas[] = { -0.5, 0.5, 0 };
 	double mus[] = { -2, 0, 2 };
 	double sigmas[] = { 0.5, 0.8, 0.2 };
 	double weights[] = { 0.2, 0.5, 0.3 };
-	double rnd[num_points];
-	double pdf[num_points];
-	double pdf_predicted[num_points];
-	double x[num_points];
-	double epdf[num_points];
+	*/
+	double alphas[] = { 1.44, 1.44 };
+	double betas[] = { 0.99, 0.99 };
+	double mus[] = { 1.45, 1.65 };
+	double sigmas[] = { 0.02, 0.02 };
+	double weights[] = { 0.5, 0.5 };
+	double rnd[MAX_POINTS];
+	double pdf[MAX_POINTS];
+	double pdf_predicted[MAX_POINTS];
+	double x[MAX_POINTS];
+	double epdf[MAX_POINTS];
 	double mn = -5, mx = 5;
 
+	FILE* infile = NULL;
 	FILE* outfile;
 	int retval = EXIT_SUCCESS;
 
 	StableDist* dist;
 
-	if (argc == 2)
-		num_points = strtod(argv[1], NULL);
+	if (argc == 2) {
+		infile = fopen(argv[1], "r");
+
+		if (!infile) {
+			perror("fopen");
+			return EXIT_FAILURE;
+		}
+	}
 
 	dist = stable_create(alphas[0], betas[0], sigmas[0], mus[0], 0);
 
@@ -55,15 +71,32 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	stable_set_mixture_components(dist, num_components);
+	if (infile == NULL) {
+		stable_set_mixture_components(dist, num_components);
 
-	for (i = 0; i < dist->num_mixture_components; i++) {
-		dist->mixture_weights[i] = weights[i];
-		stable_setparams(dist->mixture_components[i], alphas[i], betas[i], sigmas[i], mus[i], 0);
+		for (i = 0; i < dist->num_mixture_components; i++) {
+			dist->mixture_weights[i] = weights[i];
+			stable_setparams(dist->mixture_components[i], alphas[i], betas[i], sigmas[i], mus[i], 0);
+		}
+
+		stable_rnd(dist, rnd, num_points);
+		gsl_sort(rnd, 1, num_points);
+	} else {
+		printf("Reading from file %s... ", argv[1]);
+
+		for (i = 0; fscanf(infile, "%lf,%lf", x + i, rnd + i) == 2 && i < MAX_POINTS; i++);
+
+		num_points = i;
+		printf("%zu records\n", i);
+
+		stable_set_mixture_components(dist, 2);
+
+		for (i = 0; i < dist->num_mixture_components; i++)
+			dist->mixture_weights[i] = 0.5;
+
+		dist->mixture_components[0]->mu_0 = 1.45;
+		dist->mixture_components[1]->mu_0 = 1.65;
 	}
-
-	stable_rnd(dist, rnd, num_points);
-	gsl_sort(rnd, 1, num_points);
 
 	outfile = fopen("mixtures_rnd.dat", "w");
 
