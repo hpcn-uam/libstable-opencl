@@ -581,7 +581,7 @@ size_t binary_search_nearest(double* data, size_t length, double value, short ro
 	size_t left = 0, right = length;
 	size_t middle;
 
-	while (right - left > 0) {
+	while (right - left > 1) {
 		middle = (right + left) / 2;
 
 		if (data[middle] == value)
@@ -598,8 +598,74 @@ size_t binary_search_nearest(double* data, size_t length, double value, short ro
 		return left;
 }
 
+
+size_t binary_search_nearest_desc(double* data, size_t length, double value, short round_up)
+{
+	size_t left = 0, right = length;
+	size_t middle;
+
+	while (right - left > 1) {
+		middle = (right + left) / 2;
+
+		if (data[middle] == value)
+			return middle;
+		else if (data[middle] > value)
+			left = middle;
+		else
+			right = middle;
+	}
+
+	if (round_up)
+		return left;
+	else
+		return right;
+}
+
 double invgamma_pdf(double alpha, double beta, double x)
 {
 	return exp(alpha * log(beta) - gsl_sf_gamma(alpha) + (alpha + 1) * log(1 / x) - beta / x);
 }
 
+size_t find_max(double* data, size_t length)
+{
+	double max_val = -DBL_MAX;
+	size_t pos = 0;
+	size_t i;
+
+	for (i = 0; i < length; i++) {
+		if (data[i] > max_val)  {
+			max_val = data[i];
+			pos = i;
+		}
+	}
+
+	return pos;
+}
+
+void reverse(double* src, double* reversed, size_t length)
+{
+	size_t i;
+
+	for (i = 0; i < length; i++)
+		reversed[length - i - 1] = src[i];
+}
+
+
+double get_derivative_at_pctg_of_max(double* pdf, size_t npoints, double max, double pctg, double x_step, short left_part, size_t* pos)
+{
+	double search_value = pctg * max;
+	size_t value_pos;
+
+	if (left_part)
+		value_pos = binary_search_nearest(pdf, npoints, search_value, 1);
+	else
+		value_pos = binary_search_nearest_desc(pdf, npoints, search_value, 1);
+
+	if (pos != NULL)
+		*pos = value_pos;
+
+	if (value_pos == 0 || value_pos == npoints - 1)
+		return NAN;
+	else
+		return (pdf[value_pos + 1] - pdf[value_pos - 1]) / (2 * x_step);
+}

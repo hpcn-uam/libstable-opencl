@@ -68,6 +68,8 @@ void vector_npoints(double **x, double min, double max, int n, double * step);
  */
 size_t binary_search_nearest(double* data, size_t length, double value, short round_up);
 
+/** Same as the above method, but with data sorted in descending order. */
+size_t binary_search_nearest_desc(double* data, size_t length, double value, short round_up);
 
 /**
  * Return the inverse Gamma PDF at the given point.
@@ -78,5 +80,37 @@ size_t binary_search_nearest(double* data, size_t length, double value, short ro
  */
 double invgamma_pdf(double alpha, double beta, double x);
 
+/**
+ * Return the position of the maximum value in the array
+ * @param  data   Data array
+ * @param  length Length of the array
+ * @return        Position of the maximum value
+ */
+size_t find_max(double* data, size_t length);
+
+/**
+ * Reverse a vector
+ * @param src      Source vector
+ * @param reversed Where to store the reversed vector
+ * @param length   Length of the vector.
+ */
+void reverse(double* src, double* reversed, size_t length);
+
+/**
+ * Given a monomodal function (e.g, a PDF), find the value of the derivative when the value is
+ * at a given percentage of the maximum
+ * @param  pdf       Values of the function. Remember to pass only the right or left part to avoid
+ *                   	duplicate values.
+ * @param  npoints   Number of sampled points of the function
+ * @param  max       Maximum of the function
+ * @param  pctg      Percentage for which to find the derivative
+ * @param  x_step    Step between points of the pdf
+ * @param  left_part Whether we are searching to the left of the maximum (ie, pdf is ordered in ascending
+ *                   	order) or to the right (pdf in descending order).
+ * @param  pos       If not NULL, save in this pointer the location of the derivative.
+ *
+ * @return           Value of the derivative.
+ */
+double get_derivative_at_pctg_of_max(double* pdf, size_t npoints, double max, double pctg, double x_step, short left_part, size_t* pos);
 
 #endif
