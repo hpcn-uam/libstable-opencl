@@ -330,6 +330,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 	double data_mean, data_variance;
 	double previous_weights[dist->max_mixture_components];
 	double param_values[dist->max_mixture_components][MAX_STABLE_PARAMS][MAX_MIXTURE_ITERATIONS];
+	double weights[dist->max_mixture_components][MAX_MIXTURE_ITERATIONS];
 
 	FILE* debug_data = fopen("mixture_debug.dat", "w");
 
@@ -441,6 +442,12 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		} else   // Change not accepted, revert to the previous value
 			memcpy(dist->mixture_weights, previous_weights, dist->max_mixture_components * sizeof(double));
 
+
+		if (i >= BURNIN_PERIOD) {
+			for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++)
+				weights[comp_idx][i - BURNIN_PERIOD] = dist->mixture_weights[comp_idx];
+		}
+
 #endif
 
 		if (num_changes == 0)
@@ -477,7 +484,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 	if (i > BURNIN_PERIOD) {
 		printf("Mixture estimation results:\n");
-		printf("Component |      α -  std  |      β -  std  |      μ -  std  |      σ -  std  \n");
+		printf("Component |      α -  std  |      β -  std  |      μ -  std  |      σ -  std  | weight -  std  \n");
 
 		for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
 			printf("%9zu", comp_idx);
@@ -489,6 +496,13 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 				printf(" | %6.2lf - %5.2lf", param_avg, param_sd);
 				new_params[param_idx] = param_avg;
 			}
+
+			double weight_avg = gsl_stats_mean(weights[comp_idx], 1, i - BURNIN_PERIOD);
+			double weight_sd = gsl_stats_mean(weights[comp_idx], 1, i - BURNIN_PERIOD);
+
+			dist->mixture_weights[comp_idx] = weight_avg;
+
+			printf(" | %6.2lf - %5.2lf", weight_avg, weight_sd);
 
 			stable_setparams_array(dist->mixture_components[comp_idx], new_params);
 			printf("\n");
