@@ -1,5 +1,4 @@
 #include "stable_api.h"
-#include "gamma.h"
 #include "kde.h"
 #include "stable_gridfit.h"
 #include "methods.h"
@@ -15,10 +14,10 @@
 #include <gsl/gsl_math.h>
 
 #define MAX_MIXTURE_ITERATIONS 10000
-#define BURNIN_PERIOD 500
+#define BURNIN_PERIOD 100
 #define NUM_ALTERNATIVES_PARAMETER 1 // Number of alternative parameter values considered.
 
-// #define DO_WEIGHT_ESTIMATION
+#define DO_WEIGHT_ESTIMATION
 // #define DECREMENT_GENERATION_VARIANCE
 
 /**
@@ -64,22 +63,22 @@ static double _draw_rand(StableDist* dist, double mn, double mx, double mean, do
 
 static double _draw_rand_alpha(StableDist *dist)
 {
-	return _draw_rand(dist, 0.0, 2.0, dist->alfa, 1);
+	return _draw_rand(dist, 0.0, 2.0, dist->alfa, 0.05);
 }
 
 static double _draw_rand_beta(StableDist *dist)
 {
-	return _draw_rand(dist, -1, 1, dist->beta, 0.6);
+	return _draw_rand(dist, -1, 1, dist->beta, 0.1);
 }
 
 static double _draw_rand_mu(StableDist *dist)
 {
-	return _draw_rand(dist, -DBL_MAX, DBL_MAX, dist->mu_0, 0.1);
+	return _draw_rand(dist, -DBL_MAX, DBL_MAX, dist->mu_0, 0.3);
 }
 
 static double _draw_rand_sigma(StableDist *dist)
 {
-	return _draw_rand(dist, 0, DBL_MAX, dist->sigma, 1);
+	return _draw_rand(dist, 0, DBL_MAX, dist->sigma, 0.02);
 }
 
 typedef double (*new_rand_param)(StableDist*);
@@ -112,6 +111,54 @@ static short _is_local_min(double* data, size_t pos)
 static short _is_local_max(double* data, size_t pos)
 {
 	return data[pos] >= data[pos + 1] && data[pos] >= data[pos - 1];
+}
+
+// Magic estimation based on EPDF data. See the paper for the reasoning.
+static double _do_alpha_estim(double sep_logratio, double asym_log)
+{
+	double offset = 0.2021;
+	double raw_alpha_estim = 1 / (7.367 * pow(sep_logratio - 0.8314, 0.7464));
+	double asym_correction_factor = exp(- 1.081 * pow(asym_log * asym_log, 0.8103));
+
+	return max(0.3, min(offset + asym_correction_factor * raw_alpha_estim, 2));
+}
+
+static double _do_beta_estim(double alpha, double asym_log)
+{
+	double alpha_factor = exp(-1.224 * (alpha + 1.959)) - exp(-1.224 * 3.959);
+	double estim = 0.4394 * log(1 / (0.5 - 0.01968 * asym_log / alpha_factor) - 1);
+
+	return max(-1, min(1, estim));
+}
+
+static double _do_sigma_estim(double alpha, double beta, double sep_95)
+{
+	double alpha2 = pow(alpha, 2);
+	double beta2 = pow(beta, 2);
+	double alpha3 = pow(alpha, 3);
+	double beta3 = pow(beta, 3);
+	double alpha4 = pow(alpha, 4);
+	double alpha5 = pow(alpha, 5);
+
+	// Magical fitting polynomial. As alpha, beta are bounded, we don't have any problems.
+	double expected_sep_sigma1 =
+		0.3564 - 2.669 * alpha + 0.0001647 * beta
+		+ 6.435 * alpha2 - 0.004488 * alpha * beta - 0.371 * beta2
+		- 5.495 * alpha3 + 0.007918 * alpha2 * beta + 1.62 * alpha * beta2 + 0.0002298 * beta3
+		+ 2.166 * alpha4 - 0.005782 * alpha3 * beta - 1.432 * alpha2 * beta2 + 0.004358 * alpha * beta3
+		- 0.3302 * alpha5 + 0.001526 * alpha4 * beta + 0.3499 * alpha3 * beta2 - 0.002562 * alpha2 * beta3
+		;
+
+	printf("Expected sep is %lf\n", expected_sep_sigma1);
+
+	double sigma_estim = sep_95 / expected_sep_sigma1;
+
+	if (sigma_estim < 0) {
+		printf("Warning: Sigma estimation is negative! (%lf)\n", sigma_estim);
+		sigma_estim = 0.1;
+	}
+
+	return sigma_estim;
 }
 
 void _prepare_initial_estimation(StableDist* dist, const double* data, const unsigned int length)
@@ -222,20 +269,40 @@ void _prepare_initial_estimation(StableDist* dist, const double* data, const uns
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		comp = dist->mixture_components[i];
 
-		max_x = epdf_x[valid_max[i]];
-		min_left_x = epdf_x[valid_min[i]];
-		min_right_x = epdf_x[valid_min[i + 1]];
+		size_t comp_begin = valid_min[i];
+		size_t comp_end = valid_min[i + 1];
+		size_t max_pos = valid_max[i];
+		double max_value = epdf[valid_max[i]];
+		size_t pos;
 
-		comp->mu_0 = max_x;
-		continue;
-		size_t copy_start = binary_search_nearest(samples, length, min_left_x, 0);
-		size_t copy_end = binary_search_nearest(samples, length, min_right_x, 1);
-		size_t copy_length = copy_end - copy_start;
+		printf("Initial C%zu: [%zu:%zu] (%lf:%lf)\n", i, comp_begin, comp_end, epdf_x[comp_begin], epdf_x[comp_end]);
 
-		memcpy(component_points, samples + copy_start, copy_length * sizeof(double));
+		double left_deriv_95 = get_derivative_at_pctg_of_max(epdf + comp_begin, max_pos - comp_begin, max_value, 0.95, epdf_step, 1, &pos);
+		double left_x_95 = epdf_x[pos + comp_begin];
+		double right_deriv_95 = get_derivative_at_pctg_of_max(epdf + max_pos, comp_end - max_pos, max_value, 0.95, epdf_step, 0, &pos);
+		double right_x_95 = epdf_x[pos + max_pos];
 
-		printf("Gridfit for component %zu with %zu points\n", i, copy_length);
-		stable_fit_grid(comp, component_points, copy_length);
+		printf("95 %% values: %lf at %lf, %lf at %lf\n", left_deriv_95, left_x_95, right_deriv_95, right_x_95);
+
+		double left_deriv_75 = get_derivative_at_pctg_of_max(epdf + comp_begin, max_pos - comp_begin, max_value, 0.75, epdf_step, 1, &pos);
+		double left_x_75 = epdf_x[pos + comp_begin];
+		double right_deriv_75 = get_derivative_at_pctg_of_max(epdf + max_pos, comp_end - max_pos, max_value, 0.75, epdf_step, 0, &pos);
+		double right_x_75 = epdf_x[pos + max_pos];
+
+		printf("75 %% values: %lf at %lf, %lf at %lf\n", left_deriv_75, left_x_75, right_deriv_75, right_x_75);
+
+		double sep_95 = right_x_95 - left_x_95;
+		double sep_75 = right_x_75 - left_x_75;
+
+		double sep_logratio = log(sep_75) - log(sep_95);
+		double asym_log = log(left_deriv_95) - log(-right_deriv_95);
+
+		printf("Estimation parameters: %lf %lf\n", sep_logratio, asym_log);
+
+		comp->alfa = _do_alpha_estim(sep_logratio, asym_log);
+		comp->beta = _do_beta_estim(comp->alfa, asym_log);
+		comp->sigma = _do_sigma_estim(comp->alfa, comp->beta, sep_95);
+		comp->mu_0 = epdf_x[max_pos];
 
 		printf("C%zu initial %lf %lf %lf %lf\n", i, comp->alfa, comp->beta, comp->mu_0, comp->sigma);
 	}
@@ -268,24 +335,6 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 	_prepare_initial_estimation(dist, data, length);
 
-	// Prepare the arguments for the priors.
-	// TODO: Do something better than this for the estimation.
-	data_mean = gsl_stats_mean(data, 1, length);
-	data_variance = gsl_stats_variance(data, 1, length);
-
-	prior_mu_mean = 0;
-	prior_mu_variance = 0.5;
-
-	// TODO: Wild guess. Probably really wrong.
-	prior_sigma_mean = 0.5;
-	prior_sigma_variance = 1;
-
-	// Solve for α, β in the equations for mean and variance of the inverse gamma.
-	prior_sigma_alpha = prior_sigma_mean / prior_sigma_variance + 2;
-	prior_sigma_beta = (prior_sigma_alpha - 1) * prior_sigma_mean;
-
-	printf("Initial parameters: %lf/%lf | %lf %lf %lf %lf\n", data_mean, data_variance, prior_mu_mean, prior_mu_variance, prior_sigma_mean, prior_sigma_variance);
-
 	stable_activate_gpu(dist);
 
 	for (i = 0; i < dist->num_mixture_components; i++) {
@@ -293,22 +342,15 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 #ifdef DO_WEIGHT_ESTIMATION
 		dist->mixture_weights[i] = ((double) 1) / dist->num_mixture_components;
 #endif
+		dist->mixture_components[i]->mixture_montecarlo_variance = 0.05;
 
-		// Prepare a random distribution for the parameters of each component
-		stable_getparams_array(dist->mixture_components[i], new_params);
-		dist->mixture_components[i]->mixture_montecarlo_variance = 0.2;
-
-		new_params[STABLE_PARAM_ALPHA] = gsl_rng_uniform(dist->gslrand) * 2;
-		new_params[STABLE_PARAM_BETA] = gsl_rng_uniform(dist->gslrand) * 2 - 1;
-		// new_params[STABLE_PARAM_MU] = gsl_rng_uniform(dist->gslrand) * 5 - 2.5;
-		new_params[STABLE_PARAM_SIGMA] = gsl_rng_uniform(dist->gslrand) * 3;
-		printf("Comp %zu: %lf %lf %lf %lf\n", i, new_params[0], new_params[1], new_params[2], new_params[3]);
-		stable_setparams_array(dist->mixture_components[i], new_params);
 		previous_param_probs[i] = 1;
 	}
 
 	signal(SIGINT, handle_signal);
 	signal(SIGTERM, handle_signal);
+
+	fprintf(debug_data, "0");
 
 	for (j = 0; j < dist->num_mixture_components; j++) {
 		fprintf(debug_data, " %lf %lf %lf %lf %lf",
@@ -316,6 +358,8 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 				dist->mixture_components[j]->mu_0, dist->mixture_components[j]->sigma,
 				dist->mixture_weights[j]);
 	}
+
+	fprintf(debug_data, "\n");
 
 	for (i = 0; i < BURNIN_PERIOD + MAX_MIXTURE_ITERATIONS && !stop; i++) {
 		// Async launch of all the integration orders.
