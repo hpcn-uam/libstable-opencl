@@ -264,7 +264,7 @@ void _prepare_initial_estimation(StableDist* dist, const double* data, const uns
 		}
 	}
 
-	valid_min[max_idx] = mins[max_idx]; // Add the last minimum (there must be n max, n + 1 mins).
+	valid_min[max_idx] = mins[i]; // Add the last minimum (there must be n max, n + 1 mins).
 
 	total_max = max_idx;
 
