@@ -14,7 +14,7 @@
 #include <gsl/gsl_math.h>
 
 #define MAX_MIXTURE_ITERATIONS 10000
-#define BURNIN_PERIOD 100
+#define BURNIN_PERIOD 500
 #define NUM_ALTERNATIVES_PARAMETER 1 // Number of alternative parameter values considered.
 
 #define DO_WEIGHT_ESTIMATION
@@ -125,6 +125,9 @@ static double _do_alpha_estim(double sep_logratio, double asym_log)
 
 static double _do_beta_estim(double alpha, double asym_log)
 {
+	if (alpha > 1.6)
+		return 0;
+
 	double alpha_factor = exp(-1.224 * (alpha + 1.959)) - exp(-1.224 * 3.959);
 	double estim = 0.4394 * log(1 / (0.5 - 0.01968 * asym_log / alpha_factor) - 1);
 
@@ -255,6 +258,7 @@ void _prepare_initial_estimation(StableDist* dist, const double* data, const uns
 		if (epdf[maxs[i]] > 0.3 * max_value) {
 			valid_max[max_idx] = maxs[i];
 			valid_min[max_idx] = current_lowest_min_pos;
+			current_lowest_min_pos = maxs[i]; // Find minimum from here.
 			max_idx++;
 			printf("Found valid max %zu at %lf = %lf\n", max_idx, epdf_x[maxs[i]], epdf[maxs[i]]);
 		}
