@@ -28,20 +28,21 @@
 int main(int argc, char **argv)
 {
 	size_t num_points = 5000;
-	size_t num_components = 2;
+	size_t num_components = 3;
 	size_t i;
-	/*
+
 	double alphas[] = { 1.2, 0.8, 2 };
 	double betas[] = { -0.5, 0.5, 0 };
 	double mus[] = { -2, 0, 2 };
 	double sigmas[] = { 0.5, 0.8, 0.2 };
 	double weights[] = { 0.2, 0.5, 0.3 };
+	/*
+	double alphas[] = { 0.35, 0.6 };
+	double betas[] = { 0.8, 0 };
+	double mus[] = { 1.5, 1.65 };
+	double sigmas[] = { 0.05, 0.05 };
+	double weights[] = { 0.7, 0.3 };
 	*/
-	double alphas[] = { 1.44, 1.44 };
-	double betas[] = { 0.99, 0.99 };
-	double mus[] = { 1.45, 1.65 };
-	double sigmas[] = { 0.02, 0.02 };
-	double weights[] = { 0.5, 0.5 };
 	double rnd[MAX_POINTS];
 	double pdf[MAX_POINTS];
 	double pdf_predicted[MAX_POINTS];

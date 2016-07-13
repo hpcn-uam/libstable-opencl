@@ -156,6 +156,16 @@ struct StableDistStruct {
 	size_t num_mixture_components;
 	size_t max_mixture_components;
 	double mixture_montecarlo_variance;
+	size_t allocated_mixture_components;
+
+	double prior_mu_avg;
+	double prior_mu_variance;
+	double prior_sigma_alpha0;
+	double prior_sigma_beta0;
+	double prior_weights;
+
+	double* birth_probs;
+	double* death_probs;
 
 	/* Particular cases indicator (Gauss, Cauchy, Levy distribution, alfa==1, etc.) */
 	int ZONE;

@@ -430,6 +430,7 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
 #endif
 
 	dist->num_mixture_components = 0;
+	dist->allocated_mixture_components = 0;
 	dist->is_mixture = 0;
 	dist->mixture_weights = NULL;
 	dist->mixture_components = NULL;
@@ -505,24 +506,34 @@ short stable_set_mixture_components(StableDist* dist, size_t num_components)
 {
 	size_t i;
 
-	if (num_components > dist->num_mixture_components) {
+	if (num_components > dist->allocated_mixture_components) {
 		dist->mixture_components = realloc(dist->mixture_components, sizeof(StableDist*) * num_components);
 		dist->mixture_weights = realloc(dist->mixture_weights, sizeof(double) * num_components);
 
 		if (dist->mixture_components == NULL || dist->mixture_weights == NULL)
 			return 1;
 
-		for (i = dist->num_mixture_components; i < num_components; i++) {
+		for (i = dist->allocated_mixture_components; i < num_components; i++) {
 			dist->mixture_components[i] = stable_copy(dist);
 			gsl_rng_set(dist->mixture_components[i]->gslrand, time(NULL));
 			dist->mixture_weights[i] = 0;
 
+			if (dist->gpu_enabled)
+				stable_activate_gpu(dist->mixture_components[i]);
+
 			if (dist->mixture_components[i] == NULL)
 				return 1;
 		}
-	} else {
-		for (i = num_components; i < dist->num_mixture_components; i++)
+
+		dist->allocated_mixture_components = num_components;
+	}
+
+	// Don't free cached components unless num_components equals zero
+	if (num_components == 0) {
+		for (i = 0; i < dist->allocated_mixture_components; i++)
 			stable_free(dist->mixture_components[i]);
+
+		dist->allocated_mixture_components = 0;
 	}
 
 	dist->is_mixture = num_components > 0;
