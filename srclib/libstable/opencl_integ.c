@@ -47,14 +47,20 @@ static int _stable_create_points_array(struct stable_clinteg *cli, cl_precision 
 {
 	int err = 0;
 
-	if (cli->points)
+	if (cli->points) {
 		clReleaseMemObject(cli->points);
+		cli->points = NULL;
+	}
 
-	if (cli->gauss)
+	if (cli->gauss) {
 		clReleaseMemObject(cli->gauss);
+		cli->gauss = NULL;
+	}
 
-	if (cli->kronrod)
+	if (cli->kronrod) {
 		clReleaseMemObject(cli->kronrod);
+		cli->kronrod = NULL;
+	}
 
 	if (!cli->mode_pointgenerator)
 		cli->points = clCreateBuffer(cli->env.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
@@ -383,7 +389,7 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *results_1, d
 		if (results_2 && cli->copy_gauss_array)
 			results_2[i] = cli->h_gauss[i];
 
-#if STABLE_MIN_LOG <= 0
+#if STABLE_MIN_LOG < 0
 		char msg[500];
 		snprintf(msg, 500, "Results set P%zu: kronrod = %.3g", i, cli->h_kronrod[i]);
 
@@ -401,12 +407,12 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *results_1, d
 			} else if (cli->error_mode == error_is_gauss_array)
 				errs[i] = cli->h_gauss[i];
 
-#if STABLE_MIN_LOG <= 0
+#if STABLE_MIN_LOG < 0
 			snprintf(msg + strlen(msg), 500 - strlen(msg), ", relerr = %.3g", errs[i]);
 #endif
 		}
 
-#if STABLE_MIN_LOG <= 0
+#if STABLE_MIN_LOG < 0
 		stablecl_log(log_message, msg);
 #endif
 	}
