@@ -22,48 +22,26 @@ set key off
 set multiplot layout 3, 2 title 'α-stable mixture estimation'
 
 set title "α estimation"
-plot \
-	'mixture_debug.dat' u 2 w lines lw 2 title 'Comp. 1', \
-	'mixture_debug.dat' u 7 w lines lw 2 title 'Comp. 2', \
-	'mixture_debug.dat' u 12 w lines lw 2 title 'Comp. 3', \
-	'mixture_debug.dat' u 17 w lines lw 2 title 'Comp. 4'
+plot for [i=0:10] 'mixture_debug.dat' u (column(3 + 5 * i)) w lines lw 2 title 'Comp. '.i
 
 set title "β estimation"
-plot \
-	'mixture_debug.dat' u 3 w lines lw 2 title 'Comp. 1', \
-	'mixture_debug.dat' u 8 w lines lw 2 title 'Comp. 2', \
-	'mixture_debug.dat' u 13 w lines lw 2 title 'Comp. 3', \
-	'mixture_debug.dat' u 18  w lines lw 2 title 'Comp. 4'
+plot for [i=0:10] 'mixture_debug.dat' u (column(4 + 5 * i)) w lines lw 2 title 'Comp. '.i
 
 set title "μ estimation"
-plot \
-	'mixture_debug.dat' u 4 w lines lw 2 title 'Comp. 1', \
-	'mixture_debug.dat' u 9 w lines lw 2 title 'Comp. 2', \
-	'mixture_debug.dat' u 14 w lines lw 2 title 'Comp. 3', \
-	'mixture_debug.dat' u 19  w lines lw 2 title 'Comp. 4'
+plot for [i=0:10] 'mixture_debug.dat' u (column(5 + 5 * i)) w lines lw 2 title 'Comp. '.i
 
 set title "σ estimation"
-plot \
-	'mixture_debug.dat' u 5 w lines lw 2 title 'Comp. 1', \
-	'mixture_debug.dat' u 10 w lines lw 2 title 'Comp. 2', \
-	'mixture_debug.dat' u 15 w lines lw 2 title 'Comp. 3', \
-	'mixture_debug.dat' u 20  w lines lw 2 title 'Comp. 4'
-
+plot for [i=0:10] 'mixture_debug.dat' u (column(6 + 5 * i)) w lines lw 2 title 'Comp. '.i
 
 set title "Weight estimation"
-plot \
-	'mixture_debug.dat' u 6 w lines lw 2 title 'Comp. 1', \
-	'mixture_debug.dat' u 11 w lines lw 2 title 'Comp. 2', \
-	'mixture_debug.dat' u 16 w lines lw 2 title 'Comp. 3', \
-	'mixture_debug.dat' u 21 w lines lw 2 title 'Comp. 4'
+plot for [i=0:10] 'mixture_debug.dat' u (column(7 + 5 * i)) w lines lw 2 title 'Comp. '.i
 
 set title "MonteCarlo data"
-initial_var=0.5
-set y2range [0:initial_var]
+set y2range [0:10]
 set y2tics
 set ytics nomirror
 plot 'mixture_debug.dat' u 1 w lines lw 2 title 'Changes', \
-	initial_var title 'Generator variance' axes x1y2 lw 4
+	 'mixture_debug.dat' u 2 w lines title 'Number of components' lw 4 axes x1y2
 
 
 unset multiplot
