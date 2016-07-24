@@ -616,8 +616,6 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 	_prepare_initial_estimation(dist, data, length);
 
-	stable_activate_gpu(dist);
-
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		// TODO: More magic.
 #ifdef DO_WEIGHT_ESTIMATION

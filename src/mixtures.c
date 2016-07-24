@@ -118,6 +118,8 @@ int main(int argc, char **argv)
 		epdf[i] = kerneldensity(rnd, x[i], num_points, 0.5);
 	}
 
+	stable_activate_gpu(dist);
+
 	stable_pdf(dist, x, num_points, pdf, NULL);
 
 	stable_fit_mixture(dist, rnd, num_points);
