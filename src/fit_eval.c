@@ -26,15 +26,13 @@
 
 typedef int (*fitter)(StableDist *, const double *, const unsigned int);
 
-struct fittest
-{
+struct fittest {
 	fitter func;
 	short gpu_enabled;
 	const char *name;
 };
 
-struct fitresult
-{
+struct fitresult {
 	double ms_duration;
 	double alfa;
 	double beta;
@@ -99,7 +97,7 @@ struct fitresult
 #define SIGMA_START SIGMA_INCR
 #endif
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	double alfa, beta, sigma, mu_0;
 	double *data;
@@ -108,8 +106,7 @@ int main (int argc, char *argv[])
 	char testname[100];
 	size_t test_count = 0;
 	double total_duration, start, end;
-	struct fittest tests[] =
-	{
+	struct fittest tests[] = {
 		//{ stable_fit_mle, 0, "MLE" },
 		//{ stable_fit_mle2d, 0, "M2D"},
 		//{ stable_fit_koutrouvelis, 0, "KTR"},
@@ -134,8 +131,7 @@ int main (int argc, char *argv[])
 
 	install_stop_handlers();
 
-	if ((dist = stable_create(alfa, beta, sigma, mu_0, 0)) == NULL)
-	{
+	if ((dist = stable_create(alfa, beta, sigma, mu_0, 0)) == NULL) {
 		printf("Error when creating the distribution");
 		exit(1);
 	}
@@ -152,14 +148,14 @@ int main (int argc, char *argv[])
 	/* Random sample generation */
 	data = (double *) malloc(Nexp * N * sizeof(double));
 
-	for (i = 0; i < num_tests; i++)
-	{
+	for (i = 0; i < num_tests; i++) {
 		test = tests + i;
 		total_duration = 0;
 
 		char out_fname[100];
 		char* gpu_marker;
-		if(test->gpu_enabled)
+
+		if (test->gpu_enabled)
 			gpu_marker = "_GPU";
 		else
 			gpu_marker = "";
@@ -170,8 +166,7 @@ int main (int argc, char *argv[])
 
 		FILE* out = fopen(out_fname, "w");
 
-		if(!out)
-		{
+		if (!out) {
 			perror("fopen");
 			return 1;
 		}
@@ -183,16 +178,13 @@ int main (int argc, char *argv[])
 		else
 			stable_deactivate_gpu(dist);
 
-		for(alfa = ALFA_START; alfa <= ALFA_END + 2 * DBL_EPSILON; alfa += ALPHA_INCR)
-		{
-			for(beta = BETA_START; beta <= BETA_END + 2 * DBL_EPSILON; beta += BETA_INCR)
-			{
+		for (alfa = ALFA_START; alfa <= ALFA_END + 2 * DBL_EPSILON; alfa += ALPHA_INCR) {
+			for (beta = BETA_START; beta <= BETA_END + 2 * DBL_EPSILON; beta += BETA_INCR) {
 				mu_0 = 0;
 				sigma = 1;
-				for(mu_0 = MU_START; mu_0 <= MU_END + 2 * DBL_EPSILON; mu_0 += MU_INCR)
-				{
-					for(sigma = SIGMA_START; sigma <= SIGMA_END + 2 * DBL_EPSILON; sigma += SIGMA_INCR)
-					{
+
+				for (mu_0 = MU_START; mu_0 <= MU_END + 2 * DBL_EPSILON; mu_0 += MU_INCR) {
+					for (sigma = SIGMA_START; sigma <= SIGMA_END + 2 * DBL_EPSILON; sigma += SIGMA_INCR) {
 						double alfa_est = 0, beta_est = 0, mu_0_est = 0, sigma_est = 0;
 						double alfa_est_err = 0, beta_est_err = 0, mu_0_est_err = 0, sigma_est_err = 0;
 						stable_setparams(dist, alfa, beta, sigma, mu_0, 0);
@@ -205,13 +197,12 @@ int main (int argc, char *argv[])
 
 						dist->parallel_gridfit = test->gpu_enabled; // Temporary.
 
-						for (iexp = 0; iexp < Nexp; iexp++)
-						{
-							if(stable_fit_init(dist, data + iexp * N, N, NULL, NULL) != 0)
-							{
+						for (iexp = 0; iexp < Nexp; iexp++) {
+							if (stable_fit_init(dist, data + iexp * N, N, NULL, NULL) != 0) {
 								printf("Warning: couldn't init distribution\n");
 								continue;
 							}
+
 							printf("Eval %d... ", iexp);
 							fflush(stdout);
 
@@ -238,10 +229,10 @@ int main (int argc, char *argv[])
 
 						fprintf(out, "%lf %lf %lf %lf %lf ", alfa, beta, mu_0, sigma, ms_duration);
 						fprintf(out, "%lf %lf %lf %lf %lf %lf %lf %lf\n",
-					       alfa_est, alfa_est_err,
-					       beta_est, beta_est_err,
-					       sigma_est, sigma_est_err,
-					       mu_0_est, mu_0_est_err);
+								alfa_est, alfa_est_err,
+								beta_est, beta_est_err,
+								sigma_est, sigma_est_err,
+								mu_0_est, mu_0_est_err);
 
 						fflush(out);
 						fflush(stdout);

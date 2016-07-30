@@ -23,9 +23,9 @@
 double get_ms_time()
 {
 	struct timeval t;
-    gettimeofday(&t, NULL);
+	gettimeofday(&t, NULL);
 
-    return (double) t.tv_sec * 1000 + (double) t.tv_usec / 1000;
+	return (double) t.tv_sec * 1000 + (double) t.tv_usec / 1000;
 }
 
 void benchmark_begin(double *bc)

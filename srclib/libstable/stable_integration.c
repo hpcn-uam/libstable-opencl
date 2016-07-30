@@ -38,172 +38,182 @@
 
 int stable_integration_METHODNAME(char *name)
 {
-    switch (METHOD)
-    {
-    case STABLE_QAG1:
-        return sprintf(name,
-                       "QAG2: Adaptative 15 point Gauss-Kronrod rule");
-    case STABLE_QAG2:
-        return sprintf(name,
-                       "QAG2: Adaptative 21 point Gauss-Kronrod rule");
-    case STABLE_QAG5:
-        return sprintf(name,
-                       "QAG2: Adaptative 51 point Gauss-Kronrod rule");
-    case STABLE_QUADSTEP:
-        return sprintf(name,
-                       "QUADSTEP: Adaptative Bisection");
-    case STABLE_QROMBPOL:
-        return sprintf(name,
-                       "QROMBPOL: Romberg with Polinomial Extrapolation");
-    case STABLE_QROMBRAT:
-        return sprintf(name,
-                       "ROMBRAT: Romberg with Rational Extrapolation");
-    case STABLE_QNG:
-        return sprintf(name,
-                       "GSL_QNG: Non-adaptative Gauss-Kronrod rule 10, 21, 43 and 87 points");
-    }
+	switch (METHOD) {
+		case STABLE_QAG1:
+			return sprintf(name,
+						   "QAG2: Adaptative 15 point Gauss-Kronrod rule");
 
-    sprintf(name, "Invalid method");
-    return -1;
+		case STABLE_QAG2:
+			return sprintf(name,
+						   "QAG2: Adaptative 21 point Gauss-Kronrod rule");
+
+		case STABLE_QAG5:
+			return sprintf(name,
+						   "QAG2: Adaptative 51 point Gauss-Kronrod rule");
+
+		case STABLE_QUADSTEP:
+			return sprintf(name,
+						   "QUADSTEP: Adaptative Bisection");
+
+		case STABLE_QROMBPOL:
+			return sprintf(name,
+						   "QROMBPOL: Romberg with Polinomial Extrapolation");
+
+		case STABLE_QROMBRAT:
+			return sprintf(name,
+						   "ROMBRAT: Romberg with Rational Extrapolation");
+
+		case STABLE_QNG:
+			return sprintf(name,
+						   "GSL_QNG: Non-adaptative Gauss-Kronrod rule 10, 21, 43 and 87 points");
+	}
+
+	sprintf(name, "Invalid method");
+	return -1;
 }
 
 void
 stable_integration_QAG1(StableDist *dist, double(function)(double, void *),
-                        double a, double b,
-                        double epsabs, double epsrel, unsigned short limit,
-                        double *result, double *abserr)
+						double a, double b,
+						double epsabs, double epsrel, unsigned short limit,
+						double *result, double *abserr)
 {
-    gsl_function F;
+	gsl_function F;
 
-    F.function = function;
-    F.params = (void *)dist;
-    gsl_integration_qag(&F, a, b, epsabs, epsrel,
-                        limit, 1, dist->gslworkspace, result, abserr);
+	F.function = function;
+	F.params = (void *)dist;
+	gsl_integration_qag(&F, a, b, epsabs, epsrel,
+						limit, 1, dist->gslworkspace, result, abserr);
 }
 
 void
 stable_integration_QAG2(StableDist *dist, double(function)(double, void *),
-                        double a, double b,
-                        double epsabs, double epsrel, unsigned short limit,
-                        double *result, double *abserr)
+						double a, double b,
+						double epsabs, double epsrel, unsigned short limit,
+						double *result, double *abserr)
 {
-    gsl_function F;
+	gsl_function F;
 
-    F.function = function;
-    F.params = (void *)dist;
-    gsl_integration_qag(&F, a, b, epsabs, epsrel,
-                        limit, 2, dist->gslworkspace, result, abserr);
+	F.function = function;
+	F.params = (void *)dist;
+	gsl_integration_qag(&F, a, b, epsabs, epsrel,
+						limit, 2, dist->gslworkspace, result, abserr);
 }
 void
 stable_integration_QAG5(StableDist *dist, double(function)(double, void *),
-                        double a, double b,
-                        double epsabs, double epsrel, unsigned short limit,
-                        double *result, double *abserr)
+						double a, double b,
+						double epsabs, double epsrel, unsigned short limit,
+						double *result, double *abserr)
 {
-    gsl_function F;
+	gsl_function F;
 
-    F.function = function;
-    F.params = (void *)dist;
-    gsl_integration_qag(&F, a, b, epsabs, epsrel,
-                        limit, 5, dist->gslworkspace, result, abserr);
+	F.function = function;
+	F.params = (void *)dist;
+	gsl_integration_qag(&F, a, b, epsabs, epsrel,
+						limit, 5, dist->gslworkspace, result, abserr);
 }
 
 void
 stable_integration_QUADSTEP(StableDist *dist, double(function)(double, void *),
-                            double a, double b,
-                            double epsabs, double epsrel, unsigned short limit,
-                            double *result, double *abserr)
+							double a, double b,
+							double epsabs, double epsrel, unsigned short limit,
+							double *result, double *abserr)
 {
-    double fa, fc, fb;
+	double fa, fc, fb;
 
-    fa = function(a, (void *)dist);
-    fc = function((a + b) * 0.5, (void *)dist);
-    fb = function(b, (void *)dist);
-    *result = quadstep(function, (void *)dist, a, b, fa, fc, fb,
-                       epsabs, epsrel, abserr, NULL, NULL);
+	fa = function(a, (void *)dist);
+	fc = function((a + b) * 0.5, (void *)dist);
+	fb = function(b, (void *)dist);
+	*result = quadstep(function, (void *)dist, a, b, fa, fc, fb,
+					   epsabs, epsrel, abserr, NULL, NULL);
 }
 
 void
 stable_integration_QNG(StableDist *dist, double(function)(double, void *),
-                       double a, double b,
-                       double epsabs, double epsrel, unsigned short limit,
-                       double *result, double *abserr)
+					   double a, double b,
+					   double epsabs, double epsrel, unsigned short limit,
+					   double *result, double *abserr)
 {
-    gsl_function F;
-    size_t fcnt = 0.0;
+	gsl_function F;
+	size_t fcnt = 0.0;
 
-    //double c,d;
-    //double res_aux=0.0,err_aux=0.0;
-    //int warn=0;
+	//double c,d;
+	//double res_aux=0.0,err_aux=0.0;
+	//int warn=0;
 
-    F.function = function;
-    F.params = (void *)dist;
-    gsl_integration_qng(&F, a, b, epsabs, epsrel, result, abserr, &fcnt);
-    /*
-      if(*abserr<=epsabs || *abserr<=epsrel*fabs(*result)) return;
-      else
-        {
-          *result=0;
-          *abserr=0;
-          warn=fcnt;
-          while(warn<IT_MAX)
-            {
-              fcnt=0;
-              d = (b-a)*0.25;
-              c = a+d;
-              d = b-d;
-              gsl_integration_qng(&F,c,d,epsabs,epsrel,&res_aux,&err_aux,&fcnt);
-              warn+=fcnt;
-              *result=res_aux;
-              *abserr=err_aux*err_aux;
-              stable_integration(dist,function,a,c,fabs(*result*epsrel*0.5),epsrel,limit,&res_aux, &err_aux,STABLE_QAG2);
-              *result+=res_aux;
-              *abserr+=err_aux*err_aux;
-              stable_integration(dist,function,d,b,fabs(*result*epsrel*0.5),epsrel,limit,&res_aux, &err_aux,STABLE_QAG2);
-              *result+=res_aux;
-              *abserr+=err_aux*err_aux;
-              *abserr=sqrt(*abserr);
-              if(*abserr<epsabs || *abserr<epsrel*fabs(*result))
-               {
-    //          #ifdef DEBUG
-                printf(" %d ! ",warn);
-    //          #endif
-                break;
-               }
-            }
-        }
-    */
+	F.function = function;
+	F.params = (void *)dist;
+	gsl_integration_qng(&F, a, b, epsabs, epsrel, result, abserr, &fcnt);
+	/*
+	  if(*abserr<=epsabs || *abserr<=epsrel*fabs(*result)) return;
+	  else
+	    {
+	      *result=0;
+	      *abserr=0;
+	      warn=fcnt;
+	      while(warn<IT_MAX)
+	        {
+	          fcnt=0;
+	          d = (b-a)*0.25;
+	          c = a+d;
+	          d = b-d;
+	          gsl_integration_qng(&F,c,d,epsabs,epsrel,&res_aux,&err_aux,&fcnt);
+	          warn+=fcnt;
+	          *result=res_aux;
+	          *abserr=err_aux*err_aux;
+	          stable_integration(dist,function,a,c,fabs(*result*epsrel*0.5),epsrel,limit,&res_aux, &err_aux,STABLE_QAG2);
+	          *result+=res_aux;
+	          *abserr+=err_aux*err_aux;
+	          stable_integration(dist,function,d,b,fabs(*result*epsrel*0.5),epsrel,limit,&res_aux, &err_aux,STABLE_QAG2);
+	          *result+=res_aux;
+	          *abserr+=err_aux*err_aux;
+	          *abserr=sqrt(*abserr);
+	          if(*abserr<epsabs || *abserr<epsrel*fabs(*result))
+	           {
+	//          #ifdef DEBUG
+	            printf(" %d ! ",warn);
+	//          #endif
+	            break;
+	           }
+	        }
+	    }
+	*/
 }
 
 void
 stable_integration(StableDist *dist, double(function)(double, void *),
-                   double a, double b,
-                   double epsabs, double epsrel, unsigned short limit,
-                   double *result, double *abserr, unsigned short method)
+				   double a, double b,
+				   double epsabs, double epsrel, unsigned short limit,
+				   double *result, double *abserr, unsigned short method)
 {
 
-    switch (method)
-    {
-    case STABLE_QAG2:
-        stable_integration_QAG2(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
-        break;
-    case STABLE_QUADSTEP:
-        stable_integration_QUADSTEP(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
-        break;
-    case STABLE_QROMBPOL:
-        *result = qromb(function, (void *)dist, a, b, epsabs, epsrel, 4, 10, 1, NULL, NULL, abserr);
-        break;
-    case STABLE_QROMBRAT:
-        *result = qromb(function, (void *)dist, a, b, epsabs, epsrel, 4, 10, 2, NULL, NULL, abserr);
-        break;
-    case STABLE_QNG:
-        stable_integration_QNG(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
-        break;
-    case STABLE_QAG1:
-        stable_integration_QAG1(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
-        break;
-    case STABLE_QAG5:
-        stable_integration_QAG5(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
-        break;
-    }
+	switch (method) {
+		case STABLE_QAG2:
+			stable_integration_QAG2(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
+			break;
+
+		case STABLE_QUADSTEP:
+			stable_integration_QUADSTEP(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
+			break;
+
+		case STABLE_QROMBPOL:
+			*result = qromb(function, (void *)dist, a, b, epsabs, epsrel, 4, 10, 1, NULL, NULL, abserr);
+			break;
+
+		case STABLE_QROMBRAT:
+			*result = qromb(function, (void *)dist, a, b, epsabs, epsrel, 4, 10, 2, NULL, NULL, abserr);
+			break;
+
+		case STABLE_QNG:
+			stable_integration_QNG(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
+			break;
+
+		case STABLE_QAG1:
+			stable_integration_QAG1(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
+			break;
+
+		case STABLE_QAG5:
+			stable_integration_QAG5(dist, function, a, b, epsabs, epsrel, limit, result, abserr);
+			break;
+	}
 }

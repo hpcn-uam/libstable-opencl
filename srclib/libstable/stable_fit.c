@@ -50,9 +50,9 @@ void stable_fft(double *data, const unsigned int length, double * y)
 {
 	//int i;
 
-	memcpy ( (void *)y, (const void *) data, length * sizeof(double));
+	memcpy((void *)y, (const void *) data, length * sizeof(double));
 
-	gsl_fft_real_radix2_transform (y, 1, length);
+	gsl_fft_real_radix2_transform(y, 1, length);
 
 	return;
 }
@@ -67,8 +67,7 @@ double stable_loglikelihood(StableDist *dist, double *data, const unsigned int l
 
 	stable_pdf(dist, data, length, pdf, NULL);
 
-	for (i = 0; i < length; i++)
-	{
+	for (i = 0; i < length; i++) {
 		if (pdf[i] > 0.0) l += log(pdf[i]);
 	}
 
@@ -108,9 +107,7 @@ double stable_minusloglikelihood(const gsl_vector * theta, void * p)
 
 	/*Para que la estimacion no se salga del espacio de parametros*/
 	if (stable_setparams(params->dist, alfa, beta, sigma, mu, 0) < 0)
-	{
 		return GSL_NAN;
-	}
 	else minusloglike = -stable_loglike_p(params);
 
 	if (isinf(minusloglike) || isnan(minusloglike)) minusloglike = GSL_NAN;
@@ -118,7 +115,7 @@ double stable_minusloglikelihood(const gsl_vector * theta, void * p)
 	return minusloglike;
 }
 
-int compare (const void * a, const void * b)
+int compare(const void * a, const void * b)
 {
 	/* Relacion de orden para qsort*/
 	//double d=*(double *)a - *(double *)b;
@@ -155,16 +152,14 @@ double stable_minusloglikelihood_whole(const gsl_vector * theta, void * p)
 	get_original(theta, &alfa, &beta, &sigma, &mu);
 
 	/*Para que la estimacion no se salga del espacio de parametros*/
-	if (stable_setparams(params->dist, alfa, beta, sigma, mu, 0) < 0)
-	{
+	if (stable_setparams(params->dist, alfa, beta, sigma, mu, 0) < 0) {
 		printf("setparams error: %f %f %f %f\n", alfa, beta, sigma, mu);
 		return GSL_NAN;
-	}
-	else minusloglike = -stable_loglike_p(params);
+	} else minusloglike = -stable_loglike_p(params);
 
 	if (isinf(minusloglike) || isnan(minusloglike)) minusloglike = GSL_NAN;
 
-//  printf("minusloglikelihood_whole: %f\n", minusloglike);
+	//  printf("minusloglikelihood_whole: %f\n", minusloglike);
 	return minusloglike;
 }
 
@@ -179,22 +174,21 @@ short stable_fit_init(StableDist *dist, const double * data, const unsigned int 
 
 	sorted = malloc(length * sizeof(double));
 
-	memcpy ( (void *)sorted, (const void *) data, length * sizeof(double));
-	qsort  ( sorted, length, sizeof(double), compare);
+	memcpy((void *)sorted, (const void *) data, length * sizeof(double));
+	qsort(sorted, length, sizeof(double), compare);
 
 	//estimar con mcculloch para inicializar
 	stab((const double *) sorted, length, 0, &alfa0, &beta0, &sigma0, &mu1);
 
 	//punto inicial se mete en la dist
-	if (stable_setparams(dist, alfa0, beta0, sigma0, mu1, 0) < 0)
-	{
+	if (stable_setparams(dist, alfa0, beta0, sigma0, mu1, 0) < 0) {
 		printf("INITIAL ESTIMATED PARAMETER ARE NOT VALID\n");
 		fflush(stdout);
 		return -1;
 	}
 
 	//necesarios los estadisticos para estimar sigma y mu en cada iteracion
-	if(pnu_c != NULL && pnu_z !=NULL)
+	if (pnu_c != NULL && pnu_z != NULL)
 		cztab(sorted, length, pnu_c, pnu_z);
 
 	free(sorted);
@@ -227,46 +221,45 @@ int stable_fit_iter(StableDist *dist, const double * data, const unsigned int le
 
 	/* Inicio: Debe haberse inicializado dist con alfa y beta de McCulloch */
 	theta = gsl_vector_alloc(2);
-	gsl_vector_set (theta, 0, dist->alfa);
-	gsl_vector_set (theta, 1, dist->beta);
+	gsl_vector_set(theta, 0, dist->alfa);
+	gsl_vector_set(theta, 1, dist->beta);
 
 #ifdef DEBUG
-	printf("%lf, %lf\n", gsl_vector_get (theta, 0), gsl_vector_get (theta, 1));
+	printf("%lf, %lf\n", gsl_vector_get(theta, 0), gsl_vector_get(theta, 1));
 #endif
 
 	/* Saltos iniciales */
-	ss = gsl_vector_alloc (2);
-	gsl_vector_set_all (ss, 0.01);
+	ss = gsl_vector_alloc(2);
+	gsl_vector_set_all(ss, 0.01);
 
 	/* Funcion a minimizar */
 	likelihood_func.n = 2; // Dimension 2 (alfa y beta)
 	likelihood_func.f = &stable_minusloglikelihood;
-	likelihood_func.params = (void *) (&par);  // Parametros de la funcion
+	likelihood_func.params = (void *)(&par);   // Parametros de la funcion
 
 	/* Creacion del minimizer */
 	T = gsl_multimin_fminimizer_nmsimplex2rand;
 
-	s = gsl_multimin_fminimizer_alloc (T, 2); /* Dimension 2*/
+	s = gsl_multimin_fminimizer_alloc(T, 2);  /* Dimension 2*/
 
 	/* Poner funcion, estimacion inicial, saltos iniciales */
-	gsl_multimin_fminimizer_set (s, &likelihood_func, theta, ss);
+	gsl_multimin_fminimizer_set(s, &likelihood_func, theta, ss);
 
 #ifdef DEBUG
 	printf("5\n");
 #endif
 
 	/* Iterar */
-	do
-	{
+	do {
 		iter++;
 		status = gsl_multimin_fminimizer_iterate(s);
-//     if (status!=GSL_SUCCESS) {
-//       printf("Minimizer warning: %s\n",gsl_strerror(status));
-//       fflush(stdout);
-//      }
+		//     if (status!=GSL_SUCCESS) {
+		//       printf("Minimizer warning: %s\n",gsl_strerror(status));
+		//       fflush(stdout);
+		//      }
 
-		size = gsl_multimin_fminimizer_size (s);
-		status = gsl_multimin_test_size (size, ESTM_2D_EPSABS);
+		size = gsl_multimin_fminimizer_size(s);
+		status = gsl_multimin_test_size(size, ESTM_2D_EPSABS);
 		/*
 					if (status == GSL_SUCCESS)
 						{
@@ -284,11 +277,11 @@ int stable_fit_iter(StableDist *dist, const double * data, const unsigned int le
 		*/
 	} while (status == GSL_CONTINUE && iter < ESTM_2D_MAX_ITER);
 
-//  if (status!=GSL_SUCCESS)
-//    {
-//      printf("Minimizer warning: %s\n",gsl_strerror(status));
-//      fflush(stdout);
-//    }
+	//  if (status!=GSL_SUCCESS)
+	//    {
+	//      printf("Minimizer warning: %s\n",gsl_strerror(status));
+	//      fflush(stdout);
+	//    }
 
 	/* Se recupera la estimacion alfa y beta */
 	gsl_vector_free(theta);
@@ -297,8 +290,8 @@ int stable_fit_iter(StableDist *dist, const double * data, const unsigned int le
 		a = gsl_vector_get (theta, 0);
 		b = gsl_vector_get (theta, 1);
 	*/
-	a = gsl_vector_get (s->x, 0);
-	b = gsl_vector_get (s->x, 1);
+	a = gsl_vector_get(s->x, 0);
+	b = gsl_vector_get(s->x, 1);
 
 	/* Y se estima sigma y mu para esos alfa y beta */
 	czab(a, b, nu_c, nu_z, &c, &m);
@@ -306,14 +299,13 @@ int stable_fit_iter(StableDist *dist, const double * data, const unsigned int le
 	//printf("%5d %10.3e %10.3e %10.3e %10.3e\n",(int)iter,a,b,c,m);
 
 	// Se almacena el punto estimado en la distribucion, comprobando que es valido
-	if (stable_setparams(dist, a, b, c, m, 0) < 0)
-	{
+	if (stable_setparams(dist, a, b, c, m, 0) < 0) {
 		printf("FINAL ESTIMATED PARAMETER ARE NOT VALID\n  a = %f  b = %fn  c = %f  m = %f\n", a, b, c, m);
 		fflush(stdout);
 	}
 
 	gsl_vector_free(ss);
-	gsl_multimin_fminimizer_free (s);
+	gsl_multimin_fminimizer_free(s);
 	free(par.err);
 	free(par.pdf);
 
@@ -360,25 +352,25 @@ int stable_fit_iter_whole(StableDist *dist, const double * data, const unsigned 
 	set_expanded(theta, dist->alfa, dist->beta, dist->sigma, dist->mu_1);
 
 #ifdef DEBUG
-	printf("%lf, %lf, %lf, %lf\n", gsl_vector_get (theta, 0), gsl_vector_get (theta, 1), gsl_vector_get (theta, 2), gsl_vector_get (theta, 3));
+	printf("%lf, %lf, %lf, %lf\n", gsl_vector_get(theta, 0), gsl_vector_get(theta, 1), gsl_vector_get(theta, 2), gsl_vector_get(theta, 3));
 #endif
 
 	/* Saltos iniciales */
-	ss = gsl_vector_alloc (4);
-	gsl_vector_set_all (ss, 0.01);
+	ss = gsl_vector_alloc(4);
+	gsl_vector_set_all(ss, 0.01);
 
 	/* Funcion a minimizar */
 	likelihood_func.n = 4; // Dimension 4
 	likelihood_func.f = &stable_minusloglikelihood_whole;
-	likelihood_func.params = (void *) (&par);  // Parametros de la funcion
+	likelihood_func.params = (void *)(&par);   // Parametros de la funcion
 
 	/* Creacion del minimizer */
 	T = gsl_multimin_fminimizer_nmsimplex2rand;
 
-	s = gsl_multimin_fminimizer_alloc (T, 4); /* Dimension 4 */
+	s = gsl_multimin_fminimizer_alloc(T, 4);  /* Dimension 4 */
 
 	/* Poner funcion, estimacion inicial, saltos iniciales */
-	gsl_multimin_fminimizer_set (s, &likelihood_func, theta, ss);
+	gsl_multimin_fminimizer_set(s, &likelihood_func, theta, ss);
 
 
 #ifdef DEBUG
@@ -386,28 +378,27 @@ int stable_fit_iter_whole(StableDist *dist, const double * data, const unsigned 
 #endif
 
 	/* Iterar */
-	do
-	{
+	do {
 		iter++;
 		status = gsl_multimin_fminimizer_iterate(s);
+
 		if (status != GSL_SUCCESS) {
 			printf("Minimizer warning: %s\n", gsl_strerror(status));
 			fflush(stdout);
 		}
 
-		size   = gsl_multimin_fminimizer_size (s);
-		status = gsl_multimin_test_size (size, ESTM_4D_EPSABS);
+		size   = gsl_multimin_fminimizer_size(s);
+		status = gsl_multimin_test_size(size, ESTM_4D_EPSABS);
 
-//      printf(" %03d\t size = %f a_ = %f  b_ = %f  c_ = %f  m_ = %f\n",iter,size,gsl_vector_get (s->x, 0),gsl_vector_get (s->x, 1),
-//                                                           gsl_vector_get (s->x, 2),gsl_vector_get (s->x, 3));
-//      fflush(stdout);
+		//      printf(" %03d\t size = %f a_ = %f  b_ = %f  c_ = %f  m_ = %f\n",iter,size,gsl_vector_get (s->x, 0),gsl_vector_get (s->x, 1),
+		//                                                           gsl_vector_get (s->x, 2),gsl_vector_get (s->x, 3));
+		//      fflush(stdout);
 
 	} while (status == GSL_CONTINUE && iter < ESTM_4D_MAX_ITER);
 
 
 
-	if (status != GSL_SUCCESS)
-	{
+	if (status != GSL_SUCCESS) {
 		printf("Minimizer warning: %s\n", gsl_strerror(status));
 		fflush(stdout);
 	}
@@ -415,18 +406,17 @@ int stable_fit_iter_whole(StableDist *dist, const double * data, const unsigned 
 	/* Se recupera la estimacion */
 
 	gsl_vector_free(theta);
-	theta = gsl_multimin_fminimizer_x (s);
+	theta = gsl_multimin_fminimizer_x(s);
 	get_original(theta, &a, &b, &c, &m);
 
 	// Se almacena el punto estimado en la distribucion, comprobando que es valido
-	if (stable_setparams(dist, a, b, c, m, 0) < 0)
-	{
+	if (stable_setparams(dist, a, b, c, m, 0) < 0) {
 		printf("FINAL ESTIMATED PARAMETER ARE NOT VALID\n  a = %f  b = %fn  c = %f  m = %f\n", a, b, c, m);
 		fflush(stdout);
 	}
 
 	gsl_vector_free(ss);
-	gsl_multimin_fminimizer_free (s);
+	gsl_multimin_fminimizer_free(s);
 	free(par.err);
 	free(par.pdf);
 
@@ -435,10 +425,10 @@ int stable_fit_iter_whole(StableDist *dist, const double * data, const unsigned 
 
 int stable_fit_whole(StableDist *dist, const double *data, const unsigned int length)
 {
-//  double nu_c=0.0,nu_z=0.0;
+	//  double nu_c=0.0,nu_z=0.0;
 	int status = 0;
-//  stable_fit_init(dist,data,length,&nu_c,&nu_z);
-//  printf("McCulloch %d muestras: %f %f %f %f\n",length,dist->alfa,dist->beta,dist->sigma,dist->mu_1);
+	//  stable_fit_init(dist,data,length,&nu_c,&nu_z);
+	//  printf("McCulloch %d muestras: %f %f %f %f\n",length,dist->alfa,dist->beta,dist->sigma,dist->mu_1);
 
 	status = stable_fit_iter_whole(dist, data, length);
 
@@ -454,27 +444,25 @@ double * load_rand_data(char * filename, int N)
 	int i;
 
 	if ((f_data = fopen(filename, "rt")) == NULL)
-	{
 		perror("Error when opening file with random data");
-	}
 
 	data = malloc(N * sizeof(double));
 
-	for (i = 0; i < N; i++)
-	{
+	for (i = 0; i < N; i++) {
 		if (EOF == fscanf(f_data, "%le\n", data + i))
-		{
 			perror("Error when reading data");
-		}
 	}
+
 	return data;
 }
 
-int stable_fit_mle(StableDist *dist, const double *data, const unsigned int length) {
+int stable_fit_mle(StableDist *dist, const double *data, const unsigned int length)
+{
 	return stable_fit_whole(dist, data, length);
 }
 
-int stable_fit_mle2d(StableDist *dist, const double *data, const unsigned int length) {
+int stable_fit_mle2d(StableDist *dist, const double *data, const unsigned int length)
+{
 	return stable_fit(dist, data, length);
 }
 

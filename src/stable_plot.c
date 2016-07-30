@@ -28,8 +28,8 @@
 int main(int argc, char **argv)
 {
 	double alfa = 1.2;
-    double beta = 0.1;
-    int param = 0;
+	double beta = 0.1;
+	int param = 0;
 	double sigma = 1.0, mu = 0.0;
 	double min_x_range;
 	double max_x_range;
@@ -44,8 +44,7 @@ int main(int argc, char **argv)
 	double abserr_v = 0, relerr_v = 0, cpu_err_v = 0, gpu_err_v = 0;
 	int i;
 
-	if (argc == 3)
-	{
+	if (argc == 3) {
 		alfa = strtod(argv[1], NULL);
 		beta = strtod(argv[2], NULL);
 	}
@@ -70,8 +69,7 @@ int main(int argc, char **argv)
 	errs = calloc(num_samples, sizeof(double));
 	cpu_errs = calloc(num_samples, sizeof(double));
 
-	if (!dist)
-	{
+	if (!dist) {
 		fprintf(stderr, "StableDist creation failure. Aborting.\n");
 		return 1;
 	}
@@ -79,8 +77,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < num_samples; i++)
 		x[i] = min_x_range + x_step_size * i;
 
-	if (stable_activate_gpu(dist))
-	{
+	if (stable_activate_gpu(dist)) {
 		fprintf(stderr, "Couldn't initialize GPU.\n");
 		return 1;
 	}
@@ -89,8 +86,7 @@ int main(int argc, char **argv)
 	stable_pdf(dist, x, num_samples, cpu_pdf, cpu_errs);
 	stable_pdf_gpu(dist, x, num_samples, pdf, errs);
 
-	for (i = 0; i < num_samples; i++)
-	{
+	for (i = 0; i < num_samples; i++) {
 		abserr += fabs(pdf[i] - cpu_pdf[i]);
 		abserr_v += (fabs(pdf[i] - cpu_pdf[i])) * (fabs(pdf[i] - cpu_pdf[i]));
 		relerr += fabs(pdf[i] - cpu_pdf[i]) / cpu_pdf[i];

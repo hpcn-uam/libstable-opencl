@@ -91,28 +91,28 @@ typedef uint32_t uint;
 #endif
 
 struct stable_info {
-    cl_precision k1;
-    cl_precision theta0;
-    cl_precision alfa;
-    cl_precision alfainvalfa1;
-    cl_precision mu_0;
-    cl_precision sigma;
-    cl_precision xi;
-    cl_precision xxi_th;
-    cl_precision c2_part;
-    cl_precision c1;
-    cl_precision THETA_TH;
-    cl_precision beta;
-    cl_precision xi_coef;
-    short is_xxi_negative;
-    unsigned int integrand;
-    cl_precision final_pdf_factor;
-    cl_precision final_cdf_factor;
-    cl_precision final_cdf_addition;
-    cl_precision quantile_tolerance;
-    size_t max_reevaluations;
-    uint rng_seed_a;
-    uint rng_seed_b;
+	cl_precision k1;
+	cl_precision theta0;
+	cl_precision alfa;
+	cl_precision alfainvalfa1;
+	cl_precision mu_0;
+	cl_precision sigma;
+	cl_precision xi;
+	cl_precision xxi_th;
+	cl_precision c2_part;
+	cl_precision c1;
+	cl_precision THETA_TH;
+	cl_precision beta;
+	cl_precision xi_coef;
+	short is_xxi_negative;
+	unsigned int integrand;
+	cl_precision final_pdf_factor;
+	cl_precision final_cdf_factor;
+	cl_precision final_cdf_addition;
+	cl_precision quantile_tolerance;
+	size_t max_reevaluations;
+	uint rng_seed_a;
+	uint rng_seed_b;
 };
 
 #endif
