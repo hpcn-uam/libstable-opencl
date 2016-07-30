@@ -28,7 +28,7 @@
 #define OPENCL_PLATFORM_SPECIFIC_OPTIONS ""
 #endif
 
-#define MAX_OPENCL_PLATFORMS 5
+#define MAX_OPENCL_PLATFORMS 10
 #define MAX_BUILD_OPTS_LENGTH 1000
 
 #include <stdio.h>
@@ -192,6 +192,9 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
 
 	err = clGetPlatformIDs(MAX_OPENCL_PLATFORMS, platforms, &platform_num);
 
+	if (platform_num > MAX_OPENCL_PLATFORMS)
+		platform_num = MAX_OPENCL_PLATFORMS;
+
 	if (err) {
 		err_msg = "clGetPlatformIDs";
 		goto error;
@@ -199,8 +202,10 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
 
 	_opencl_platform_info(platforms, platform_num);
 
-
 	err = clGetDeviceIDs(platforms[platform_index], CL_DEVICE_TYPE_ALL, MAX_OPENCL_PLATFORMS, devices, &device_num);
+
+	if (device_num > MAX_OPENCL_PLATFORMS)
+		device_num = MAX_OPENCL_PLATFORMS;
 
 	if (err) {
 		err_msg = "clGetDeviceIDs - group creation";
