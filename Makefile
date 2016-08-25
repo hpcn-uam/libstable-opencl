@@ -14,7 +14,7 @@ LIBDIRS =
 PROJECT_NAME = libstable
 
 CONFS = debug release benchmark profile simulator
-DEFAULT_CONF = debug
+DEFAULT_CONF = release
 
 OBJDIR = obj
 SRCDIR = src
