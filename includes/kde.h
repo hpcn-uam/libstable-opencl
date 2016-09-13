@@ -28,4 +28,4 @@
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_math.h>
 
-double kerneldensity(double *samples, double obs, size_t n, double bw_adjust);
+double kerneldensity(const double *samples, double obs, size_t n, double bw_adjust);

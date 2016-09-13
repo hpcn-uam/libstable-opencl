@@ -27,7 +27,7 @@
 /** Estimate bandwidth using Silverman's "rule of thumb"
  * (Silverman 1986, pg 48 eq 3.31).  This is the default
  * bandwith estimator for the R 'density' function.  */
-double nrd0(double x[], const int N)
+double nrd0(const double x[], const int N)
 {
 	double hi = gsl_stats_sd(x, 1, N);
 	double iqr =
@@ -44,7 +44,7 @@ double gauss_kernel(double x)
 	return exp(-(gsl_pow_2(x) / 2)) / (M_SQRT2 * sqrt(M_PI));
 }
 
-double kerneldensity(double *samples, double obs, size_t n, double bw_adjust)
+double kerneldensity(const double *samples, double obs, size_t n, double bw_adjust)
 {
 	size_t i;
 	double h = GSL_MAX(nrd0(samples, n), 1e-6) * bw_adjust;
