@@ -9,7 +9,7 @@ RELEASE_CFLAGS = -O3 -march=native -DSTABLE_MIN_LOG=1
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -ggdb -pg
 SIMULATOR_CFLAGS = $(DEBUG_CFLAGS) -DSIMULATOR_BUILD
 E_LIBS = $(shell pkg-config --libs gsl) -pthread
-LIBDIRS =
+LIBDIRS = -Llib/debug
 
 PROJECT_NAME = libstable
 
@@ -40,7 +40,6 @@ LIB_SRCS := $(wildcard $(LIBSRCDIR)/**/*.c)
 LIB_OBJS := $(addprefix $(OBJDIR)/, $(patsubst %.c,%.o, $(LIB_SRCS)))
 LIB_NAMES := $(patsubst $(LIBSRCDIR)/%, %, $(wildcard $(LIBSRCDIR)/*))
 LIBS :=	$(addsuffix .a, $(LIB_NAMES))
-LIBS +=	$(addsuffix .so, $(LIB_NAMES))
 LIB_DEPS := $(addsuffix .deps, $(addprefix $(OBJDIR)/., $(LIB_NAMES)))
 LIB_OBJDIRS := $(foreach conf, $(CONFS), $(addprefix $(OBJDIR)/$(conf)/$(LIBSRCDIR)/, $(LIB_NAMES)))
 LIB_OUTDIRS := $(addprefix $(LIBDIR)/, $(CONFS))
@@ -209,7 +208,7 @@ $(OBJDIR)/%.bc: $(CLDIR)/%.cl Makefile
 
 $(BINDIR)/%: | $(BINDIR) depend configs
 	@echo "$(FMT_BOLD)Building final target: $* $(FMT_NORM)"
-	@$(CC) $(CFLAGS) $(INCLUDES) $^ $(LIBDIRS) $(E_LIBS) -o $@
+	@$(CC) $(CFLAGS) $(LDFLAGS) $(INCLUDES) $^ $(LIBDIRS) $(E_LIBS) -o $@
 
 ## Packing
 
