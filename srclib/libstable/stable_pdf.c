@@ -550,7 +550,7 @@ void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
 		return;
 	}
 
-	if (dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY)
+	if (dist->ZONE == GAUSS || dist->ZONE == CAUCHY || dist->ZONE == LEVY || !dist->gpu_enabled)
 		stable_pdf(dist, x, Nx, pdf, err); // Rely on analytical formulae where possible
 	else {
 		stable_clinteg_set_mode(&dist->cli, mode_pdf);
