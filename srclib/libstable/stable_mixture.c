@@ -102,6 +102,7 @@ volatile sig_atomic_t stop = 0;
 
 void handle_signal(int sig)
 {
+	printf("Stopping...\n");
 	stop = 1;
 }
 
