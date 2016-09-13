@@ -401,7 +401,7 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
 						   int parametrization)
 {
 	/*gsl_error_handler_t * old_handler;
-	old_handler = */gsl_set_error_handler(&error_handler);
+	old_handler = */
 
 	StableDist * dist = (StableDist *) malloc(sizeof(StableDist));
 
@@ -555,3 +555,41 @@ short stable_setparams_array(StableDist* dist, double params[4])
 	return stable_setparams(dist, params[STABLE_PARAM_ALPHA], params[STABLE_PARAM_BETA],
 							params[STABLE_PARAM_SIGMA], params[STABLE_PARAM_MU], 0) == NOVALID;
 }
+
+void _stable_vprint_params_array(double params[4], const char* prefix, va_list ap)
+{
+	char* formatted_prefix = NULL;
+	vasprintf(&formatted_prefix, prefix, ap);
+
+	if (!formatted_prefix)
+		return;
+
+	printf("%s: α = %.3lf, β = %.3f, μ = %.3lf, σ = %.3lf\n", formatted_prefix,
+		   params[STABLE_PARAM_ALPHA], params[STABLE_PARAM_BETA], params[STABLE_PARAM_MU], params[STABLE_PARAM_SIGMA]);
+
+	free(formatted_prefix);
+}
+
+void stable_print_params_array(double params[4], const char* prefix, ...)
+{
+	va_list ap;
+	va_start(ap, prefix);
+
+	_stable_vprint_params_array(params, prefix, ap);
+	va_end(ap);
+}
+
+void stable_print_params(StableDist* dist, const char* prefix, ...)
+{
+	va_list ap;
+	double params[4];
+
+	va_start(ap, prefix);
+
+	stable_getparams_array(dist, params);
+	_stable_vprint_params_array(params, prefix, ap);
+
+	va_end(ap);
+}
+
+

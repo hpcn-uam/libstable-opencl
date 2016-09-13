@@ -259,6 +259,8 @@ StableDist *stable_create(double alfa, double beta, double sigma, double mu,
 short stable_activate_gpu(StableDist* dist);
 void stable_deactivate_gpu(StableDist* dist);
 
+void stable_print_params_array(double params[4], const char* prefix, ...);
+void stable_print_params(StableDist* dist, const char* prefix, ...);
 
 /**
  * Enable the mixture and set the given number of components or, if the number is
