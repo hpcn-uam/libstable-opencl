@@ -113,4 +113,16 @@ void reverse(double* src, double* reversed, size_t length);
  */
 double get_derivative_at_pctg_of_max(double* pdf, size_t npoints, double max, double pctg, double x_step, short left_part, size_t* pos);
 
+/**
+ * Calculate an empirical PDF based on the given samples.
+ * @param samples   Array with the samples.
+ * @param nsamples  Number of samples in the array.
+ * @param start_x 	X value where the EPDF starts
+ * @param end_x     X value where the EPDF ends
+ * @param npoints   Number of points to sample for in the EPDF.
+ * @param bw_adjust Bandwidth adjustment factor.
+ * @param epdf_x    If not NULL, store here the X values of the EPDF. Must have length npoints
+ * @param epdf      Store here the values of the EPDF.
+ */
+void calculate_epdf(const double* samples, size_t nsamples, double start_x, double end_x, size_t npoints, double bw_adjust, double* epdf_x, double* epdf);
 #endif

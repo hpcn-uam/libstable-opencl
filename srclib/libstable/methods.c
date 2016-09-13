@@ -30,6 +30,7 @@
 
 #include "methods.h"
 #include "stable_api.h"
+#include "kde.h"
 //#include "stable_common.h"
 
 #include <math.h>
@@ -668,4 +669,17 @@ double get_derivative_at_pctg_of_max(double* pdf, size_t npoints, double max, do
 		return NAN;
 	else
 		return (pdf[value_pos + 1] - pdf[value_pos - 1]) / (2 * x_step);
+}
+
+void calculate_epdf(const double* samples, size_t nsamples, double start_x, double end_x, size_t npoints, double bw_adjust, double* epdf_x, double* epdf)
+{
+	double step = (end_x - start_x) / npoints;
+	double x;
+
+	for (size_t i = 0; i < npoints; i++) {
+		x = start_x + i * step;
+		epdf[i] = kerneldensity(samples, x, nsamples, bw_adjust); // Silverman's bandwidth estimator is too high for skewed, multimodal distributions.
+
+		if (epdf_x) epdf_x[i] = x;
+	}
 }
