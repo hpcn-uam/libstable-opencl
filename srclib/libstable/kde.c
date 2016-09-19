@@ -44,6 +44,14 @@ double gauss_kernel(double x)
 	return exp(-(gsl_pow_2(x) / 2)) / (M_SQRT2 * sqrt(M_PI));
 }
 
+double epanechnikov_kernel(double x)
+{
+	if (fabs(x) < 1)
+		return 0.75 * (1 - gsl_pow_2(x));
+	else
+		return 0;
+}
+
 double kerneldensity(const double *samples, double obs, size_t n, double bw_adjust)
 {
 	size_t i;
@@ -51,7 +59,7 @@ double kerneldensity(const double *samples, double obs, size_t n, double bw_adju
 	double prob = 0;
 
 	for (i = 0; i < n; i++)
-		prob += gauss_kernel((samples[i] - obs) / h) / (n * h);
+		prob += epanechnikov_kernel((samples[i] - obs) / h) / (n * h);
 
 	return prob;
 }
