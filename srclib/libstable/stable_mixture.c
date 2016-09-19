@@ -128,11 +128,14 @@ static double _do_alpha_estim(double sep_logratio, double asym_log)
 
 static double _do_beta_estim(double alpha, double asym_log)
 {
-	if (alpha > 1.6)
+	if (alpha > 1.6 || isnan(asym_log))
 		return 0;
 
 	double alpha_factor = exp(-1.224 * (alpha + 1.959)) - exp(-1.224 * 3.959);
 	double estim = 0.4394 * log(1 / (0.5 - 0.01968 * asym_log / alpha_factor) - 1);
+
+	if (isnan(estim))
+		return 0;
 
 	return max(-1, min(1, estim));
 }
