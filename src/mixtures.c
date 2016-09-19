@@ -18,24 +18,29 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "stable_api.h"
 #include "benchmarking.h"
 #include "opencl_integ.h"
 #include "kde.h"
 
-#define MAX_POINTS 5000
+#define MAX_POINTS 50000
 
 int main(int argc, char **argv)
 {
 	size_t num_points = 5000;
-	size_t num_components = 3;
 	size_t i;
 
+	assert(MAX_POINTS >= num_points);
+
+	/*
 	double alphas[] = { 1.2, 0.8, 2 };
 	double betas[] = { -0.5, 0.5, 0 };
 	double mus[] = { -2, 0, 2 };
 	double sigmas[] = { 0.5, 0.8, 0.2 };
 	double weights[] = { 0.2, 0.5, 0.3 };
+	*/
+
 	/*
 	double alphas[] = { 0.35, 0.6 };
 	double betas[] = { 0.8, 0 };
@@ -43,6 +48,16 @@ int main(int argc, char **argv)
 	double sigmas[] = { 0.05, 0.05 };
 	double weights[] = { 0.7, 0.3 };
 	*/
+
+
+	double alphas[] = { 1.2, 0.8, 2, 0.6 };
+	double betas[] = { -0.5, 0.5, 0, 0 };
+	double mus[] = { -2, 0, 2, 2.5 };
+	double sigmas[] = { 0.5, 0.8, 0.15, 0.15 };
+	double weights[] = { 0.2, 0.3, 0.3, 0.2 };
+
+	size_t num_components = sizeof weights / sizeof(double);
+
 	double rnd[MAX_POINTS];
 	double pdf[MAX_POINTS];
 	double pdf_predicted[MAX_POINTS];
@@ -65,6 +80,8 @@ int main(int argc, char **argv)
 		}
 	}
 
+	gsl_set_error_handler_off();
+
 	dist = stable_create(alphas[0], betas[0], sigmas[0], mus[0], 0);
 
 	if (!dist) {
@@ -73,6 +90,7 @@ int main(int argc, char **argv)
 	}
 
 	if (infile == NULL) {
+		printf("Generating random numbers...\n");
 		stable_set_mixture_components(dist, num_components);
 
 		for (i = 0; i < dist->num_mixture_components; i++) {
@@ -115,10 +133,10 @@ int main(int argc, char **argv)
 
 	for (i = 0; i < num_points; i++) {
 		x[i] = mn + i * (mx - mn) / num_points;
-		epdf[i] = kerneldensity(rnd, x[i], num_points, 0.5);
+		epdf[i] = kerneldensity(rnd, x[i], num_points, MIXTURE_KERNEL_ADJUST);
 	}
 
-	stable_activate_gpu(dist);
+	// stable_activate_gpu(dist);
 
 	stable_pdf(dist, x, num_points, pdf, NULL);
 

@@ -22,6 +22,8 @@
 #define DO_WEIGHT_ESTIMATION
 // #define DECREMENT_GENERATION_VARIANCE
 
+double MIXTURE_KERNEL_ADJUST = 0.7;
+
 /**
  * A common function for evaluation of mixtures, calling a base function.
  */
