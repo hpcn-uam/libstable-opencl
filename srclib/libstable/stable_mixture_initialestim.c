@@ -128,19 +128,83 @@ static void _component_initial_estimation(StableDist* comp, const double* data, 
 	comp->mu_0 = epdf_x[max_pos];
 }
 
+size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_points, double* max_value, double* epdf_x)
+{
+	size_t i;
+	size_t min_idx = 0, max_idx = 0;
+	short searching_min = 0, searching_max = 1; // Assume we're starting at a minimum.
+	double minmax_coef_threshold = 0.9;
+
+	if (max_value != NULL)
+		*max_value = -DBL_MAX;
+
+	for (i = 0; i < epdf_points; i++) {
+		// Assume we start at a minimum
+		if (i == 0) {
+			mins[0] = 0;
+			min_idx++;
+
+			searching_max = 1;
+			searching_min = 0;
+		} else if (i > 1 && i < epdf_points - 1) {
+			if (searching_max && epdf[i - 1] > 0.01 && _is_local_max(epdf, i - 1)) {
+				double minmax_ratio = epdf[mins[min_idx - 1]] / epdf[i - 1];
+
+				if (minmax_ratio < minmax_coef_threshold) {
+					// If this is a big enough maximum, mark it and start searching
+					// for the next minimum
+					searching_max = 0;
+					searching_min = 1;
+
+					printf("Found max %zu at %lf = %lf (ratio %lf)\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio);
+					maxs[max_idx] = i - 1;
+					max_idx++;
+
+				} else
+					printf("Max discard at %lf (ratio %lf)\n", epdf_x[i - 1], minmax_ratio);
+			} else if (searching_min && _is_local_min(epdf, i - 1)) {
+				double minmax_ratio = epdf[i - 1] / epdf[maxs[max_idx - 1]];
+
+				if (minmax_ratio > minmax_coef_threshold) {
+					max_idx--;  // If the difference with the previous max is not big enough, cancel the previous maximum
+					printf("Low min at %lf, discard previous max (ratio %lf)\n", epdf_x[i - 1], minmax_ratio);
+				} else {
+					// If the difference is good enough, mark it as a minimum.
+					mins[min_idx] = i - 1;
+					printf("Found min %zu at %lf = %lf (ratio %lf)\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio);
+					min_idx++;
+				}
+
+				// In any case, we need to search for the maximum: if the previous was suppressed we need
+				// a new one; and if we found a minimum we also need another one.
+				searching_max = 1;
+				searching_min = 0;
+			}
+		} else if (i == epdf_points - 1 && searching_min) {
+			// Mark a minimum at the end of the data if we are searching for one.
+			mins[min_idx] = i;
+			min_idx++;
+		}
+
+		if (max_value != NULL && epdf[i] > *max_value)
+			*max_value = epdf[i];
+	}
+
+	return max_idx;
+}
+
 void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* data, const unsigned int length)
 {
 	size_t epdf_points = 5000;
 	double samples[length];
 	double epdf_x[epdf_points];
-	double epdf[epdf_points];
+	double epdf[epdf_points], epdf_finer[epdf_points];
 	double epdf_start, epdf_end;
-	size_t maxs[length], mins[length], valid_max[length], valid_min[length];
-	size_t max_idx = 0, min_idx = 0, total_max;
+	size_t maxs[epdf_points], mins[epdf_points], valid_max[epdf_points], valid_min[epdf_points];
+	size_t maxs_finer[epdf_points], mins_finer[epdf_points];
+	size_t total_max, total_max_finer, valid_max_idx, max_idx, max_finer_idx;
 	size_t i;
-	double minmax_coef_threshold = 0.9;
-	short searching_min = 0, searching_max = 1; // Assume we're starting at a minimum.
-	double max_value = - DBL_MAX;
+	double max_value;
 	size_t current_lowest_min_pos;
 	size_t extra_components = 0;
 	double mu_values[dist->max_mixture_components];
@@ -163,87 +227,31 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	printf("Study range is [%lf, %lf], %zu points with step %lf\n", epdf_start, epdf_end, epdf_points, (epdf_end - epdf_end) / epdf_points);
 
 	calculate_epdf(samples, length, epdf_start, epdf_end, epdf_points, MIXTURE_KERNEL_ADJUST, epdf_x, epdf);
-
-	for (i = 0; i < epdf_points; i++) {
-		// Assume we start at a minimum
-		if (i == 0) {
-			mins[0] = 0;
-			min_idx++;
-
-			searching_max = 1;
-			searching_min = 0;
-		} else if (i > 1 && i < length - 1) {
-			if (searching_max && epdf[i - 1] > 0.01 && _is_local_max(epdf, i - 1)) {
-				double minmax_ratio = epdf[mins[min_idx - 1]] / epdf[i - 1];
-
-				if (minmax_ratio < minmax_coef_threshold) {
-					// If this is a big enough maximum, mark it and start searching
-					// for the next minimum
-					searching_max = 0;
-					searching_min = 1;
-
-					printf("Found max %zu at %lf = %lf (ratio %lf)\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio);
-					maxs[max_idx] = i - 1;
-					max_idx++;
-
-				} else
-					printf("Max discard at %lf (ratio %lf)\n", epdf_x[i - 1], minmax_ratio);
-			} else if (searching_min && _is_local_min(epdf, i - 1)) {
-				double minmax_ratio = epdf[i - 1] / epdf[maxs[max_idx - 1]];
-
-				if (minmax_ratio > minmax_coef_threshold) {
-					max_idx--;  // If the difference with the previous max is not big enough, cancel the previous maximum
-					printf("Low min at %lf, discard previous max (ratio %lf)\n", epdf_x[i - 1], minmax_ratio);
-
-					// Still, mark it as a possible component
-					extra_components++;
-				} else {
-					// If the difference is good enough, mark it as a minimum.
-					mins[min_idx] = i - 1;
-					printf("Found min %zu at %lf = %lf (ratio %lf)\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio);
-					min_idx++;
-				}
-
-				// In any case, we need to search for the maximum: if the previous was suppressed we need
-				// a new one; and if we found a minimum we also need another one.
-				searching_max = 1;
-				searching_min = 0;
-			}
-		} else if (i == length - 1 && searching_min) {
-			// Mark a minimum at the end of the data if we are searching for one.
-			mins[min_idx] = i;
-			min_idx++;
-		}
-
-		if (epdf[i] > max_value)
-			max_value = epdf[i];
-	}
-
-	total_max = max_idx;
-	max_idx = 0;
+	total_max = _find_local_minmax(epdf, maxs, mins, epdf_points, &max_value, epdf_x);
 	current_lowest_min_pos = mins[0];
 
 	// The initial search of maximums is complete.
 	// Now let's filter and get only those big enough
-	for (i = 0; i < total_max; i++) {
-		if (epdf[current_lowest_min_pos] > epdf[mins[i]])
-			current_lowest_min_pos = mins[i];
+	for (valid_max_idx = 0, max_idx = 0, max_finer_idx = 0; max_idx < total_max; max_idx++) {
+		if (epdf[current_lowest_min_pos] > epdf[mins[max_idx]])
+			current_lowest_min_pos = mins[max_idx];
 
-		if (epdf[maxs[i]] > 0.05 * max_value) {
-			valid_max[max_idx] = maxs[i];
-			valid_min[max_idx] = current_lowest_min_pos;
-			current_lowest_min_pos = maxs[i]; // Find minimum from here.
-			max_idx++;
-			printf("Max %zu at %lf = %lf is valid (valid max idx %zu)\n", i, epdf_x[maxs[i]], epdf[maxs[i]], max_idx);
+		if (epdf[maxs[max_idx]] > 0.05 * max_value) {
+			valid_max[valid_max_idx] = maxs[max_idx];
+			valid_min[valid_max_idx] = current_lowest_min_pos;
+			current_lowest_min_pos = maxs[max_idx]; // Find minimum from here.
+			valid_max_idx++;
+			printf("Max %zu at %lf = %lf is valid (valid max idx %zu)\n",
+				   max_idx, epdf_x[maxs[max_idx]], epdf[maxs[max_idx]], valid_max_idx);
 		} else {
 			extra_components++;
-			printf("Max %zu discarded (%.3lf %% of max)\n", i, 100 * epdf[maxs[i]] / max_value);
+			printf("Max %zu discarded (%.3lf %% of max)\n", max_idx, 100 * epdf[maxs[max_idx]] / max_value);
 		}
 	}
 
-	valid_min[max_idx] = mins[i]; // Add the last minimum (there must be n max, n + 1 mins).
+	valid_min[valid_max_idx] = mins[max_idx]; // Add the last minimum (there must be n max, n + 1 mins).
 
-	total_max = max_idx;
+	total_max = valid_max_idx;
 
 	stable_set_mixture_components(dist, total_max);
 
