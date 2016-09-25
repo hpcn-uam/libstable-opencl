@@ -78,21 +78,14 @@ static double _do_sigma_estim(double alpha, double beta, double sep_95)
 	return sigma_estim;
 }
 
-static void _component_initial_estimation(StableDist* comp, const double* data, size_t length, double start_x, double end_x)
+static void _component_initial_estimation(StableDist* comp, double start_x, double end_x, double* epdf, double* epdf_x, size_t epdf_points)
 {
-	size_t epdf_points = 2000;
-	double epdf[epdf_points], epdf_x[epdf_points];
 	double epdf_step = (end_x - start_x) / epdf_points;
 	size_t max_pos;
 	double max_value;
 	size_t pos;
 
-	// Use a wider bandwidth: we want the behaviour inside each component to be as smooth
-	// as possible. Wider bandwidth implies less influence of spurious peaks due to random
-	// sampling.
-	calculate_epdf(data, length, start_x, end_x, epdf_points, 0.5, epdf_x, epdf);
-
-	// Recalculate maximum point with the new EPDF
+	// Recalculate maximum point with the EPDF
 	max_pos = gsl_stats_max_index(epdf, 1, epdf_points);
 	max_value = epdf[max_pos];
 
@@ -197,6 +190,7 @@ struct component_partition {
 	size_t begin_idx;
 	size_t end_idx;
 	size_t max_idx;
+	short found_in_finer_epdf;
 };
 
 static int _compar_partition(const void* a, const void* b)
@@ -266,6 +260,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		if (epdf[maxs[max_idx]] > 0.05 * max_value) {
 			mixture_partition[current_partition].begin_idx = current_lowest_min_pos;
 			mixture_partition[current_partition].max_idx = maxs[max_idx];
+			mixture_partition[current_partition].found_in_finer_epdf = 0;
 
 			if (current_partition > 0)
 				mixture_partition[current_partition - 1].end_idx = current_lowest_min_pos;
@@ -302,6 +297,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 			size_t part_idx = 0;
 			size_t minval_idx;
 			size_t part_max;
+			size_t part_end = epdf_points - 1;
 
 			while (part_idx < total_partitions && epdf_x[mixture_partition[part_idx].max_idx] < epdf_x[max_pos])
 				part_idx++;
@@ -314,6 +310,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 				minval_idx = gsl_stats_min_index(epdf_finer + part_max, 1, max_pos - part_max) + part_max;
 				mixture_partition[total_partitions].begin_idx = minval_idx;
+				part_end = mixture_partition[part_idx - 1].end_idx;
 				mixture_partition[part_idx - 1].end_idx = minval_idx;
 			} else {
 				// No partition before this one, the begin index of the new partition is the begin index
@@ -331,10 +328,12 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 			} else {
 				// No partition after this one, the end index of the new partition is the end
 				// of the one before
-				mixture_partition[total_partitions].end_idx = mixture_partition[part_idx - 1].end_idx;
+				mixture_partition[total_partitions].end_idx = part_end;
 			}
 
 			mixture_partition[total_partitions].max_idx = max_pos;
+			mixture_partition[total_partitions].found_in_finer_epdf = 1;
+
 			total_partitions++;
 			extra_partitions++;
 
@@ -352,15 +351,13 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 		size_t comp_begin = mixture_partition[i].begin_idx;
 		size_t comp_end = mixture_partition[i].end_idx;
-		double max_x = epdf_x[comp_end];
 		size_t sample_len = 0;
+		double* epdf_for_estimation = mixture_partition[i].found_in_finer_epdf ? epdf_finer : epdf;
 
-		for (sample_len = 0; sample_len + data_offset < length; sample_len++)
-			if (samples[sample_len + data_offset] >= max_x)
-				break;
+		epdf_for_estimation += comp_begin;
 
 		printf("Initial C%zu: [%zu:%zu] (%lf:%lf)\n", i, comp_begin, comp_end, epdf_x[comp_begin], epdf_x[comp_end]);
-		_component_initial_estimation(comp, data + data_offset, sample_len, epdf_x[comp_begin], epdf_x[comp_end]);
+		_component_initial_estimation(comp, epdf_x[comp_begin], epdf_x[comp_end], epdf_for_estimation, epdf_x + comp_begin, comp_end - comp_begin);
 
 		mu_values[i] = comp->mu_0;
 		sigma_values[i] = comp->sigma;
