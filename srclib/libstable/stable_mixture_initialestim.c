@@ -70,8 +70,8 @@ static double _do_sigma_estim(double alpha, double beta, double sep_95)
 
 	double sigma_estim = sep_95 / expected_sep_sigma1;
 
-	if (sigma_estim < 0) {
-		printf("Warning: Sigma estimation is negative! (%lf)\n", sigma_estim);
+	if (sigma_estim <= 0) {
+		printf("Warning: Sigma estimation is non-positive! (%lf)\n", sigma_estim);
 		sigma_estim = 0.1;
 	}
 
