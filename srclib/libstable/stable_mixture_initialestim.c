@@ -303,7 +303,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 			size_t minval_idx;
 			size_t part_max;
 
-			while (part_idx < total_partitions && epdf_x[mixture_partition[part_idx].begin_idx] < epdf_x[max_pos])
+			while (part_idx < total_partitions && epdf_x[mixture_partition[part_idx].max_idx] < epdf_x[max_pos])
 				part_idx++;
 
 			printf("Found extra peak ratio %lf at x[%zu] = %lf, comp after is %zu\n", difference_ratio, max_pos, epdf_x[max_pos], part_idx);
