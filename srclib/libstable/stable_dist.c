@@ -406,12 +406,13 @@ StableDist * stable_create(double alfa, double beta, double sigma, double mu,
 	StableDist * dist = (StableDist *) malloc(sizeof(StableDist));
 
 	if (dist == NULL) {
-		perror("No se pudo crear la distribucion.");
+		perror("Memory error when creating distribution");
 		return NULL;
 	}
 
 	if ((stable_setparams(dist, alfa, beta, sigma, mu, parametrization)) == NOVALID) {
-		perror("No se pudo crear la distribucion.");
+		fprintf(stderr, "Invalid parameters (α = %lf, β = %lf, σ = %lf, μ = %lf) with parametrization %d\n",
+				alfa, beta, sigma, mu, parametrization);
 		return NULL;
 	}
 
