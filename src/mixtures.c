@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 	double pdf[MAX_POINTS];
 	double pdf_predicted[MAX_POINTS];
 	double x[MAX_POINTS];
-	double epdf[MAX_POINTS];
+	double epdf[MAX_POINTS], epdf_finer[MAX_POINTS];
 	double mn = -5, mx = 5;
 
 	FILE* infile = NULL;
@@ -134,6 +134,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < num_points; i++) {
 		x[i] = mn + i * (mx - mn) / num_points;
 		epdf[i] = kerneldensity(rnd, x[i], num_points, MIXTURE_KERNEL_ADJUST);
+		epdf_finer[i] = kerneldensity(rnd, x[i], num_points, MIXTURE_KERNEL_ADJUST_FINER);
 	}
 
 	// stable_activate_gpu(dist);
@@ -145,7 +146,7 @@ int main(int argc, char **argv)
 	stable_pdf(dist, x, num_points, pdf_predicted, NULL);
 
 	for (i = 0; i < num_points; i++)
-		fprintf(outfile, "%lf %lf %lf %lf\n", x[i], pdf[i], pdf_predicted[i], epdf[i]);
+		fprintf(outfile, "%lf %lf %lf %lf %lf\n", x[i], pdf[i], pdf_predicted[i], epdf[i], epdf_finer[i]);
 
 	fclose(outfile);
 
