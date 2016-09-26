@@ -289,7 +289,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		size_t max_pos = maxs_finer[max_idx];
 		double difference_ratio = epdf_finer[max_pos] / epdf[max_pos];
 
-		if (difference_ratio > 1.4 && epdf[max_pos] > 0.05 * max_value) {
+		if (difference_ratio > 1.7 && epdf[max_pos] > 0.05 * max_value) {
 			// Found a peak that grows considerably when compared to the smoother EPDF.
 			// Most probably, this is a peak of a mixture, so we have to insert a new partition.
 
