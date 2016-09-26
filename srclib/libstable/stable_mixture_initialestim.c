@@ -11,7 +11,8 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf_gamma.h>
 
-double MIXTURE_KERNEL_ADJUST = 0.7;
+double MIXTURE_KERNEL_ADJUST = 0.9;
+double MIXTURE_KERNEL_ADJUST_FINER = 0.12 * 0.9;
 
 
 static short _is_local_min(double* data, size_t pos)
@@ -242,7 +243,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	printf("Study range is [%lf, %lf], %zu points with step %lf\n", epdf_start, epdf_end, epdf_points, (epdf_end - epdf_end) / epdf_points);
 
 	calculate_epdf(samples, length, epdf_start, epdf_end, epdf_points, MIXTURE_KERNEL_ADJUST, epdf_x, epdf);
-	calculate_epdf(samples, length, epdf_start, epdf_end, epdf_points, 0.2 * MIXTURE_KERNEL_ADJUST, epdf_x, epdf_finer);
+	calculate_epdf(samples, length, epdf_start, epdf_end, epdf_points, MIXTURE_KERNEL_ADJUST_FINER, epdf_x, epdf_finer);
 
 	total_max = _find_local_minmax(epdf, maxs, mins, epdf_points, &max_value, epdf_x);
 	total_max_finer = _find_local_minmax(epdf_finer, maxs_finer, mins_finer, epdf_points, NULL, epdf_x);

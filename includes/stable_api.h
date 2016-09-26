@@ -76,6 +76,7 @@ extern double AUX1; // Auxiliary values
 extern double AUX2;
 
 extern double MIXTURE_KERNEL_ADJUST; // Adjust value for Silverman's rule of thumb (affects maximum detection in the mixture preparation)
+extern double MIXTURE_KERNEL_ADJUST_FINER; // Adjust value for Silverman's rule of thumb (affects maximum detection in the mixture preparation)
 
 #ifdef DEBUG
 extern unsigned int integ_eval; // # of integrand evaluations
