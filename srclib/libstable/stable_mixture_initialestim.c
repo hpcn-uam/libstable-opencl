@@ -25,7 +25,7 @@ static short _is_local_max(double* data, size_t pos)
 	return data[pos] >= data[pos + 1] && data[pos] >= data[pos - 1];
 }
 
-// Magic estimation based on EPDF data. See the paper for the reasoning.
+// Magic estimation based on EPDF data. See the future paper for the reasoning.
 static double _do_alpha_estim(double sep_logratio, double asym_log)
 {
 	double offset = 0.2021;
@@ -79,6 +79,15 @@ static double _do_sigma_estim(double alpha, double beta, double sep_95)
 	return sigma_estim;
 }
 
+/**
+ * Run an initial estimation of a component based on the derivatives of the EPDF.
+ * @param comp        Component to estimate.
+ * @param start_x     Start X value for the component.
+ * @param end_x       Final X value for the component.
+ * @param epdf        Values of the EPDF where this mixture is "visible" (i.e., around its peak).
+ * @param epdf_x      X values where the previous EPDF was sampled.
+ * @param epdf_points Number of points of the EPDF.
+ */
 static void _component_initial_estimation(StableDist* comp, double start_x, double end_x, double* epdf, double* epdf_x, size_t epdf_points)
 {
 	double epdf_step = (end_x - start_x) / epdf_points;
@@ -122,6 +131,17 @@ static void _component_initial_estimation(StableDist* comp, double start_x, doub
 	comp->mu_0 = epdf_x[max_pos];
 }
 
+/**
+ * Find local minimum and maximums in a given EPDF, trying to ignore noise perturbations and
+ * selecting only significative maximums.
+ * @param  epdf        EPDF
+ * @param  maxs        Array where the indexes of the found maximums will be returned.
+ * @param  mins        Array where the indexes of the found minimums will be returned.
+ * @param  epdf_points Number of points in the EPDF
+ * @param  max_value   Store here the maximum value found in the EPDF.
+ * @param  epdf_x      X points where the EPDF is sampled.
+ * @return             Number of maximums found. The number of minimums is 1 + the number of maximums.
+ */
 size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_points, double* max_value, double* epdf_x)
 {
 	size_t i;
@@ -347,6 +367,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	printf("Found %zu possible extra components, for a total of %zu\n", extra_partitions, total_partitions);
 	stable_set_mixture_components(dist, total_partitions);
 
+	// Compute initial estimations for each component based on the derivatives of the EPDF.
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		comp = dist->mixture_components[i];
 
@@ -370,6 +391,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 
 	// Configure the death/birth probabilities
+	// TODO: Think this through. Not definitive code.
 	printf("Configuring extra component probabilities\n");
 	double last_birth_prob = 0.01;
 
@@ -391,7 +413,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		printf("Probabilities %zu: %lf / %lf\n", i, dist->birth_probs[i], dist->death_probs[i]);
 	}
 
-	// Prepare the priors
+	// Prepare the priors for the Monte Carlo estimation.
 	dist->prior_mu_avg = gsl_stats_mean(mu_values, 1, dist->num_mixture_components);
 	dist->prior_mu_variance = gsl_stats_variance(mu_values, 1, dist->num_mixture_components);
 	dist->prior_weights = 10; // TODO: This does not look like it has any science on it.
