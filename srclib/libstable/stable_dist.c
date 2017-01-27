@@ -34,6 +34,7 @@
 #include <pthread.h>
 #include <math.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 /*----------------------------------------------------------------------------*/
 /*                             Public part                                    */

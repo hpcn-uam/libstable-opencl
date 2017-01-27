@@ -384,8 +384,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 			extra_partitions++;
 
 			// Re-sort the partitions to allow search of the next maximum.
-			// Use mergesort instead of qsort as it behaves better on almost-sorted data.
-			mergesort(mixture_partition, total_partitions, sizeof(struct component_partition), _compar_partition);
+			qsort(mixture_partition, total_partitions, sizeof(struct component_partition), _compar_partition);
 		}
 	}
 
