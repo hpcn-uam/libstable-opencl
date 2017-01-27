@@ -223,6 +223,25 @@ static int _compar_partition(const void* a, const void* b)
 	return ((int) pa->begin_idx) - ((int) pb->begin_idx);
 }
 
+static double get_dataset_typical_step(const double* vals, size_t n)
+{
+	double sep[n];
+	size_t num_distinct = 0, i;
+	double prev = vals[0];
+
+	for (i = 0; i < n; i++) {
+		if (prev != vals[i]) {
+			sep[num_distinct] += fabs(vals[i] - prev);
+			num_distinct++;
+		}
+
+		prev = vals[i];
+	}
+
+	gsl_sort(sep, 1, num_distinct);
+	return gsl_stats_median_from_sorted_data(sep, 1, num_distinct);
+}
+
 void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* data, const unsigned int length)
 {
 	size_t epdf_points = 5000;
@@ -234,6 +253,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	size_t maxs[epdf_points], mins[epdf_points];
 	size_t maxs_finer[epdf_points], mins_finer[epdf_points];
 	size_t total_max, total_max_finer, max_idx, max_finer_idx;
+	double average_dataset_step;
 	struct component_partition mixture_partition[dist->max_mixture_components];
 	size_t current_partition, total_partitions;
 	size_t i;
@@ -255,12 +275,17 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 	gsl_sort(samples, 1, length);
 
+	average_dataset_step = get_dataset_typical_step(samples, length);
+
 	epdf_start = gsl_stats_quantile_from_sorted_data(samples, 1, length, 0.02);
 	epdf_end = gsl_stats_quantile_from_sorted_data(samples, 1, length, 0.98);
 
+	epdf_points = GSL_MIN(epdf_points, (epdf_end - epdf_start) / (average_dataset_step));
+
 	min_peak_dst = 0.05 * (epdf_end - epdf_start);
 
-	printf("Study range is [%lf, %lf], %zu points with step %lf\n", epdf_start, epdf_end, epdf_points, (epdf_end - epdf_end) / epdf_points);
+	printf("Study range is [%lf, %lf], %zu points with step %lf (typical dataset step is %lf)\n",
+		   epdf_start, epdf_end, epdf_points, (epdf_end - epdf_start) / epdf_points, average_dataset_step);
 
 	calculate_epdf(samples, length, epdf_start, epdf_end, epdf_points, MIXTURE_KERNEL_ADJUST, epdf_x, epdf);
 	calculate_epdf(samples, length, epdf_start, epdf_end, epdf_points, MIXTURE_KERNEL_ADJUST_FINER, epdf_x, epdf_finer);
@@ -365,6 +390,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	}
 
 	printf("Found %zu possible extra components, for a total of %zu\n", extra_partitions, total_partitions);
+
 	stable_set_mixture_components(dist, total_partitions);
 
 	// Compute initial estimations for each component based on the derivatives of the EPDF.
