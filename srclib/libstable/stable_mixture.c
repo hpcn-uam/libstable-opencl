@@ -426,6 +426,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 	double previous_weights[dist->max_mixture_components];
 	double param_values[dist->max_mixture_components][MAX_STABLE_PARAMS][MAX_MIXTURE_ITERATIONS];
 	double weights[dist->max_mixture_components][MAX_MIXTURE_ITERATIONS];
+	size_t location_lock_iterations = 10;
 
 	FILE* debug_data = fopen("mixture_debug.dat", "w");
 
@@ -461,6 +462,9 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		_iteration = i;
 
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
+			if (param_idx == STABLE_PARAM_MU && i < location_lock_iterations)
+				continue;
+
 			for (j = 0; j < NUM_ALTERNATIVES_PARAMETER; j++) {
 				for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
 					component = dist->mixture_components[comp_idx];
