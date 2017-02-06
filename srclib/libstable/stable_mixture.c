@@ -612,14 +612,14 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 			for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
 				double param_avg = gsl_stats_mean(param_values[comp_idx][param_idx], 1, i - BURNIN_PERIOD);
-				double param_sd = gsl_stats_sd_m(param_values[comp_idx][param_idx], 1, i - BURNIN_PERIOD, param_avg);
+				double param_sd = gsl_stats_sd(param_values[comp_idx][param_idx], 1, i - BURNIN_PERIOD);
 
 				printf(" | %6.2lf - %5.2lf", param_avg, param_sd);
 				new_params[param_idx] = param_avg;
 			}
 
 			double weight_avg = gsl_stats_mean(weights[comp_idx], 1, i - BURNIN_PERIOD);
-			double weight_sd = gsl_stats_mean(weights[comp_idx], 1, i - BURNIN_PERIOD);
+			double weight_sd = gsl_stats_sd(weights[comp_idx], 1, i - BURNIN_PERIOD);
 
 			dist->mixture_weights[comp_idx] = weight_avg;
 
