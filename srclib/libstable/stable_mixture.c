@@ -433,10 +433,6 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 	stable_mixture_prepare_initial_estimation(dist, data, length);
 
 	for (i = 0; i < dist->num_mixture_components; i++) {
-		// TODO: More magic.
-#ifdef DO_WEIGHT_ESTIMATION
-		dist->mixture_weights[i] = ((double) 1) / dist->num_mixture_components;
-#endif
 		dist->mixture_components[i]->mixture_montecarlo_variance = 0.05;
 
 		for (j = 0; j < MAX_STABLE_PARAMS; j++)
@@ -528,7 +524,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		memcpy(previous_weights, dist->mixture_weights, dist->max_mixture_components * sizeof(double));
 
 		for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++)
-			dirichlet_params[comp_idx] = dist->prior_weights + length * dist->mixture_weights[comp_idx];
+			dirichlet_params[comp_idx] = dist->prior_weights * dist->mixture_weights[comp_idx];
 
 		gsl_ran_dirichlet(dist->gslrand, dist->num_mixture_components, dirichlet_params, dist->mixture_weights);
 
