@@ -392,6 +392,8 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 	stable_set_mixture_components(dist, total_partitions);
 
+	double weightsum = 0;
+
 	// Compute initial estimations for each component based on the derivatives of the EPDF.
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		comp = dist->mixture_components[i];
@@ -412,12 +414,28 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		stable_print_params(comp, "C%zu parameters", i);
 
 		data_offset = sample_len;
+
+		double x_max = epdf_x[mixture_partition[i].max_idx];
+		double maxval = epdf[mixture_partition[i].max_idx];
+		double comp_max = stable_pdf_point(comp, x_max, NULL);
+
+		dist->mixture_weights[i] = maxval / comp_max;
+		weightsum += dist->mixture_weights[i];
+	}
+
+	printf("Weight sum is %lf\n", weightsum);
+
+	// Normalize the weights
+	for (i = 0; i < dist->num_mixture_components; i++) {
+		dist->mixture_weights[i] /= weightsum;
+		printf("C%zu: Weight %lf\n", i, dist->mixture_weights[i]);
 	}
 
 
 	// Configure the death/birth probabilities
 	// TODO: Think this through. Not definitive code.
 	printf("Configuring extra component probabilities\n");
+
 	double last_birth_prob = 0.01;
 
 	for (i = dist->num_mixture_components; i < dist->max_mixture_components; i++) {
@@ -441,7 +459,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	// Prepare the priors for the Monte Carlo estimation.
 	dist->prior_mu_avg = gsl_stats_mean(mu_values, 1, dist->num_mixture_components);
 	dist->prior_mu_variance = gsl_stats_variance(mu_values, 1, dist->num_mixture_components);
-	dist->prior_weights = 10; // TODO: This does not look like it has any science on it.
+	dist->prior_weights = 40; // TODO: This does not look like it has any science on it.
 	double sigma_mean = gsl_stats_mean(sigma_values, 1, dist->num_mixture_components);
 	double sigma_variance = gsl_stats_variance(sigma_values, 1, dist->num_mixture_components);
 	dist->prior_sigma_alpha0 = pow(sigma_mean, 2) / sigma_variance + 2;
