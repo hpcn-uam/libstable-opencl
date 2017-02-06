@@ -40,6 +40,8 @@
 /*                             Public part                                    */
 /*----------------------------------------------------------------------------*/
 
+const char* _param_names[MAX_STABLE_PARAMS] = { "α", "β", "μ", "σ" };
+
 unsigned int stable_get_THREADS()
 {
 	return THREADS;

@@ -125,6 +125,8 @@ enum {
 
 #define MAX_STABLE_PARAMS 4
 
+extern const char* _param_names[MAX_STABLE_PARAMS];
+
 
 
 /************************************************************************
