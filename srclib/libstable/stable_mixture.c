@@ -592,12 +592,14 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 		num_changes = 0;
 
+#ifdef DECREMENT_GENERATION_VARIANCE
+
 		for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
 			component = dist->mixture_components[comp_idx];
-#ifdef DECREMENT_GENERATION_VARIANCE
 			component->mixture_montecarlo_variance *= 0.99999;
-#endif
 		}
+
+#endif
 	}
 
 
