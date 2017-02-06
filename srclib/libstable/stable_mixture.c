@@ -415,8 +415,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 	size_t num_fitter_dists = dist->max_mixture_components * MAX_STABLE_PARAMS * NUM_ALTERNATIVES_PARAMETER;
 	StableDist* component;
 	double previous_pdf[length];
-	double previous_param_probs[num_fitter_dists];
-	double changed_parameters[num_fitter_dists];
+	double previous_param_probs[num_fitter_dists][MAX_STABLE_PARAMS];
 	double pdf[length];
 	double jump_probability;
 	size_t streak_without_change = 0;
@@ -440,7 +439,8 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 #endif
 		dist->mixture_components[i]->mixture_montecarlo_variance = 0.05;
 
-		previous_param_probs[i] = 1;
+		for (j = 0; j < MAX_STABLE_PARAMS; j++)
+			previous_param_probs[i][j] = 1;
 	}
 
 	signal(SIGINT, handle_signal);
@@ -478,8 +478,6 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 					// Generate a new parameter and set it in the distrubtion
 					new_params[param_idx] = rand_generators[param_idx](component);
-					changed_parameters[fitter_idx] = new_params[param_idx];
-
 					stable_setparams_array(component, new_params);
 
 #ifdef DEBUG
@@ -488,13 +486,12 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 #endif
 					stable_pdf_gpu(dist, data, length, pdf, NULL);
 
-					jump_probability = 1;
-					double probs;
+					jump_probability = 0;
 
 					for (k = 0; k < length; k++)
-						jump_probability *= pdf[k] / previous_pdf[k];
+						jump_probability += log(pdf[k]) - log(previous_pdf[k]);
 
-					probs = jump_probability;
+					jump_probability = exp(jump_probability);
 
 					/* if (param_idx == STABLE_PARAM_MU)
 						param_probability = gsl_ran_gaussian_pdf(new_params[param_idx] - prior_mu_mean, sqrt(prior_mu_variance));
@@ -503,15 +500,18 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 					else */
 					param_probability = 1;
 
-					jump_probability *= (param_probability) / (previous_param_probs[param_idx]);
+					jump_probability *= (param_probability) / (previous_param_probs[comp_idx][param_idx]);
 					// jump_probability = exp(jump_probability);
 
 					// Only try to do the jump if we have previous likelihoods
+					short accepted = 0;
+
 					if (i > 0) {
 						if (rand_event(dist->gslrand, jump_probability)) {
+							accepted = 1;
 							num_changes++;
 							memcpy(previous_pdf, pdf, sizeof(double) * length);
-							previous_param_probs[param_idx] = param_probability;
+							previous_param_probs[comp_idx][param_idx] = param_probability;
 						} else   // Change not accepted, revert to the previous value
 							stable_setparams_array(component, dist_params);
 					} else
@@ -534,10 +534,12 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 		stable_pdf_gpu(dist, data, length, pdf, NULL);
 
-		jump_probability = 1;
+		jump_probability = 0;
 
 		for (k = 0; k < length; k++)
-			jump_probability *= pdf[k] / previous_pdf[k];
+			jump_probability += log(pdf[k]) - log(previous_pdf[k]);
+
+		jump_probability = exp(jump_probability);
 
 		if (rand_event(dist->gslrand, jump_probability)) {
 			num_changes++;
