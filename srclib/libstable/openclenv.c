@@ -177,6 +177,19 @@ static void _opencl_devices_info(cl_device_id* devices, cl_uint device_num)
 #endif
 }
 
+static void _opencl_device_get_limits(struct openclenv* env)
+{
+	cl_ulong global_memsize, local_memsize, constant_memsize;
+
+	clGetDeviceInfo(env->device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &global_memsize, NULL);
+	clGetDeviceInfo(env->device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &local_memsize, NULL);
+	clGetDeviceInfo(env->device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(cl_ulong), &constant_memsize, NULL);
+
+	env->max_constant_memory = constant_memsize;
+	env->max_global_memory = global_memsize;
+	env->max_local_memory = local_memsize;
+}
+
 int opencl_initenv(struct openclenv *env, size_t platform_index)
 {
 	char *err_msg = NULL;
@@ -217,6 +230,8 @@ int opencl_initenv(struct openclenv *env, size_t platform_index)
 	_opencl_devices_info(devices, device_num);
 
 	stablecl_log(log_message, "Chosen device %zu from platform %zu", device_index, platform_index);
+
+	_opencl_device_get_limits(env);
 
 	env->context = clCreateContext(0, 1, &env->device, NULL, NULL, &err);
 

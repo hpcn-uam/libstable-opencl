@@ -1,5 +1,5 @@
 E_LIBS += -lOpenCL
-INCLUDES += -I/usr/local/cuda-6.0/include
+INCLUDES += -I/usr/local/cuda-6.0/include -I/usr/local/cuda-7.5/include
 CL_OBJS =
 
 CFLAGS += -Wno-comment # CUDA headers generate this warning, clean it up.
