@@ -39,6 +39,9 @@ struct openclenv {
 	short enabled_kernels[MAX_KERNELS];
 	size_t kernel_count;
 	size_t current_kernel;
+	size_t max_constant_memory;
+	size_t max_global_memory;
+	size_t max_local_memory;
 };
 
 struct opencl_profile {

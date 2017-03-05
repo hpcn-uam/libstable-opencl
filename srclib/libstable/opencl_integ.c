@@ -43,6 +43,28 @@ static int _stable_can_overflow(struct stable_clinteg *cli)
 	return work_threads / cli->subdivisions != cli->points_rule;
 }
 
+static size_t _stable_get_maximum_points_for_gpu(struct stable_clinteg* cli)
+{
+	size_t constant_memory_per_point = 0;
+	size_t global_memory_per_point = 0;
+	size_t max_points_constant, max_points_global;
+
+	if (!cli->mode_pointgenerator) {
+		constant_memory_per_point = sizeof(cl_precision);
+		global_memory_per_point = sizeof(cl_precision);
+	}
+
+	global_memory_per_point += sizeof(cl_precision);
+
+	max_points_constant = cli->env.max_constant_memory / constant_memory_per_point;
+	max_points_global = cli->env.max_global_memory / global_memory_per_point;
+
+	if (max_points_global > max_points_constant)
+		return max_points_constant;
+	else
+		return max_points_global;
+}
+
 static int _stable_create_points_array(struct stable_clinteg *cli, cl_precision *points, size_t num_points)
 {
 	int err = 0;
@@ -70,6 +92,8 @@ static int _stable_create_points_array(struct stable_clinteg *cli, cl_precision 
 
 	cli->kronrod = clCreateBuffer(cli->env.context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR,
 								  sizeof(cl_precision) * num_points, NULL, &err);
+
+	stablecl_log(log_message, "Size sent is %zu\n", sizeof(cl_precision) * num_points);
 
 	return err;
 }
@@ -264,7 +288,13 @@ short stable_clinteg_points_async(struct stable_clinteg *cli, double *x, size_t 
 	size_t regular_workgroup_size[2] = { KRONROD_EVAL_POINTS, MAX_WORKGROUPS };
 	size_t pointgen_work_threads = num_points;
 	size_t* work_threads, *workgroup_size, dimensions;
+	size_t max_points = _stable_get_maximum_points_for_gpu(cli);
 	cl_precision* points = NULL;
+
+	if (num_points > max_points) {
+		stablecl_log(log_warning, "Warning: calling with %zu points, greater than maximum supported by GPU (%zu points)",
+					 num_points, max_points);
+	}
 
 	_stable_clinteg_prepare_kernel_data(cli->h_args, dist);
 
@@ -344,6 +374,22 @@ short stable_clinteg_points(struct stable_clinteg *cli, double *x, double *resul
 {
 	cl_event event;
 	cl_int err;
+	size_t max_points = _stable_get_maximum_points_for_gpu(cli);
+
+	if (num_points > max_points) {
+		// If the user requests more points than the number supported by GPU,
+		// do it in two calls.
+		stablecl_log(log_message, "num_points > max_points (%zu > %zu), separating in two calls", num_points, max_points);
+		err = stable_clinteg_points(cli, x + max_points,
+									results_1 != NULL ? results_1 + max_points : NULL,
+									results_2 != NULL ? results_2 + max_points : NULL,
+									errs != NULL ? errs + max_points : NULL,
+									num_points - max_points, dist);
+		num_points = max_points;
+
+		if (err) return err;
+
+	}
 
 	err = stable_clinteg_points_async(cli, x, num_points, dist, &event);
 
@@ -407,7 +453,7 @@ short stable_clinteg_points_end(struct stable_clinteg *cli, double *results_1, d
 		}
 
 #if STABLE_MIN_LOG <= 0
-		stablecl_log(log_message, msg);
+		// stablecl_log(log_message, msg);
 #endif
 	}
 
