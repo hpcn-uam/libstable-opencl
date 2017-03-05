@@ -4,7 +4,7 @@ Libstable-opencl is a fork of the _libstable_ library to offload computations to
 
 Original _libstable_ library by Javier Royuela del Val and Federico Simmross Wattenberg, available in http://www.lpi.tel.uva.es/stable.
 
-Version: 1.0.2
+Version: 1.0.3
 
 ## Library usage
 
@@ -51,3 +51,9 @@ Apart from the library, there are some test programs located in the _src_ direct
 * Some NVIDIA drivers cache the OpenCL kernels but don't rebuild correctly when included headers changes. If you change a header included in the OpenCL code (currently only _opencl_common.h, gk_points.h_ and _stable_inv_precalcs.h) remove the _$HOME/.nv_ folder to force a rebuild.
 * Some AMD drivers fail when including header files in OpenCL code. An easy workaround is to copy the included headers to the _/tmp_ folder, where AMD does the temporary copies when compiling code. Running _cp -r includes /tmp_ should suffice to work around this driver bug.
 
+## Changelog
+
+- v1.0: Initial version
+- v1.0.1: Add random number generation capabilities.
+- v1.0.2: Improve efficienty of the random number generator
+- v1.0.3: Support situations when the GPU does not have enough memory for a single kernel call.
