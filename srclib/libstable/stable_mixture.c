@@ -6,6 +6,7 @@
 
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
@@ -431,6 +432,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 	gsl_set_error_handler_off();
 	stable_mixture_prepare_initial_estimation(dist, data, length);
+	stable_rnd_seed(dist, time(NULL));
 
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		dist->mixture_components[i]->mixture_montecarlo_variance = 0.05;

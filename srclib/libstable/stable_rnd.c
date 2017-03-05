@@ -33,7 +33,11 @@
 void
 stable_rnd_seed(StableDist * dist, unsigned long int s)
 {
+	size_t i;
 	gsl_rng_set(dist->gslrand, s);
+
+	for (i = 0; i < dist->num_mixture_components; i++)
+		stable_rnd_seed(dist->mixture_components[i], s + i + 1);
 }
 
 
