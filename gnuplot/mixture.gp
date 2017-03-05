@@ -1,5 +1,16 @@
 set term aqua enhanced font "Times-Roman, 18" dashed size 1900,1080
 
+bin(x,width)=width*floor(x/width) + width/2.0
+
+stats 'mixtures_rnd.dat' nooutput
+
+bincount = 100
+recordnum = STATS_records
+iqwidth = (STATS_up_quartile - STATS_lo_quartile)
+xstart = STATS_lo_quartile - iqwidth
+xend = STATS_up_quartile + iqwidth
+binwidth = (xend - xstart) / bincount
+
 ### Tics
 
 set xtics
@@ -18,6 +29,8 @@ set grid ytics mytics ls 102, ls 103
 unset y2tics
 
 set key off
+
+set xrange [*:*]
 
 set multiplot layout 3, 3 title 'α-stable mixture estimation'
 
@@ -56,6 +69,16 @@ set title 'Acc. probabilities'
 set yrange [0:1]
 plot -1, 'mixture_split.dat' u 1:5 w lines title 'Prob' lw 3
 set yrange [*:*]
+
+set title 'Histogram & PDF'
+set boxwidth binwidth
+set xrange [xstart:xend]
+
+set style fill solid 0.25 border 2
+
+plot \
+	'mixtures_rnd.dat' using (bin($1,binwidth)):(1 / (binwidth * recordnum)) smooth freq with boxes title 'Data' ls 1, \
+	'mixtures_dat.dat' using 1:3 w l ls 2 lw 3 title 'Predicted PDF'
 
 unset multiplot
 pause 4
