@@ -29,6 +29,7 @@ int main(int argc, const char** argv)
 	int max_test_size = 3500;
 	int num_tests_per_size = 4;
 	int test_size_step = 10;
+	int test_size_start = test_size_step;
 	int test_size;
 	int i;
 	double *x, *q;
@@ -73,7 +74,7 @@ int main(int argc, const char** argv)
 			mode = mode_pcdf;
 	}
 
-	for (test_size = test_size_step; test_size <= max_test_size; test_size += test_size_step) {
+	for (test_size = test_size_start; test_size <= max_test_size; test_size += test_size_step) {
 		duration = 0;
 		cpu_duration = 0;
 		cpu_parallel_duration = 0;
