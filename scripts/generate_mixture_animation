@@ -1,0 +1,18 @@
+#!/bin/bash
+
+tmp=$(mktemp -d)
+iter=0
+
+echo $tmp
+
+while IFS='' read -r line || [[ -n "$line" ]]; do
+	line=$(echo $line | awk '{ $1 = ""; $2 = ""; print }')
+	bin/release/stable_plot_mixture $line > mixtures_dat.dat
+	gnuplot -e "outfile='${tmp}/F${iter}.png'" gnuplot/histogram.gp
+	iter=$((iter + 1))
+	echo "Done $iter"
+done < "mixture_debug.dat"
+
+ffmpeg -framerate 24 -i "$tmp/F%d.png" mixtures.mp4
+
+rm -rf $tmp

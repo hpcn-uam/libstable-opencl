@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 		dist->mixture_components[i]->beta = strtod(argv[2 + i * args_per_component], NULL);
 		dist->mixture_components[i]->mu_0 = strtod(argv[3 + i * args_per_component], NULL);
 		dist->mixture_components[i]->sigma = strtod(argv[4 + i * args_per_component], NULL);
-		dist->mixture_weights[i] = strtod(argv[5], NULL);
+		dist->mixture_weights[i] = strtod(argv[5 + i * args_per_component], NULL);
 	}
 
 	vector_npoints(&x, xmin, xmax, num_samples, &step);
