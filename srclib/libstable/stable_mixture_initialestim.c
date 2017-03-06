@@ -14,6 +14,7 @@
 double MIXTURE_KERNEL_ADJUST = 0.9;
 double MIXTURE_KERNEL_ADJUST_FINER = 0.12 * 0.9;
 
+#define nan_safeguard(n, defval) (isnan(n) ? (defval) : n)
 
 static short _is_local_min(double* data, size_t pos)
 {
@@ -32,7 +33,7 @@ static double _do_alpha_estim(double sep_logratio, double asym_log)
 	double raw_alpha_estim = 1 / (7.367 * pow(sep_logratio - 0.8314, 0.7464));
 	double asym_correction_factor = exp(- 1.081 * pow(asym_log * asym_log, 0.8103));
 
-	return max(0.3, min(offset + asym_correction_factor * raw_alpha_estim, 2));
+	return nan_safeguard(max(0.3, min(offset + asym_correction_factor * raw_alpha_estim, 2)), 1);
 }
 
 static double _do_beta_estim(double alpha, double asym_log)
@@ -46,7 +47,7 @@ static double _do_beta_estim(double alpha, double asym_log)
 	if (isnan(estim))
 		return 0;
 
-	return max(-1, min(1, estim));
+	return nan_safeguard(max(-1, min(1, estim)), 0);
 }
 
 static double _do_sigma_estim(double alpha, double beta, double sep_95)
@@ -76,7 +77,7 @@ static double _do_sigma_estim(double alpha, double beta, double sep_95)
 		sigma_estim = 0.1;
 	}
 
-	return sigma_estim;
+	return nan_safeguard(sigma_estim, 0.1);
 }
 
 /**
@@ -100,7 +101,6 @@ static void _component_initial_estimation(StableDist* comp, double start_x, doub
 	max_value = epdf[max_pos];
 
 	double left_deriv_95 = get_derivative_at_pctg_of_max(epdf, max_pos, max_value, 0.95, epdf_step, 1, &pos);
-
 	double left_x_95 = epdf_x[pos];
 	double right_deriv_95 = get_derivative_at_pctg_of_max(epdf + max_pos, epdf_points - max_pos, max_value, 0.95, epdf_step, 0, &pos);
 	double right_x_95 = epdf_x[pos + max_pos];
