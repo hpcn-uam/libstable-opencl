@@ -23,6 +23,7 @@
 #define DO_VARIABLE_COMPONENTS
 #define DO_WEIGHT_ESTIMATION
 // #define DECREMENT_GENERATION_VARIANCE
+#define VERBOSE_CHANGES
 
 /**
  * A common function for evaluation of mixtures, calling a base function.
@@ -307,6 +308,10 @@ static int _check_split_move(StableDist * dist, const double * data, const unsig
 				   comp_idx, -1, new_weight_1, new_weight_2, curr_weight, u1, u2, u3,
 				   params_1, params_2, curr_params);
 
+#ifdef VERBOSE_CHANGES
+	stable_print_params(comp, "recovered");
+#endif
+
 	return accepted; // Only 1 proposal
 }
 
@@ -517,6 +522,11 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 					if (i >= BURNIN_PERIOD)
 						param_values[comp_idx][param_idx][i - BURNIN_PERIOD] = new_params[param_idx];
+
+#ifdef VERBOSE_CHANGES
+					fprintf(stderr, "I%zuC%zu %s %.3lf -> %.3lf probability %.3g Accept %hd\n",
+							i, comp_idx, _param_names[param_idx], dist_params[param_idx], new_params[param_idx], jump_probability, accepted);
+#endif
 				}
 			}
 		}
@@ -538,13 +548,26 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 			jump_probability += log(pdf[k]) - log(previous_pdf[k]);
 
 		jump_probability = exp(jump_probability);
+		short accepted = 0;
+
+#ifdef VERBOSE_CHANGES
+		fprintf(stderr, "I%zu W ", i);
+
+		for (j = 0; j < dist->num_mixture_components; j++)
+			fprintf(stderr, "%zu(%.3lf -> %.3lf) ", j, previous_weights[j], dist->mixture_weights[j]);
+
+#endif
 
 		if (rand_event(dist->gslrand, jump_probability)) {
 			num_changes++;
+			accepted = 1;
 			memcpy(previous_pdf, pdf, sizeof(double) * length);
 		} else     // Change not accepted, revert to the previous value
 			memcpy(dist->mixture_weights, previous_weights, dist->max_mixture_components * sizeof(double));
 
+#ifdef VERBOSE_CHANGES
+		fprintf(stderr, " Accepted %hd\n", accepted);
+#endif
 
 		if (i >= BURNIN_PERIOD) {
 			for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++)
@@ -578,8 +601,10 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		else
 			streak_without_change = 0;
 
+#ifndef VERBOSE_CHANGES
 		printf("\rIter %zu - %zu changes", i, num_changes);
 		fflush(stdout);
+#endif
 		fprintf(debug_data, "%zu %zu", num_changes, dist->num_mixture_components);
 
 		for (j = 0; j < dist->num_mixture_components; j++) {
