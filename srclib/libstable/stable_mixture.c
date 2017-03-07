@@ -70,7 +70,7 @@ static double _draw_rand(StableDist* dist, double mn, double mx, double mean, do
 
 static double _draw_rand_alpha(StableDist *dist)
 {
-	return _draw_rand(dist, 0.0, 2.0, dist->alfa, RNG_STD);
+	return _draw_rand(dist, 0.001, 2.0, dist->alfa, RNG_STD);
 }
 
 static double _draw_rand_beta(StableDist *dist)
@@ -85,7 +85,7 @@ static double _draw_rand_mu(StableDist *dist)
 
 static double _draw_rand_sigma(StableDist *dist)
 {
-	return _draw_rand(dist, 0, DBL_MAX, dist->sigma, RNG_STD);
+	return _draw_rand(dist, 0.001, DBL_MAX, dist->sigma, RNG_STD);
 }
 
 typedef double (*new_rand_param)(StableDist*);
