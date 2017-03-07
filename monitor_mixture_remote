@@ -6,11 +6,26 @@ if [ -z "$remote" ]; then
 	remote="azufre"
 fi
 
+function on_exit() # Called by trap
+{
+	exit 0
+}
+
+trap on_exit INT
+
+# Initial sync
+rsync -v --exclude=mixtures_dat.dat "${remote}:libstable/mixture*" . > /dev/null
+
+minx=$(head -n 1 mixtures_rnd.dat)
+maxx=$(tail -n 10 mixtures_rnd.dat | head -n 1)
+
+echo "Data range is $minx $maxx"
+
 gnuplot gnuplot/mixture.gp &
 
 while true ; do
 	rsync -v --exclude=mixtures_dat.dat "${remote}:libstable/mixture*" . > /dev/null
 	tail -n 1 mixture_debug.dat | awk '{ $1 = ""; $2 = ""; print }' | \
-		xargs -I{} sh -c 'bin/release/stable_plot_mixture {} > mixtures_dat.dat'
+		xargs -I{} sh -c "bin/release/stable_plot_mixture $minx $maxx {} > mixtures_dat.dat"
 	sleep 1
 done
