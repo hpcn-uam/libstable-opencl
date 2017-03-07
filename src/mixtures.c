@@ -29,6 +29,7 @@
 int main(int argc, char **argv)
 {
 	size_t num_points = 5000;
+	size_t epdf_points = 1000;
 	size_t i;
 
 	assert(MAX_POINTS >= num_points);
@@ -61,8 +62,8 @@ int main(int argc, char **argv)
 	double rnd[MAX_POINTS];
 	double pdf[MAX_POINTS];
 	double pdf_predicted[MAX_POINTS];
-	double x[MAX_POINTS];
-	double epdf[MAX_POINTS], epdf_finer[MAX_POINTS];
+	double x[epdf_points];
+	double epdf[epdf_points], epdf_finer[epdf_points];
 	double mn = -5, mx = 5;
 
 	FILE* infile = NULL;
@@ -99,7 +100,6 @@ int main(int argc, char **argv)
 		}
 
 		stable_rnd(dist, rnd, num_points);
-		gsl_sort(rnd, 1, num_points);
 	} else {
 		printf("Reading from file %s... ", argv[1]);
 
@@ -117,6 +117,10 @@ int main(int argc, char **argv)
 		dist->mixture_components[1]->mu_0 = 1.65;
 	}
 
+	printf("Sorting records... ");
+	gsl_sort(rnd, 1, num_points);
+	printf("done\n");
+
 	outfile = fopen("mixtures_rnd.dat", "w");
 
 	if (!outfile) {
@@ -125,22 +129,31 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
+	printf("Writing sorted records... ");
+
 	for (i = 0; i < num_points; i++)
 		fprintf(outfile, "%lf\n", rnd[i]);
 
 	fclose(outfile);
+	printf("done\n");
+
+	printf("Plotting initial EPDF... ");
+	fflush(stdout);
 	outfile = fopen("mixtures_dat.dat", "w");
 
-	for (i = 0; i < num_points; i++) {
+	for (i = 0; i < epdf_points; i++) {
 		x[i] = mn + i * (mx - mn) / num_points;
 		epdf[i] = kerneldensity(rnd, x[i], num_points, MIXTURE_KERNEL_ADJUST);
 		epdf_finer[i] = kerneldensity(rnd, x[i], num_points, MIXTURE_KERNEL_ADJUST_FINER);
 	}
 
+	printf("done\n");
+
 	// stable_activate_gpu(dist);
 
 	stable_pdf(dist, x, num_points, pdf, NULL);
 
+	printf("Starting mixture estimation.\n");
 	stable_fit_mixture(dist, rnd, num_points);
 
 	stable_pdf(dist, x, num_points, pdf_predicted, NULL);
