@@ -17,8 +17,10 @@
 #include <gsl/gsl_sf_gamma.h>
 
 #define MAX_MIXTURE_ITERATIONS 10000
-#define BURNIN_PERIOD 500
+#define BURNIN_PERIOD 200
 #define NUM_ALTERNATIVES_PARAMETER 1 // Number of alternative parameter values considered.
+
+#define RNG_STD 0.5
 
 #define DO_VARIABLE_COMPONENTS
 #define DO_WEIGHT_ESTIMATION
@@ -68,22 +70,22 @@ static double _draw_rand(StableDist* dist, double mn, double mx, double mean, do
 
 static double _draw_rand_alpha(StableDist *dist)
 {
-	return _draw_rand(dist, 0.0, 2.0, dist->alfa, 0.03);
+	return _draw_rand(dist, 0.0, 2.0, dist->alfa, RNG_STD);
 }
 
 static double _draw_rand_beta(StableDist *dist)
 {
-	return _draw_rand(dist, -1, 1, dist->beta, 0.03);
+	return _draw_rand(dist, -1, 1, dist->beta, RNG_STD);
 }
 
 static double _draw_rand_mu(StableDist *dist)
 {
-	return _draw_rand(dist, -DBL_MAX, DBL_MAX, dist->mu_0, 0.03);
+	return _draw_rand(dist, -DBL_MAX, DBL_MAX, dist->mu_0, RNG_STD);
 }
 
 static double _draw_rand_sigma(StableDist *dist)
 {
-	return _draw_rand(dist, 0, DBL_MAX, dist->sigma, 0.03);
+	return _draw_rand(dist, 0, DBL_MAX, dist->sigma, RNG_STD);
 }
 
 typedef double (*new_rand_param)(StableDist*);
