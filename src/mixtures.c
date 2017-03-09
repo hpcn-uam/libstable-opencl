@@ -65,6 +65,7 @@ int main(int argc, char **argv)
 	double x[epdf_points];
 	double epdf[epdf_points], epdf_finer[epdf_points];
 	double mn = -5, mx = 5;
+	short has_real_pdf = 0;
 
 	FILE* infile = NULL;
 	FILE* outfile;
@@ -100,6 +101,7 @@ int main(int argc, char **argv)
 		}
 
 		stable_rnd(dist, rnd, num_points);
+		has_real_pdf = 1;
 	} else {
 		printf("Reading from file %s... ", argv[1]);
 
@@ -108,13 +110,7 @@ int main(int argc, char **argv)
 		num_points = i;
 		printf("%zu records\n", i);
 
-		stable_set_mixture_components(dist, 2);
-
-		for (i = 0; i < dist->num_mixture_components; i++)
-			dist->mixture_weights[i] = 0.5;
-
-		dist->mixture_components[0]->mu_0 = 1.45;
-		dist->mixture_components[1]->mu_0 = 1.65;
+		has_real_pdf = 1;
 	}
 
 	printf("Sorting records... ");
@@ -149,9 +145,12 @@ int main(int argc, char **argv)
 
 	printf("done\n");
 
-	// stable_activate_gpu(dist);
+	stable_activate_gpu(dist);
 
-	stable_pdf(dist, x, num_points, pdf, NULL);
+	if (has_real_pdf)
+		stable_pdf(dist, x, num_points, pdf, NULL);
+	else
+		memset(pdf, 0, sizeof(double) * num_points);
 
 	printf("Starting mixture estimation.\n");
 	stable_fit_mixture(dist, rnd, num_points);
