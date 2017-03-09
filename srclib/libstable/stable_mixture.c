@@ -225,9 +225,9 @@ static short _calc_splitcombine_acceptance_ratio(
 		/ (u2 * (1 - pow(u2, 2)) * (1 - u3) * pow(sigma_comb, 2));
 
 	double log_acceptance_ratio =
-		log_likelihood_ratio;
-	/* + log(alpha_beta_ratio) + log_weight_ratio +
-	log(mu_ratio) + log_sigma_ratio + log(move_probability) + log(jacobian); */
+		log_likelihood_ratio
+		+ log(alpha_beta_ratio) + log_weight_ratio +
+		log(mu_ratio) + log_sigma_ratio + log(move_probability) + log(jacobian);
 
 	if (!is_split)
 		log_acceptance_ratio = - log_acceptance_ratio;
