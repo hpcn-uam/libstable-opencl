@@ -14,6 +14,8 @@
 double MIXTURE_KERNEL_ADJUST = 0.9;
 double MIXTURE_KERNEL_ADJUST_FINER = 0.12 * 0.9;
 
+// #define VERBOSE_INITIALESTIM
+
 #define nan_safeguard(n, defval) (isnan(n) ? (defval) : n)
 
 static short _is_local_min(double* data, size_t pos)
@@ -68,7 +70,9 @@ static double _do_sigma_estim(double alpha, double beta, double sep_95)
 		- 0.3302 * alpha5 + 0.001526 * alpha4 * beta + 0.3499 * alpha3 * beta2 - 0.002562 * alpha2 * beta3
 		;
 
+#ifdef VERBOSE_INITIALESTIM
 	printf("Expected sep is %lf\n", expected_sep_sigma1);
+#endif
 
 	double sigma_estim = sep_95 / expected_sep_sigma1;
 
@@ -105,14 +109,15 @@ static void _component_initial_estimation(StableDist* comp, double start_x, doub
 	double right_deriv_95 = get_derivative_at_pctg_of_max(epdf + max_pos, epdf_points - max_pos, max_value, 0.95, epdf_step, 0, &pos);
 	double right_x_95 = epdf_x[pos + max_pos];
 
-	printf("95 %% values: %lf at %lf, %lf at %lf\n", left_deriv_95, left_x_95, right_deriv_95, right_x_95);
-
 	double left_deriv_75 = get_derivative_at_pctg_of_max(epdf, max_pos, max_value, 0.75, epdf_step, 1, &pos);
 	double left_x_75 = epdf_x[pos];
 	double right_deriv_75 = get_derivative_at_pctg_of_max(epdf + max_pos, epdf_points - max_pos, max_value, 0.75, epdf_step, 0, &pos);
 	double right_x_75 = epdf_x[pos + max_pos];
 
+#ifdef VERBOSE_INITIALESTIM
+	printf("95 %% values: %lf at %lf, %lf at %lf\n", left_deriv_95, left_x_95, right_deriv_95, right_x_95);
 	printf("75 %% values: %lf at %lf, %lf at %lf\n", left_deriv_75, left_x_75, right_deriv_75, right_x_75);
+#endif
 
 	double sep_95 = right_x_95 - left_x_95;
 	double sep_75 = right_x_75 - left_x_75;
@@ -123,7 +128,9 @@ static void _component_initial_estimation(StableDist* comp, double start_x, doub
 	double sep_logratio = log(sep_75) - log(sep_95);
 	double asym_log = log(left_deriv_95) - log(-right_deriv_95);
 
+#ifdef VERBOSE_INITIALESTIM
 	printf("Estimation parameters: %lf %lf\n", sep_logratio, asym_log);
+#endif
 
 	comp->alfa = _do_alpha_estim(sep_logratio, asym_log);
 	comp->beta = _do_beta_estim(comp->alfa, asym_log);
@@ -170,22 +177,33 @@ size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_
 					searching_max = 0;
 					searching_min = 1;
 
-					printf("Found max %zu at %lf = %lf (ratio %lf)\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio);
 					maxs[max_idx] = i - 1;
 					max_idx++;
 
+#ifdef VERBOSE_INITIALESTIM
+					printf("Found max %zu at %lf = %lf (ratio %lf)\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio);
 				} else
 					printf("Max discard at %lf (ratio %lf)\n", epdf_x[i - 1], minmax_ratio);
+
+#else
+				}
+
+#endif
+
 			} else if (searching_min && _is_local_min(epdf, i - 1)) {
 				double minmax_ratio = epdf[i - 1] / epdf[maxs[max_idx - 1]];
 
 				if (minmax_ratio > minmax_coef_threshold) {
 					max_idx--;  // If the difference with the previous max is not big enough, cancel the previous maximum
+#ifdef VERBOSE_INITIALESTIM
 					printf("Low min at %lf, discard previous max (ratio %lf)\n", epdf_x[i - 1], minmax_ratio);
+#endif
 				} else {
 					// If the difference is good enough, mark it as a minimum.
 					mins[min_idx] = i - 1;
+#ifdef VERBOSE_INITIALESTIM
 					printf("Found min %zu at %lf = %lf (ratio %lf)\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio);
+#endif
 					min_idx++;
 				}
 
@@ -194,7 +212,8 @@ size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_
 				searching_max = 1;
 				searching_min = 0;
 			}
-		} else if (i == epdf_points - 1 && searching_min) {
+		}
+		else if (i == epdf_points - 1 && searching_min) {
 			// Mark a minimum at the end of the data if we are searching for one.
 			mins[min_idx] = i;
 			min_idx++;
@@ -312,13 +331,17 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 				mixture_partition[current_partition - 1].end_idx = current_lowest_min_pos;
 
 			current_lowest_min_pos = maxs[max_idx]; // Find minimum from here.
+#ifdef VERBOSE_INITIALESTIM
 			printf("Max %zu at %lf = %lf is valid (assigned to component %zu)\n",
 				   max_idx, epdf_x[maxs[max_idx]], epdf[maxs[max_idx]], current_partition);
+#endif
 
 			current_partition++;
 		} else {
 			extra_components++;
+#ifdef VERBOSE_INITIALESTIM
 			printf("Max %zu discarded (%.3lf %% of max)\n", max_idx, 100 * epdf[maxs[max_idx]] / max_value);
+#endif
 		}
 	}
 
@@ -348,7 +371,9 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 			while (part_idx < total_partitions && epdf_x[mixture_partition[part_idx].max_idx] < epdf_x[max_pos])
 				part_idx++;
 
+#ifdef VERBOSE_INITIALESTIM
 			printf("Found extra peak ratio %lf at x[%zu] = %lf, comp after is %zu\n", difference_ratio, max_pos, epdf_x[max_pos], part_idx);
+#endif
 
 			if (part_idx > 0) {
 				// Modify the partition before this one
@@ -423,7 +448,9 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		weightsum += dist->mixture_weights[i];
 	}
 
+#ifdef VERBOSE_INITIALESTIM
 	printf("Weight sum is %lf\n", weightsum);
+#endif
 
 	// Normalize the weights
 	for (i = 0; i < dist->num_mixture_components; i++) {
@@ -434,7 +461,9 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 	// Configure the death/birth probabilities
 	// TODO: Think this through. Not definitive code.
+#ifdef VERBOSE_INITIALESTIM
 	printf("Configuring extra component probabilities\n");
+#endif
 
 	double last_birth_prob = 0.01;
 
@@ -453,7 +482,9 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		else
 			dist->death_probs[i] = 1 - dist->birth_probs[i];
 
+#ifdef VERBOSE_INITIALESTIM
 		printf("Probabilities %zu: %lf / %lf\n", i, dist->birth_probs[i], dist->death_probs[i]);
+#endif
 	}
 
 	// Prepare the priors for the Monte Carlo estimation.

@@ -25,7 +25,7 @@
 #define DO_VARIABLE_COMPONENTS
 #define DO_WEIGHT_ESTIMATION
 // #define DECREMENT_GENERATION_VARIANCE
-#define VERBOSE_CHANGES
+// #define VERBOSE_MIXTURE
 
 /**
  * A common function for evaluation of mixtures, calling a base function.
@@ -143,9 +143,12 @@ static size_t _do_component_combine(
 	}
 
 	stable_set_mixture_components(dist, dist->num_mixture_components - 1);
-	printf("Set combine %lf (%zu %zu -> %zu, rem %zu)\n", w_comb, comp_1, comp_2, combined_comp, removed_comp);
 	dist->mixture_weights[combined_comp] = w_comb;
 	stable_setparams_array(dist->mixture_components[combined_comp], params);
+
+#ifdef VERBOSE_MIXTURE
+	printf("Set combine %lf (%zu %zu -> %zu, rem %zu)\n", w_comb, comp_1, comp_2, combined_comp, removed_comp);
+#endif
 
 	return combined_comp;
 }
@@ -175,9 +178,6 @@ static short _calc_splitcombine_acceptance_ratio(
 	for (size_t i = 0; i < dist->num_mixture_components; i++)
 		sum += dist->mixture_weights[i];
 
-	if (sum > 1)
-		printf("OH FUCK %lf\n", sum);
-
 	stable_pdf_gpu(dist, data, length, new_pdf, NULL);
 
 	double n1 = length * w1;
@@ -193,7 +193,9 @@ static short _calc_splitcombine_acceptance_ratio(
 
 	double alpha_beta_ratio = 0.25;
 
+#ifdef VERBOSE_MIXTURE
 	printf("%lf %lf %lf %lf\n", log(w1) * (dist->prior_weights - 1 + n1), log(w2) * (dist->prior_weights - 1 + n2), log(w_comb) * (dist->prior_weights - 1 + n1 + n2), log(gsl_sf_beta(dist->prior_weights, dist->num_mixture_components * dist->prior_weights)));
+#endif
 
 	double log_weight_ratio =
 		log(w1) * (dist->prior_weights - 1 + n1)
@@ -232,9 +234,11 @@ static short _calc_splitcombine_acceptance_ratio(
 
 	double acceptance_ratio = min(1, exp(log_acceptance_ratio));
 
+#ifdef VERBOSE_MIXTURE
 	printf("Ratios: αβ = %lf, w = %lf, μ = %lf, σ = %lf, m = %lf, j = %lf\n",
 		   alpha_beta_ratio, (log_weight_ratio), mu_ratio, log_sigma_ratio, move_probability, jacobian);
 	printf("Acceptance ratio: %lf\n", acceptance_ratio);
+#endif
 
 	fprintf(fsplit, "%zu %lf %lf %lf %lf\n", _iteration, mu1, mu2, mu_comb, acceptance_ratio);
 	fflush(fsplit);
@@ -255,10 +259,6 @@ static short _calc_splitcombine_acceptance_ratio(
 
 	for (size_t i = 0; i < dist->num_mixture_components; i++)
 		sum += dist->mixture_weights[i];
-
-	if (sum > 1)
-		printf("OH FUCK %lf\n", sum);
-
 
 	return 0;
 }
@@ -299,18 +299,20 @@ static int _check_split_move(StableDist * dist, const double * data, const unsig
 	double params_1[4] = { curr_params[STABLE_PARAM_ALPHA], curr_params[STABLE_PARAM_BETA], new_mu_1, new_sigma_1 };
 	double params_2[4] = { curr_params[STABLE_PARAM_ALPHA], curr_params[STABLE_PARAM_BETA], new_mu_2, new_sigma_2 };
 
+#ifdef VERBOSE_MIXTURE
 	stable_print_params_array(curr_params, "split base");
 	stable_print_params_array(params_1, "split 1");
 	stable_print_params_array(params_2, "split 2");
 
 	printf("weights %lf | %lf (( %lf\n", new_weight_1, new_weight_2, curr_weight);
+#endif
 
 	accepted = _calc_splitcombine_acceptance_ratio(
 				   dist, data, length, 1, current_pdf,
 				   comp_idx, -1, new_weight_1, new_weight_2, curr_weight, u1, u2, u3,
 				   params_1, params_2, curr_params);
 
-#ifdef VERBOSE_CHANGES
+#ifdef VERBOSE_MIXTURE
 	stable_print_params(comp, "recovered");
 #endif
 
@@ -525,7 +527,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 					if (i >= BURNIN_PERIOD)
 						param_values[comp_idx][param_idx][i - BURNIN_PERIOD] = new_params[param_idx];
 
-#ifdef VERBOSE_CHANGES
+#ifdef VERBOSE_MIXTURE
 					fprintf(stderr, "I%zuC%zu %s %.3lf -> %.3lf probability %.3g Accept %hd\n",
 							i, comp_idx, _param_names[param_idx], dist_params[param_idx], new_params[param_idx], jump_probability, accepted);
 #endif
@@ -552,7 +554,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		jump_probability = exp(jump_probability);
 		short accepted = 0;
 
-#ifdef VERBOSE_CHANGES
+#ifdef VERBOSE_MIXTURE
 		fprintf(stderr, "I%zu W ", i);
 
 		for (j = 0; j < dist->num_mixture_components; j++)
@@ -567,7 +569,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		} else     // Change not accepted, revert to the previous value
 			memcpy(dist->mixture_weights, previous_weights, dist->max_mixture_components * sizeof(double));
 
-#ifdef VERBOSE_CHANGES
+#ifdef VERBOSE_MIXTURE
 		fprintf(stderr, " Accepted %hd\n", accepted);
 #endif
 
@@ -603,7 +605,7 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 		else
 			streak_without_change = 0;
 
-#ifndef VERBOSE_CHANGES
+#ifndef VERBOSE_MIXTURE
 		printf("\rIter %zu - %zu changes", i, num_changes);
 		fflush(stdout);
 #endif
