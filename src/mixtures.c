@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 	} else {
 		printf("Reading from file %s... ", argv[1]);
 
-		for (i = 0; fscanf(infile, "%lf,%lf", x + i, rnd + i) == 2 && i < MAX_POINTS; i++);
+		for (i = 0; fscanf(infile, "%lf", rnd + i) == 1 && i < MAX_POINTS; i++);
 
 		num_points = i;
 		printf("%zu records\n", i);
