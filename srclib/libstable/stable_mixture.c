@@ -16,11 +16,11 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf_gamma.h>
 
-#define MAX_MIXTURE_ITERATIONS 10000
-#define BURNIN_PERIOD 200
+#define MAX_MIXTURE_ITERATIONS 3000
+#define BURNIN_PERIOD 300
 #define NUM_ALTERNATIVES_PARAMETER 1 // Number of alternative parameter values considered.
 
-#define RNG_STD 0.5
+#define RNG_STD 0.05
 
 #define DO_VARIABLE_COMPONENTS
 #define DO_WEIGHT_ESTIMATION
