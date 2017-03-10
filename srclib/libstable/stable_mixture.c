@@ -661,6 +661,8 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 			stable_setparams_array(dist->mixture_components[comp_idx], new_params);
 			printf("\n");
 		}
+
+		printf("\nKS test: %lf\n", stable_kolmogorov_smirnov_gof(dist, data, length));
 	} else
 		printf("WARNING: Burn-in period not passed.\n");
 

@@ -604,6 +604,17 @@ double stable_loglike_p(stable_like_params *params);
 
 double stable_minusloglikelihood(const gsl_vector * theta, void * p);
 
+/**
+ * Compute the Kolmogorov-Smirnov test, returning the confidence level
+ * that the samples are drawn from the probability distribution defined
+ * in dist.
+ * @param  dist     Stable distribution.
+ * @param  samples  List of samples.
+ * @param  nsamples Number of samples.
+ * @return          Kolmogoron-Smirnov probability value.
+ */
+double stable_kolmogorov_smirnov_gof(StableDist* dist, const double* samples, size_t nsamples);
+
 /************************************************************************
  ************************************************************************
  * Random numbers generation                                            *

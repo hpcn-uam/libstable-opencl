@@ -125,4 +125,21 @@ double get_derivative_at_pctg_of_max(double* pdf, size_t npoints, double max, do
  * @param epdf      Store here the values of the EPDF.
  */
 void calculate_epdf(const double* samples, size_t nsamples, double start_x, double end_x, size_t npoints, double bw_adjust, double* epdf_x, double* epdf);
+
+/**
+ * Perform the Kolmogorov-Smirnov test
+ * @param  samples  Data samples
+ * @param  nsamples Number of samples
+ * @param  cdf      Array with the distribution's CDF values at samples.
+ * @param  d        If not NULL, store here the value of the Kolmogorov-Smirnov statistic
+ * @return          Probability
+ */
+double kstest(const double* samples, size_t nsamples, const double* cdf, double* d);
+
+/**
+ * Return the probability of the given value in a Kolmogorov-Smirnov distribution.
+ * @param  alam Value
+ * @return      Probability
+ */
+double probks(double alam);
 #endif

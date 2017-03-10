@@ -28,6 +28,7 @@
  */
 #include "stable_api.h"
 #include "mcculloch.h"
+#include "methods.h"
 
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_vector.h>
@@ -466,3 +467,20 @@ int stable_fit_mle2d(StableDist *dist, const double *data, const unsigned int le
 	return stable_fit(dist, data, length);
 }
 
+double stable_kolmogorov_smirnov_gof(StableDist* dist, const double* samples, size_t nsamples)
+{
+	double *cdf;
+	double d;
+	double result;
+
+	cdf = calloc(nsamples, sizeof(double));
+
+	stable_cdf_gpu(dist, samples, nsamples, cdf, NULL);
+
+	result = kstest(samples, nsamples, cdf, &d);
+	printf("D: %lf\n", d);
+
+	free(cdf);
+
+	return result;
+}
