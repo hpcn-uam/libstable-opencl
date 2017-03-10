@@ -1,0 +1,17 @@
+#!/bin/bash
+
+input_folder="$1"
+output_folder="results/mixtures"
+
+if [ -z "$1" ]; then
+	echo "usage: batch_mixture_estimation [input folder]"
+	exit 1
+fi
+
+mkdir -p $output_folder
+
+for f in $(ls $input_folder); do
+	echo "Estimation for $f..."
+	bin/release/mixtures "$input_folder/$f"  "$output_folder/$f.txt"
+	gnuplot -e "outfile='$output_folder/$f.png'" gnuplot/histogram.gp
+done
