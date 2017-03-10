@@ -60,8 +60,8 @@ int main(int argc, char **argv)
 	size_t num_components = sizeof weights / sizeof(double);
 
 	double rnd[MAX_POINTS];
-	double pdf[MAX_POINTS];
-	double pdf_predicted[MAX_POINTS];
+	double pdf[epdf_points];
+	double pdf_predicted[epdf_points];
 	double x[epdf_points];
 	double epdf[epdf_points], epdf_finer[epdf_points];
 	double mn = -5, mx = 5;
@@ -148,16 +148,16 @@ int main(int argc, char **argv)
 	stable_activate_gpu(dist);
 
 	if (has_real_pdf)
-		stable_pdf(dist, x, num_points, pdf, NULL);
+		stable_pdf(dist, x, epdf_points, pdf, NULL);
 	else
-		memset(pdf, 0, sizeof(double) * num_points);
+		memset(pdf, 0, sizeof(double) * epdf_points);
 
 	printf("Starting mixture estimation.\n");
 	stable_fit_mixture(dist, rnd, num_points);
 
-	stable_pdf(dist, x, num_points, pdf_predicted, NULL);
+	stable_pdf(dist, x, epdf_points, pdf_predicted, NULL);
 
-	for (i = 0; i < num_points; i++)
+	for (i = 0; i < epdf_points; i++)
 		fprintf(outfile, "%lf %lf %lf %lf %lf\n", x[i], pdf[i], pdf_predicted[i], epdf[i], epdf_finer[i]);
 
 	fclose(outfile);
