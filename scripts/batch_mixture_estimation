@@ -12,6 +12,6 @@ mkdir -p $output_folder
 
 for f in $(ls $input_folder); do
 	echo "Estimation for $f..."
-	bin/release/mixtures "$input_folder/$f"  "$output_folder/$f.txt"
+	bin/release/mixtures "$input_folder/$f" > "$output_folder/$f.txt"
 	gnuplot -e "outfile='$output_folder/$f.png'" gnuplot/histogram.gp
 done
