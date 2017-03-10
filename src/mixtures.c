@@ -29,7 +29,9 @@
 int main(int argc, char **argv)
 {
 	size_t num_points = 5000;
-	size_t epdf_points = 1000;
+	double epdf_resolution = 0.01;
+	size_t min_points = 1000;
+	size_t epdf_points;
 	size_t i;
 
 	assert(MAX_POINTS >= num_points);
@@ -60,11 +62,11 @@ int main(int argc, char **argv)
 	size_t num_components = sizeof weights / sizeof(double);
 
 	double rnd[MAX_POINTS];
-	double pdf[epdf_points];
-	double pdf_predicted[epdf_points];
-	double x[epdf_points];
-	double epdf[epdf_points], epdf_finer[epdf_points];
-	double mn = -5, mx = 5;
+	double *pdf, *cdf;
+	double *pdf_predicted;
+	double *x;
+	double *epdf, *epdf_finer;
+	double mn, mx;
 	short has_real_pdf = 0;
 
 	FILE* infile = NULL;
@@ -117,6 +119,23 @@ int main(int argc, char **argv)
 	gsl_sort(rnd, 1, num_points);
 	printf("done\n");
 
+	mn = rnd[0];
+	mx = rnd[num_points - 1];
+
+	epdf_points = (mx - mn) / epdf_resolution;
+
+	if (epdf_points < min_points)
+		epdf_points = min_points;
+
+	x = calloc(epdf_points, sizeof(double));
+	pdf = calloc(epdf_points, sizeof(double));
+	cdf = calloc(epdf_points, sizeof(double));
+	pdf_predicted = calloc(epdf_points, sizeof(double));
+	epdf = calloc(epdf_points, sizeof(double));
+	epdf_finer = calloc(epdf_points, sizeof(double));
+
+	printf("Using %zu points for PDF/EPDF plotting\n", epdf_points);
+
 	outfile = fopen("mixtures_rnd.dat", "w");
 
 	if (!outfile) {
@@ -138,7 +157,7 @@ int main(int argc, char **argv)
 	outfile = fopen("mixtures_dat.dat", "w");
 
 	for (i = 0; i < epdf_points; i++) {
-		x[i] = mn + i * (mx - mn) / num_points;
+		x[i] = mn + i * (mx - mn) / epdf_points;
 		epdf[i] = kerneldensity(rnd, x[i], num_points, MIXTURE_KERNEL_ADJUST);
 		epdf_finer[i] = kerneldensity(rnd, x[i], num_points, MIXTURE_KERNEL_ADJUST_FINER);
 	}
@@ -156,9 +175,10 @@ int main(int argc, char **argv)
 	stable_fit_mixture(dist, rnd, num_points);
 
 	stable_pdf(dist, x, epdf_points, pdf_predicted, NULL);
+	stable_cdf(dist, x, epdf_points, cdf, NULL);
 
 	for (i = 0; i < epdf_points; i++)
-		fprintf(outfile, "%lf %lf %lf %lf %lf\n", x[i], pdf[i], pdf_predicted[i], epdf[i], epdf_finer[i]);
+		fprintf(outfile, "%lf %lf %lf %lf %lf %lf\n", x[i], pdf[i], pdf_predicted[i], epdf[i], epdf_finer[i], cdf[i]);
 
 	fclose(outfile);
 
