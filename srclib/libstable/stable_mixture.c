@@ -17,7 +17,7 @@
 #include <gsl/gsl_sf_gamma.h>
 
 #define MAX_MIXTURE_ITERATIONS 3000
-#define BURNIN_PERIOD 300
+#define BURNIN_PERIOD 500
 #define NUM_ALTERNATIVES_PARAMETER 1 // Number of alternative parameter values considered.
 
 #define RNG_STD 0.05
