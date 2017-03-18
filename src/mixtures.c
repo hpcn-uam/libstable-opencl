@@ -29,7 +29,7 @@
 int main(int argc, char **argv)
 {
 	size_t num_points = 5000;
-	double epdf_resolution = 0.01;
+	double epdf_resolution = 0.001;
 	size_t min_points = 1000;
 	size_t epdf_points;
 	size_t i;
@@ -121,6 +121,8 @@ int main(int argc, char **argv)
 
 	mn = rnd[0];
 	mx = rnd[num_points - 1];
+
+	printf("Data full range is [%lf:%lf]\n", mn, mx);
 
 	epdf_points = (mx - mn) / epdf_resolution;
 
