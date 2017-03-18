@@ -267,7 +267,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	double samples[length];
 	double epdf_x[epdf_points];
 	double epdf[epdf_points], epdf_finer[epdf_points];
-	double epdf_start, epdf_end;
+	double epdf_start, epdf_end, epdf_range;
 	double min_peak_dst;
 	size_t maxs[epdf_points], mins[epdf_points];
 	size_t maxs_finer[epdf_points], mins_finer[epdf_points];
@@ -298,6 +298,15 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 	epdf_start = gsl_stats_quantile_from_sorted_data(samples, 1, length, 0.02);
 	epdf_end = gsl_stats_quantile_from_sorted_data(samples, 1, length, 0.98);
+	epdf_range = epdf_end - epdf_start;
+
+	// Avoid cutting too many data if we have a clear cut in the support of the
+	// distribution (e.g., α-stables with high β values).
+	if (epdf_start - samples[0] < 0.05 * epdf_range)
+		epdf_start = samples[0];
+
+	if (samples[length - 1] - epdf_end < 0.05 * epdf_range)
+		epdf_end = samples[length - 1];
 
 	epdf_points = GSL_MIN(epdf_points, (epdf_end - epdf_start) / (average_dataset_step));
 
