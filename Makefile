@@ -29,7 +29,8 @@ TARGETS = example fittest stable_array \
 			gpu_tests gpu_performance opencl_tests fitperf \
 			gpu_mpoints_perftest stable_plot gridfittest \
 			fit_eval gpu_precision quantile_eval quantile_perf \
-			gen_randoms mixtures param_behaviour stable_plot_mixture
+			gen_randoms mixtures param_behaviour stable_plot_mixture \
+			libtest
 INCLUDES = -I./includes/
 
 INCS := $(wildcard $(INCDIR)/*.h)
