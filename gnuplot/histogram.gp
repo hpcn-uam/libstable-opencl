@@ -28,8 +28,9 @@ set style fill solid 0.25 border 2
 plot \
 	'mixtures_rnd.dat' using (bin($1,binwidth)):(1 / (binwidth * recordnum)) smooth freq with boxes title 'Data' ls 1, \
 	'mixtures_dat.dat' using 1:3 w l ls 2 lw 3 title 'Predicted PDF', \
-	#'mixtures_dat.dat' using 1:4 w l ls 1 lw 3 title 'Empirical PDF', \
-	#'mixtures_dat.dat' using 1:5 w l ls 4 lw 3 title 'Empirical PDF Finer', \
+	'mixtures_dat.dat' using 1:4 w l ls 1 lw 2 title 'Empirical PDF', \
+	'mixtures_dat.dat' using 1:5 w l ls 4 lw 1 title 'Empirical PDF Finer', \
+	'mixture_initial.dat' using 1:2 w l ls 5 dt 2 lw 2 title 'Initial PDF estimation'
 	#'mixtures_dat.dat' using 1:2 w l ls 3 lw 3 title 'Real PDF'
 
-if (!exists("outfile")) pause -1
+# if (!exists("outfile")) pause -1

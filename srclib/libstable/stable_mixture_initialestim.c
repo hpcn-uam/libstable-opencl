@@ -504,4 +504,14 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	double sigma_variance = gsl_stats_variance(sigma_values, 1, dist->num_mixture_components);
 	dist->prior_sigma_alpha0 = pow(sigma_mean, 2) / sigma_variance + 2;
 	dist->prior_sigma_beta0 = sigma_mean * (dist->prior_sigma_alpha0 - 1);
+
+
+	// Write the data to file
+	FILE* datfile = fopen("mixture_initial.dat", "w");
+	stable_pdf_gpu(dist, epdf_x, epdf_points, pdf, NULL);
+
+	for (i = 0; i < epdf_points; i++)
+		fprintf(datfile, "%lf %lf %lf %lf\n", epdf_x[i], pdf[i], epdf[i], epdf_finer[i]);
+
+	fclose(datfile);
 }
