@@ -446,7 +446,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		data_offset = sample_len;
 
 		double x_max = epdf_x[mixture_partition[i].max_idx];
-		double maxval = epdf[mixture_partition[i].max_idx];
+		double maxval = epdf_for_estimation[mixture_partition[i].max_idx];
 		double comp_max = stable_pdf_point(comp, x_max, NULL);
 
 		dist->mixture_weights[i] = maxval / comp_max;
