@@ -71,7 +71,7 @@ static double _do_sigma_estim(double alpha, double beta, double sep_95)
 		;
 
 #ifdef VERBOSE_INITIALESTIM
-	printf("Expected sep is %lf\n", expected_sep_sigma1);
+	printf("Expected sep is %lf, actual is %lf\n", expected_sep_sigma1, sep_95);
 #endif
 
 	double sigma_estim = sep_95 / expected_sep_sigma1;
@@ -182,13 +182,9 @@ size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_
 
 #ifdef VERBOSE_INITIALESTIM
 					printf("Found max %zu at %lf = %lf (ratio %lf)\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio);
-				} else
-					printf("Max discard at %lf (ratio %lf)\n", epdf_x[i - 1], minmax_ratio);
-
-#else
+#endif
 				}
 
-#endif
 
 			} else if (searching_min && _is_local_min(epdf, i - 1)) {
 				double minmax_ratio = epdf[i - 1] / epdf[maxs[max_idx - 1]];
@@ -212,8 +208,7 @@ size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_
 				searching_max = 1;
 				searching_min = 0;
 			}
-		}
-		else if (i == epdf_points - 1 && searching_min) {
+		} else if (i == epdf_points - 1 && searching_min) {
 			// Mark a minimum at the end of the data if we are searching for one.
 			mins[min_idx] = i;
 			min_idx++;
@@ -263,10 +258,11 @@ static double get_dataset_typical_step(const double* vals, size_t n)
 
 void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* data, const unsigned int length)
 {
-	size_t epdf_points = 5000;
+	size_t epdf_points = 10000;
 	double samples[length];
 	double epdf_x[epdf_points];
 	double epdf[epdf_points], epdf_finer[epdf_points];
+	double pdf[epdf_points];
 	double epdf_start, epdf_end, epdf_range;
 	double min_peak_dst;
 	size_t maxs[epdf_points], mins[epdf_points];
