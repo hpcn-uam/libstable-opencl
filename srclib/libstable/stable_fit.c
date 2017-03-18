@@ -37,6 +37,7 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_fft_real.h>
+#include <gsl/gsl_sort.h>
 
 #define ESTM_2D_EPSABS 0.008
 #define ESTM_2D_MAX_ITER 300
@@ -469,18 +470,26 @@ int stable_fit_mle2d(StableDist *dist, const double *data, const unsigned int le
 
 double stable_kolmogorov_smirnov_gof(StableDist* dist, const double* samples, size_t nsamples)
 {
-	double *cdf;
+	double *cdf, *samples_sorted;
 	double d;
 	double result;
 
 	cdf = calloc(nsamples, sizeof(double));
+	samples_sorted = calloc(nsamples, sizeof(double));
 
-	stable_cdf_gpu(dist, samples, nsamples, cdf, NULL);
+	memcpy(samples_sorted, samples, nsamples * sizeof(double));
+	gsl_sort(samples_sorted, 1, nsamples);
 
-	result = kstest(samples, nsamples, cdf, &d);
+	if (dist->gpu_enabled)
+		stable_cdf_gpu(dist, samples_sorted, nsamples, cdf, NULL);
+	else
+		stable_cdf(dist, samples_sorted, nsamples, cdf, NULL);
+
+	result = kstest(samples_sorted, nsamples, cdf, &d);
 	printf("D: %lf\n", d);
 
 	free(cdf);
+	free(samples_sorted);
 
 	return result;
 }
