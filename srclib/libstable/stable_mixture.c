@@ -172,7 +172,7 @@ static short _calc_splitcombine_acceptance_ratio(
 		fsplit = fopen("mixture_split.dat", "w");
 
 	if (is_split) {
-		comp_2 = dist->num_mixture_components - 1; // New component is the last one
+		comp_2 = dist->num_mixture_components; // New component is the last one
 		_do_component_split(dist, comp_1, w1, w2, params_1, params_2, comp_2);
 	} else
 		comp_1 = _do_component_combine(dist, comp_1, comp_2, w_comb, params_comb, &removed_index);
@@ -246,6 +246,13 @@ static short _calc_splitcombine_acceptance_ratio(
 
 	if (rand_event(dist->gslrand, acceptance_ratio)) {
 		memcpy(current_pdf, new_pdf, sizeof(double) * length);
+
+		// In a split, try have as less change as possible.
+		if (is_split) {
+			if (fabs(mu2 - mu_comb) < fabs(mu1 - mu_comb))
+				stable_swap_components(dist, comp_1, comp_2);
+		}
+
 		return 1; // Move accepted
 	}
 
