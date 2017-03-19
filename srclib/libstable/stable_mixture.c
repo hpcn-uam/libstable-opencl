@@ -26,6 +26,7 @@
 #define DO_WEIGHT_ESTIMATION
 // #define DECREMENT_GENERATION_VARIANCE
 // #define VERBOSE_MIXTURE
+#define VERBOSE_SPLITCOMBINE
 
 /**
  * A common function for evaluation of mixtures, calling a base function.
@@ -196,10 +197,6 @@ static short _calc_splitcombine_acceptance_ratio(
 
 	double alpha_beta_ratio = 0.25;
 
-#ifdef VERBOSE_MIXTURE
-	printf("%lf %lf %lf %lf\n", log(w1) * (dist->prior_weights - 1 + n1), log(w2) * (dist->prior_weights - 1 + n2), log(w_comb) * (dist->prior_weights - 1 + n1 + n2), log(gsl_sf_beta(dist->prior_weights, dist->num_mixture_components * dist->prior_weights)));
-#endif
-
 	double log_weight_ratio =
 		log(w1) * (dist->prior_weights - 1 + n1)
 		+ log(w2) * (dist->prior_weights - 1 + n2)
@@ -237,9 +234,10 @@ static short _calc_splitcombine_acceptance_ratio(
 
 	double acceptance_ratio = min(1, exp(log_acceptance_ratio));
 
-#ifdef VERBOSE_MIXTURE
-	printf("Ratios: αβ = %lf, w = %lf, μ = %lf, σ = %lf, m = %lf, j = %lf\n",
-		   alpha_beta_ratio, (log_weight_ratio), mu_ratio, log_sigma_ratio, move_probability, jacobian);
+#ifdef VERBOSE_SPLITCOMBINE
+	printf("Ratios: αβ = %lf, w = %lf, μ = %lf, σ = %lf, m = %lf, j = %lf, L = %lf, log L = %lf\n",
+		   alpha_beta_ratio, (log_weight_ratio), mu_ratio, log_sigma_ratio, move_probability,
+		   jacobian, exp(log_likelihood_ratio), log_likelihood_ratio);
 	printf("Acceptance ratio: %lf\n", acceptance_ratio);
 #endif
 
@@ -302,7 +300,7 @@ static int _check_split_move(StableDist * dist, const double * data, const unsig
 	double params_1[4] = { curr_params[STABLE_PARAM_ALPHA], curr_params[STABLE_PARAM_BETA], new_mu_1, new_sigma_1 };
 	double params_2[4] = { curr_params[STABLE_PARAM_ALPHA], curr_params[STABLE_PARAM_BETA], new_mu_2, new_sigma_2 };
 
-#ifdef VERBOSE_MIXTURE
+#ifdef VERBOSE_SPLITCOMBINE
 	stable_print_params_array(curr_params, "split base");
 	stable_print_params_array(params_1, "split 1");
 	stable_print_params_array(params_2, "split 2");
@@ -315,7 +313,7 @@ static int _check_split_move(StableDist * dist, const double * data, const unsig
 				   comp_idx, -1, new_weight_1, new_weight_2, curr_weight, u1, u2, u3,
 				   params_1, params_2, curr_params);
 
-#ifdef VERBOSE_MIXTURE
+#ifdef VERBOSE_SPLITCOMBINE
 	stable_print_params(comp, "recovered");
 #endif
 
@@ -409,9 +407,11 @@ static int _check_combine_move(StableDist * dist, const double * data, const uns
 	double u2 = (mu2 - mu_comb) / (sigma_comb * sqrt(w1 / w2));
 	double u3 = w1 * pow(sigma1, 2) / (pow(sigma_comb, 2) * (1 - pow(u2, 2)) * w_comb);
 
+#ifdef VERBOSE_SPLITCOMBINE
 	stable_print_params_array(params_1, "Comb 1");
 	stable_print_params_array(params_2, "Comb 2");
 	stable_print_params_array(params_comb, "Comb res");
+#endif
 
 	accepted = _calc_splitcombine_acceptance_ratio(
 				   dist, data, length, 0, current_pdf,
@@ -586,14 +586,14 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 #ifdef DO_VARIABLE_COMPONENTS
 
 		if (rand_event(dist->gslrand, dist->birth_probs[dist->num_mixture_components])) {
-			printf("\nTry split\n");
+			printf("\nIteration %zu: Try split\n", i);
 
 			if (_check_split_move(dist, data, length, previous_pdf)) {
 				num_changes++;
 				printf("Accept split\n");
 			}
 		} else if (rand_event(dist->gslrand, dist->death_probs[dist->num_mixture_components])) {
-			printf("\nTry combine\n");
+			printf("\nIteration %zu: Try combine\n", i);
 
 			if (_check_combine_move(dist, data, length, previous_pdf)) {
 				num_changes++;
