@@ -113,7 +113,7 @@ void handle_signal(int sig)
 
 static void _do_component_split(
 	StableDist * dist, size_t comp_to_split, double w1, double w2,
-	double params_1[4], double params_2[4])
+	double params_1[4], double params_2[4], size_t new_comp_index)
 {
 	size_t split_1 = comp_to_split;
 	size_t split_2 = dist->num_mixture_components; // Component 2 is created at the last position
@@ -125,28 +125,30 @@ static void _do_component_split(
 
 	stable_setparams_array(dist->mixture_components[split_1], params_1);
 	stable_setparams_array(dist->mixture_components[split_2], params_2);
+
+	if (new_comp_index != split_2)
+		stable_swap_components(dist, split_2, new_comp_index);
 }
 
 static size_t _do_component_combine(
 	StableDist * dist, size_t comp_1, size_t comp_2, double w_comb,
-	double params[4])
+	double params[4], size_t* removed_index)
 {
 	size_t combined_comp = min(comp_1, comp_2);
 	size_t removed_comp = max(comp_1, comp_2);
 
-	if (removed_comp < dist->num_mixture_components - 1) {
-		// Not the last component, replace this one with the last
-		StableDist* swap = dist->mixture_components[dist->num_mixture_components - 1];
-		dist->mixture_components[dist->num_mixture_components - 1] = dist->mixture_components[removed_comp];
-		dist->mixture_components[removed_comp] = swap;
-		dist->mixture_weights[removed_comp] = dist->mixture_weights[dist->num_mixture_components - 1];
-	}
+	if (removed_index != NULL)
+		*removed_index = removed_comp;
+
+	// Not the last component, replace this one with the last
+	if (removed_comp < dist->num_mixture_components - 1)
+		stable_swap_components(dist, dist->num_mixture_components - 1, removed_comp);
 
 	stable_set_mixture_components(dist, dist->num_mixture_components - 1);
 	dist->mixture_weights[combined_comp] = w_comb;
 	stable_setparams_array(dist->mixture_components[combined_comp], params);
 
-#ifdef VERBOSE_MIXTURE
+#ifdef VERBOSE_SPLITCOMBINE
 	printf("Set combine %lf (%zu %zu -> %zu, rem %zu)\n", w_comb, comp_1, comp_2, combined_comp, removed_comp);
 #endif
 
@@ -163,15 +165,16 @@ static short _calc_splitcombine_acceptance_ratio(
 {
 	double new_pdf[length];
 	static FILE* fsplit = NULL;
+	size_t removed_index;
 
 	if (!fsplit)
 		fsplit = fopen("mixture_split.dat", "w");
 
 	if (is_split) {
-		_do_component_split(dist, comp_1, w1, w2, params_1, params_2);
 		comp_2 = dist->num_mixture_components - 1; // New component is the last one
+		_do_component_split(dist, comp_1, w1, w2, params_1, params_2, comp_2);
 	} else
-		comp_1 = _do_component_combine(dist, comp_1, comp_2, w_comb, params_comb);
+		comp_1 = _do_component_combine(dist, comp_1, comp_2, w_comb, params_comb, &removed_index);
 
 	double sum = 0;
 
@@ -251,9 +254,9 @@ static short _calc_splitcombine_acceptance_ratio(
 	// If move is not accepted, revert the previous operation
 
 	if (is_split)
-		_do_component_combine(dist, comp_1, comp_2, w_comb, params_comb);
+		_do_component_combine(dist, comp_1, comp_2, w_comb, params_comb, NULL);
 	else
-		_do_component_split(dist, comp_1, w1, w2, params_1, params_2);
+		_do_component_split(dist, comp_1, w1, w2, params_1, params_2, removed_index);
 
 	sum = 0;
 

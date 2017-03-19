@@ -277,6 +277,11 @@ void stable_print_params(StableDist* dist, const char* prefix, ...);
 short stable_set_mixture_components(StableDist* dist, size_t num_components);
 short stable_disable_mixture(StableDist* dist);
 
+/**
+ * Swap the positions of two components in the mixture
+ */
+void stable_swap_components(StableDist* dist, size_t comp1, size_t comp2);
+
 StableDist *stable_copy(StableDist *src_dist);
 
 void stable_free(StableDist *dist);

@@ -76,3 +76,14 @@ void error_handler(const char * reason, const char * file,
 	snprintf(message, 1024, "%s: %d: ERROR #%d: %s\n", file, line, gsl_errno, reason);
 	stable_log(message);
 }
+
+void stable_swap_components(StableDist* dist, size_t comp1, size_t comp2)
+{
+	StableDist* swap = dist->mixture_components[comp1];
+	double wswap = dist->mixture_weights[comp1];
+
+	dist->mixture_components[comp1] = dist->mixture_components[comp2];
+	dist->mixture_components[comp2] = swap;
+	dist->mixture_weights[comp1] = dist->mixture_weights[comp2];
+	dist->mixture_weights[comp2] = wswap;
+}
