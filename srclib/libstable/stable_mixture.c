@@ -327,8 +327,8 @@ static int _check_split_move(StableDist * dist, const double * data, const unsig
 	if (new_mu_1 >= new_mu_2)
 		return 0;
 
-	double new_sigma_1 = sqrt(u3 * (1 - pow(u2, 2)) * comp->sigma * curr_weight / new_weight_1);
-	double new_sigma_2 = sqrt((1 - u3) * (1 - pow(u2, 2)) * comp->sigma * curr_weight / new_weight_2);
+	double new_sigma_1 = sqrt(u3 * (1 - pow(u2, 2)) * pow(comp->sigma, 2) * curr_weight / new_weight_1);
+	double new_sigma_2 = sqrt((1 - u3) * (1 - pow(u2, 2)) * pow(comp->sigma, 2) * curr_weight / new_weight_2);
 
 	double params_1[4] = { curr_params[STABLE_PARAM_ALPHA], curr_params[STABLE_PARAM_BETA], new_mu_1, new_sigma_1 };
 	double params_2[4] = { curr_params[STABLE_PARAM_ALPHA], curr_params[STABLE_PARAM_BETA], new_mu_2, new_sigma_2 };
