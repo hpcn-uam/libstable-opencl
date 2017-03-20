@@ -580,14 +580,18 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 		gsl_ran_dirichlet(dist->gslrand, dist->num_mixture_components, dirichlet_params, dist->mixture_weights);
 
-		stable_pdf_gpu(dist, data, length, pdf, NULL);
-
 		jump_probability = 0;
 
-		for (k = 0; k < length; k++)
-			jump_probability += log(pdf[k]) - log(previous_pdf[k]);
+		// Do not even bother with weight samples that have one component with almost zero weight.
+		if (gsl_stats_min(dist->mixture_weights, 1, dist->num_mixture_components) >= 1e-3)   {
+			stable_pdf_gpu(dist, data, length, pdf, NULL);
 
-		jump_probability = exp(jump_probability);
+			for (k = 0; k < length; k++)
+				jump_probability += log(pdf[k]) - log(previous_pdf[k]);
+
+			jump_probability = exp(jump_probability);
+		}
+
 		short accepted = 0;
 
 #ifdef VERBOSE_MIXTURE
