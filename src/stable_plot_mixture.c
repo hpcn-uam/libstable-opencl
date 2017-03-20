@@ -20,6 +20,9 @@ int main(int argc, char **argv)
 
 	stable_set_mixture_components(dist, (argc - 1 - extra_args) / args_per_component);
 
+	stable_set_relTOL(1e-2);
+	stable_set_absTOL(1e-5);
+
 	xmin = strtod(argv[1], NULL);
 	xmax = strtod(argv[2], NULL);
 
@@ -27,10 +30,12 @@ int main(int argc, char **argv)
 	pdf = calloc(num_samples, sizeof(double));
 
 	for (i = 0; i < dist->num_mixture_components; i++) {
-		dist->mixture_components[i]->alfa = strtod(argv[1 + extra_args + i * args_per_component], NULL);
-		dist->mixture_components[i]->beta = strtod(argv[2 + extra_args + i * args_per_component], NULL);
-		dist->mixture_components[i]->mu_0 = strtod(argv[3 + extra_args + i * args_per_component], NULL);
-		dist->mixture_components[i]->sigma = strtod(argv[4 + extra_args + i * args_per_component], NULL);
+		stable_setparams(dist->mixture_components[i],
+						 strtod(argv[1 + extra_args + i * args_per_component], NULL),
+						 strtod(argv[2 + extra_args + i * args_per_component], NULL),
+						 strtod(argv[4 + extra_args + i * args_per_component], NULL),
+						 strtod(argv[3 + extra_args + i * args_per_component], NULL),
+						 0);
 		dist->mixture_weights[i] = strtod(argv[5 + extra_args + i * args_per_component], NULL);
 	}
 
