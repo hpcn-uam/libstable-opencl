@@ -133,6 +133,10 @@ static void _do_component_split(
 
 	if (new_comp_index != split_2)
 		stable_swap_components(dist, split_2, new_comp_index);
+
+#ifdef VERBOSE_SPLITCOMBINE
+	printf("Set split %zu into %zu and %zu (swapping last with %zu)\n", comp_to_split, split_1, split_2, new_comp_index);
+#endif
 }
 
 static size_t _do_component_combine(
@@ -174,6 +178,15 @@ static short _calc_splitcombine_acceptance_ratio(
 
 	if (!fsplit)
 		fsplit = fopen("mixture_split.dat", "w");
+
+#ifdef VERBOSE_SPLITCOMBINE
+	printf("Before check, μ values = ");
+
+	for (size_t i = 0; i < dist->num_mixture_components; i++)
+		printf("%lf ", dist->mixture_components[i]->mu_0);
+
+	printf("\n");
+#endif
 
 	if (is_split) {
 		comp_2 = dist->num_mixture_components; // New component is the last one
@@ -271,6 +284,15 @@ static short _calc_splitcombine_acceptance_ratio(
 
 	for (size_t i = 0; i < dist->num_mixture_components; i++)
 		sum += dist->mixture_weights[i];
+
+#ifdef VERBOSE_SPLITCOMBINE
+	printf("After check, μ values = ");
+
+	for (size_t i = 0; i < dist->num_mixture_components; i++)
+		printf("%lf ", dist->mixture_components[i]->mu_0);
+
+	printf("\n");
+#endif
 
 	return 0;
 }
