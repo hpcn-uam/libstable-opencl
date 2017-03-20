@@ -277,6 +277,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	size_t current_lowest_min_pos;
 	size_t extra_components = 0;
 	size_t extra_partitions = 0;
+	size_t second_pass_partitions = 0;
 	double mu_values[dist->max_mixture_components];
 	double sigma_values[dist->max_mixture_components];
 	StableDist* comp;
@@ -412,18 +413,19 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 			mixture_partition[total_partitions].found_in_finer_epdf = 1;
 
 			total_partitions++;
-			extra_partitions++;
+			second_pass_partitions++;
 
 			// Re-sort the partitions to allow search of the next maximum.
 			qsort(mixture_partition, total_partitions, sizeof(struct component_partition), _compar_partition);
 		}
 	}
 
-	printf("Found %zu possible extra components, for a total of %zu\n", extra_partitions, total_partitions);
+	printf("Found %zu components in the second pass, for a total of %zu\n", second_pass_partitions, total_partitions);
 
 	stable_set_mixture_components(dist, total_partitions);
 
 	double weightsum = 0;
+	size_t wide_components = 0;
 
 	// Compute initial estimations for each component based on the derivatives of the EPDF.
 	for (i = 0; i < dist->num_mixture_components; i++) {
@@ -452,6 +454,8 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 		dist->mixture_weights[i] = maxval / comp_max;
 		weightsum += dist->mixture_weights[i];
+		if (maxval / comp_max > 2)
+			wide_components++;
 	}
 
 #ifdef VERBOSE_INITIALESTIM
@@ -468,25 +472,33 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	// Configure the death/birth probabilities
 	// TODO: Think this through. Not definitive code.
 #ifdef VERBOSE_INITIALESTIM
-	printf("Configuring extra component probabilities\n");
+	printf("Configuring extra component probabilities (%zu extra comps, %zu wide)\n", extra_components, wide_components);
 #endif
 
+	extra_components += wide_components;
 	double last_birth_prob = 0.01;
+	double extra_comp_factor = 0.1 * (1 + 1.5 * wide_components);
+	double extra_comp_perc = ((double)extra_components) / dist->max_mixture_components;
 
-	for (i = dist->num_mixture_components; i < dist->max_mixture_components; i++) {
+	for (i = dist->num_mixture_components - second_pass_partitions; i < dist->max_mixture_components; i++) {
 		if (i >= dist->num_mixture_components + extra_components) {
 			dist->birth_probs[i] = last_birth_prob / 2; // Marginal probability of increasing components
-		} else {
+			last_birth_prob = dist->birth_probs[i];
+		} else if (i >= dist->num_mixture_components) {
 			size_t extra_comp_idx = i - dist->num_mixture_components;
-			dist->birth_probs[i] = 0.1 * max((((double)extra_components) / dist->max_mixture_components) * (extra_components - extra_comp_idx) / extra_components, 0.025);
-		}
+			double extra_comp_idx_factor = ((double) extra_components - extra_comp_idx) / extra_components;
+			dist->birth_probs[i] = extra_comp_factor * max(extra_comp_perc * extra_comp_idx_factor, 0.025);
+			last_birth_prob = dist->birth_probs[i];
+		} else
+			dist->birth_probs[i] = 0.4;
 
-		last_birth_prob = dist->birth_probs[i];
 
-		if (i == dist->num_mixture_components)
+		if (i == dist->num_mixture_components - second_pass_partitions)
 			dist->death_probs[i] = 0;
+		else if (i <= dist->num_mixture_components)
+			dist->death_probs[i] = 0.05;
 		else
-			dist->death_probs[i] = 1 - dist->birth_probs[i];
+			dist->death_probs[i] = max(0.01, 0.5 - extra_comp_factor) * (1 - dist->birth_probs[i - 1]);
 
 #ifdef VERBOSE_INITIALESTIM
 		printf("Probabilities %zu: %lf / %lf\n", i, dist->birth_probs[i], dist->death_probs[i]);
