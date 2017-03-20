@@ -3,6 +3,13 @@
 input_folder="$1"
 output_folder="results/mixtures"
 
+function on_exit() # Called by trap
+{
+	exit 0
+}
+
+trap on_exit INT
+
 if [ -z "$1" ]; then
 	echo "usage: batch_mixture_estimation [input folder]"
 	exit 1
@@ -13,6 +20,8 @@ mkdir -p $output_folder
 for f in $(ls $input_folder); do
 	echo "Estimation for $f..."
 	bin/release/mixtures "$input_folder/$f" > "$output_folder/$f.txt"
+	echo "- Plotting histogram"
 	gnuplot -e "outfile='$output_folder/$f-hist.png'" gnuplot/histogram.gp
+	echo "- Plotting ECDF"
 	gnuplot -e "outfile='$output_folder/$f-ecdf.png'" gnuplot/ecdf.gp
 done
