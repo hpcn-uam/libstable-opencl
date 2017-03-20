@@ -452,10 +452,17 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		double maxval = epdf_for_estimation[mixture_partition[i].max_idx];
 		double comp_max = stable_pdf_point(comp, x_max, NULL);
 
-		dist->mixture_weights[i] = maxval / comp_max;
+		dist->mixture_weights[i] = min(1, maxval / comp_max); // Avoid over-corrections because of bad initial estimations.
 		weightsum += dist->mixture_weights[i];
+
 		if (maxval / comp_max > 2)
 			wide_components++;
+
+#ifdef VERBOSE_INITIALESTIM
+		printf("C%zu: PDF Max at x = %lf is %lf, for EPDF is %lf. Correcting with weight %lf\n",
+			   i, x_max, comp_max, maxval, dist->mixture_weights[i]);
+
+#endif
 	}
 
 #ifdef VERBOSE_INITIALESTIM
