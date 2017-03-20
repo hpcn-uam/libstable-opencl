@@ -391,6 +391,13 @@ static int _search_components_to_combine(StableDist* dist, size_t* comp_1, size_
 			return -1;
 	}
 
+	// Ensure that comp_1 < comp_2 to avoid swapping components when moves are rejected.
+	if (*comp_1 > *comp_2) {
+		size_t swap = *comp_1;
+		*comp_1 = *comp_2;
+		*comp_2 = swap;
+	}
+
 	return 0;
 }
 
