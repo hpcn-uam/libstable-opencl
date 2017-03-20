@@ -478,7 +478,8 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 	double previous_weights[dist->max_mixture_components];
 	double param_values[dist->max_mixture_components][MAX_STABLE_PARAMS][MAX_MIXTURE_ITERATIONS];
 	double weights[dist->max_mixture_components][MAX_MIXTURE_ITERATIONS];
-	size_t location_lock_iterations = 10;
+	size_t location_lock_iterations = 25;
+	size_t fix_components_during_last_n_iterations = 800;
 
 	FILE* debug_data = fopen("mixture_debug.dat", "w");
 
@@ -629,23 +630,34 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 
 #ifdef DO_VARIABLE_COMPONENTS
 
-		if (rand_event(dist->gslrand, dist->birth_probs[dist->num_mixture_components])) {
-			printf("\nIteration %zu: Try split\n", i);
+		if (i >= location_lock_iterations && (MAX_ITERATIONS - i) > fix_components_during_last_n_iterations) {
+			if (rand_event(dist->gslrand, dist->birth_probs[dist->num_mixture_components])) {
+				printf("\nIteration %zu: Try split\n", i);
 
-			if (_check_split_move(dist, data, length, previous_pdf)) {
-				num_changes++;
-				printf("Accept split\n");
-			}
-		} else if (rand_event(dist->gslrand, dist->death_probs[dist->num_mixture_components])) {
-			printf("\nIteration %zu: Try combine\n", i);
+				if (_check_split_move(dist, data, length, previous_pdf)) {
+					num_changes++;
+					printf("Accept split\n");
+				}
+			} else if (rand_event(dist->gslrand, dist->death_probs[dist->num_mixture_components])) {
+				printf("\nIteration %zu: Try combine\n", i);
 
-			if (_check_combine_move(dist, data, length, previous_pdf)) {
-				num_changes++;
-				printf("Accept combine\n");
+				if (_check_combine_move(dist, data, length, previous_pdf)) {
+					num_changes++;
+					printf("Accept combine\n");
+				}
 			}
 		}
 
 #endif
+
+		//#ifdef VERBOSE_MIXTURE
+
+		if (i == location_lock_iterations)
+			printf("Iteration %zu: Releasing initial lock on location and component birth/death\n", i);
+		else if (MAX_ITERATIONS - i == fix_components_during_last_n_iterations)
+			printf("Iteration %zu: Locking component birth/death for final refinement\n", i);
+
+		//#endif
 
 		if (num_changes == 0)
 			streak_without_change++;
@@ -653,8 +665,8 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 			streak_without_change = 0;
 
 #ifndef VERBOSE_MIXTURE
-		printf("\rIter %zu - %zu changes", i, num_changes);
-		fflush(stdout);
+		// printf("\rIter %zu - %zu changes", i, num_changes);
+		// fflush(stdout);
 #endif
 		fprintf(debug_data, "%zu %zu", num_changes, dist->num_mixture_components);
 
