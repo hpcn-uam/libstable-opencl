@@ -185,8 +185,6 @@ size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_
 					printf("Found max %zu at %lf = %lf (ratio %lf)\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio);
 #endif
 				}
-
-
 			} else if (searching_min && _is_local_min(epdf, i - 1)) {
 				double minmax_ratio = epdf[i - 1] / epdf[maxs[max_idx - 1]];
 
