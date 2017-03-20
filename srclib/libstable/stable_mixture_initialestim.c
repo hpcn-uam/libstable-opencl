@@ -438,10 +438,8 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		size_t sample_len = 0;
 		double* epdf_for_estimation = mixture_partition[i].found_in_finer_epdf ? epdf_finer : epdf;
 
-		epdf_for_estimation += comp_begin;
-
 		printf("Initial C%zu: [%zu:%zu] (%lf:%lf)\n", i, comp_begin, comp_end, epdf_x[comp_begin], epdf_x[comp_end]);
-		_component_initial_estimation(comp, epdf_x[comp_begin], epdf_x[comp_end], epdf_for_estimation, epdf_x + comp_begin, comp_end - comp_begin);
+		_component_initial_estimation(comp, epdf_x[comp_begin], epdf_x[comp_end], epdf_for_estimation + comp_begin, epdf_x + comp_begin, comp_end - comp_begin);
 
 		mu_values[i] = comp->mu_0;
 		sigma_values[i] = comp->sigma;
