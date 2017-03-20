@@ -59,6 +59,10 @@ void _stable_evaluate_mixture(StableDist *dist, const double x[], const int Nx,
 				if (result2) result2[j] += res2_component[j] * dist->mixture_weights[i];
 			}
 		}
+
+		if (res1_component) free(res1_component);
+
+		if (res2_component) free(res2_component);
 	}
 }
 
