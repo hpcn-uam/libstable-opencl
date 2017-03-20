@@ -706,6 +706,14 @@ int stable_fit_mixture(StableDist * dist, const double * data, const unsigned in
 				double param_avg = gsl_stats_mean(param_values[comp_idx][param_idx], 1, i - BURNIN_PERIOD);
 				double param_sd = gsl_stats_sd(param_values[comp_idx][param_idx], 1, i - BURNIN_PERIOD);
 
+				if ((param_avg != 0 && param_sd / fabs(param_avg) > 0.01)) {
+					size_t check_only_last = fix_components_during_last_n_iterations;
+					size_t last_valid = i - BURNIN_PERIOD - check_only_last;
+					param_avg = gsl_stats_mean(param_values[comp_idx][param_idx] + last_valid, 1, check_only_last);
+					param_sd = gsl_stats_sd(param_values[comp_idx][param_idx] + last_valid, 1, check_only_last);
+				}
+
+
 				printf(" | %6.2lf - %5.2lf", param_avg, param_sd);
 				new_params[param_idx] = param_avg;
 			}
