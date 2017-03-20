@@ -363,8 +363,9 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	for (max_idx = 0; max_idx < total_max_finer; max_idx++) {
 		size_t max_pos = maxs_finer[max_idx];
 		double difference_ratio = epdf_finer[max_pos] / epdf[max_pos];
+		double max_ratio = epdf[max_pos] / max_value;
 
-		if (difference_ratio > 1.7 && epdf[max_pos] > 0.05 * max_value) {
+		if (difference_ratio > 1.7 && max_ratio > 0.10) {
 			// Found a peak that grows considerably when compared to the smoother EPDF.
 			// Most probably, this is a peak of a mixture, so we have to insert a new partition.
 
@@ -379,7 +380,8 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 				part_idx++;
 
 #ifdef VERBOSE_INITIALESTIM
-			printf("Found extra peak ratio %lf at x[%zu] = %lf, comp after is %zu\n", difference_ratio, max_pos, epdf_x[max_pos], part_idx);
+			printf("Found extra peak ratio %lf at x[%zu] = %lf (EPDF value %lf, %.3lf %% of max), comp after is %zu\n",
+				   difference_ratio, max_pos, epdf_x[max_pos], epdf[max_pos], max_ratio * 100, part_idx);
 #endif
 
 			if (part_idx > 0) {
