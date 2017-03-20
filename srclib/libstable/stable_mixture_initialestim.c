@@ -132,10 +132,11 @@ static void _component_initial_estimation(StableDist* comp, double start_x, doub
 	printf("Estimation parameters: %lf %lf\n", sep_logratio, asym_log);
 #endif
 
-	comp->alfa = _do_alpha_estim(sep_logratio, asym_log);
-	comp->beta = _do_beta_estim(comp->alfa, asym_log);
-	comp->sigma = _do_sigma_estim(comp->alfa, comp->beta, sep_95);
-	comp->mu_0 = epdf_x[max_pos];
+	stable_setparams(comp,
+					 _do_alpha_estim(sep_logratio, asym_log),
+					 _do_beta_estim(comp->alfa, asym_log),
+					 _do_sigma_estim(comp->alfa, comp->beta, sep_95),
+					 epdf_x[max_pos], 0);
 }
 
 /**
