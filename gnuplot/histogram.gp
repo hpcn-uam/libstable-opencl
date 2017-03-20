@@ -9,9 +9,12 @@ stats 'mixtures_rnd.dat' nooutput
 bincount = 200
 recordnum = STATS_records
 iqwidth = (STATS_up_quartile - STATS_lo_quartile)
-xstart = STATS_lo_quartile - iqwidth
-xend = STATS_up_quartile + iqwidth
+xstart = STATS_lo_quartile - iqwidth * 1.5
+xend = STATS_up_quartile + iqwidth * 1.5
 binwidth = (xend - xstart) / bincount
+
+if (xstart < STATS_min) xstart = STATS_min
+if (xend > STATS_max) xend = STATS_max
 
 # set term wxt size 1200,800
 
