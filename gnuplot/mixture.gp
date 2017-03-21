@@ -1,5 +1,3 @@
-set term aqua enhanced font "Times-Roman, 18" dashed size 1900,1080
-
 bin(x,width)=width*floor(x/width) + width/2.0
 
 stats 'mixtures_rnd.dat' nooutput
@@ -13,6 +11,10 @@ binwidth = (xend - xstart) / bincount
 
 if (xstart < STATS_min) xstart = STATS_min
 if (xend > STATS_max) xend = STATS_max
+
+if (exists("outfile")) set term pngcairo size 1920,1080
+if (exists("outfile")) set output outfile
+if (!exists("outfile")) set term aqua enhanced font "Times-Roman, 18" dashed size 1900,1080
 
 ### Tics
 
@@ -83,6 +85,4 @@ plot \
 	'mixtures_rnd.dat' using (bin($1,binwidth)):(1 / (binwidth * recordnum)) smooth freq with boxes title 'Data' ls 1, \
 	'mixtures_dat.dat' using 1:3 w l ls 2 lw 3 title 'Predicted PDF'
 
-unset multiplot
-pause 4
-reread
+if (!exists("outfile")) unset multiplot; pause 4; reread

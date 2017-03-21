@@ -24,4 +24,6 @@ for f in $(ls $input_folder); do
 	gnuplot -e "outfile='$output_folder/$f-hist.png'" gnuplot/histogram.gp
 	echo "- Plotting ECDF"
 	gnuplot -e "outfile='$output_folder/$f-ecdf.png'" gnuplot/ecdf.gp
+	echo "- Plotting MonteCarlo evolution"
+	gnuplot -e "outfile='$output_folder/$f-evolution.png'" gnuplot/mixture.gp
 done
