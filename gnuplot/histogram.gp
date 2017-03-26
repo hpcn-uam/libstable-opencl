@@ -8,10 +8,14 @@ stats 'mixtures_rnd.dat' nooutput
 
 bincount = 200
 recordnum = STATS_records
+
+percval(n) = system(sprintf("head -n %d mixtures_rnd.dat | tail -n 1", ceil(n * recordnum)))
+
 iqwidth = (STATS_up_quartile - STATS_lo_quartile)
-xstart = STATS_lo_quartile - iqwidth * 1.5
-xend = STATS_up_quartile + iqwidth * 1.5
+xstart = percval(0.02) - iqwidth * 0.1
+xend = percval(0.9)
 binwidth = (xend - xstart) / bincount
+
 
 if (xstart < STATS_min) xstart = STATS_min
 if (xend > STATS_max) xend = STATS_max
