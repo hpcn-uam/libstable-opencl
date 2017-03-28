@@ -1,6 +1,7 @@
 #!/bin/bash
 
 input_folder="$1"
+ls_target="$1"
 output_folder="results/mixtures"
 
 function on_exit() # Called by trap
@@ -15,9 +16,14 @@ if [ -z "$1" ]; then
 	exit 1
 fi
 
+if [ -f "$input_folder" ]; then
+	input_folder="$(dirname $input_folder)"
+fi
+
 mkdir -p $output_folder
 
-for f in $(ls $input_folder); do
+for f in $(ls $ls_target); do
+	f="$(basename $f)"
 	echo "Estimation for $f..."
 	bin/release/mixtures "$input_folder/$f" > "$output_folder/$f.txt"
 	echo "- Plotting histogram"
