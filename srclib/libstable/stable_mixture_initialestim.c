@@ -14,7 +14,7 @@
 double MIXTURE_KERNEL_ADJUST = 0.9;
 double MIXTURE_KERNEL_ADJUST_FINER = 0.12 * 0.9;
 
-// #define VERBOSE_INITIALESTIM
+#define VERBOSE_INITIALESTIM
 
 #define nan_safeguard(n, defval) (isnan(n) ? (defval) : n)
 
