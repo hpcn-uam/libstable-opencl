@@ -23,7 +23,7 @@
             "options_c":
             {
                 "use_only_additional_options": true,
-                "additional_options_file": "/Users/gjulianm/Dropbox/HPCN/cuda/libstable/.astylerc"
+                "additional_options_file": "${project_path}/.astylerc"
                 // "additional_options_file": "${folder:${project_path:hpcap.sublime-project}}/.astylerc"
             },
         	"autoformat_on_save": true
