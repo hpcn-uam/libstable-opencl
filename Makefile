@@ -8,7 +8,7 @@ BENCHMARK_CFLAGS =  $(RELEASE_CFLAGS) -DBENCHMARK
 RELEASE_CFLAGS = -O3 -march=native -DSTABLE_MIN_LOG=1
 PROFILE_CFLAGS = $(RELEASE_CFLAGS) -ggdb -pg
 SIMULATOR_CFLAGS = $(DEBUG_CFLAGS) -DSIMULATOR_BUILD
-E_LIBS = $(shell pkg-config --libs gsl) -pthread
+E_LIBS = -lm $(shell pkg-config --libs gsl) -pthread
 LIBDIRS = -Llib/debug
 
 PROJECT_NAME = libstable
@@ -72,6 +72,16 @@ include Makefile.$(shell uname)
 ### Makefile plugins
 
 ### End Makefile plugins
+
+### Sanity checks
+
+PKG_CONFIG := $(shell command -v pkg-config 2> /dev/null)
+
+ifeq (,$(PKG_CONFIG))
+$(error $(PKG_CONFIG) pkg-config not available, please install it)
+endif
+
+### End sanity checks
 
 .PRECIOUS: %.o %.d %.g
 .PHONY: benchmark clean pack doxydoc docclean benchmark-run configs $(TARGETS) depend
