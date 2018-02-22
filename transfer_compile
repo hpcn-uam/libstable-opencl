@@ -1,0 +1,78 @@
+#!/bin/bash
+
+## Some variables and functions for formatting output
+tbold=$(tput bold)
+treset=$(tput sgr0)
+tred=$(tput setaf 1)
+tgreen=$(tput setaf 2)
+tyellow=$(tput setaf 3)
+
+function echob()
+{
+	local out="$@"
+	[ -t 1 ] && out="${tbold}${out}${treset}"
+	echo -e "${out}"
+}
+
+function usage() {
+cat << EOF
+Usage: ${0##*/} [-th] [-r remote_host] [-p remote_path]
+Transfer the files nicely.
+Options:
+	-h: Show this help.
+	-r remote_host: Transfer to this host. Default is $host.
+	-p remote_path: Store in the given path. Default is $path.
+	-t: Only transfer, do not compile.
+EOF
+}
+
+host=ariane
+path=libstable
+
+OPTIND=1
+while getopts 'hp:r:t' opt; do
+	case "$opt" in
+		h) usage; exit 0 ;;
+		p) path="$OPTARG" ;;
+		r) host="$OPTARG" ;;
+		t) remote_build="false" ;;
+		'?') usage; exit 1;;
+	esac
+done
+
+function remote_make()
+{
+	path=$1
+	name=$2
+	target=$3
+
+
+	out=$(ssh -t $host "cd $path; make $target" 2>&1)
+	retval=$?
+	echo "$out" | ./hilite.sh -f red [Ee]rror | ./hilite.sh -f yellow warning
+
+	if [ $retval -ne 0 ]; then
+		echob ${tred}Compilation failed.
+		exit 1
+	fi
+
+	echog $name is compiling.
+}
+
+echob "Syncing files to $host:$path..."
+
+rsync -avzP --exclude=.git --exclude=data --exclude=results \
+	--exclude=obj --exclude=bin --exclude=lib --exclude="*pdf" \
+	--exclude="*.dat" --exclude="*.results" --exclude="*.txt" \
+	--exclude="*.out" --exclude="*.sql" \
+	./ $host:$path || (echo ${tred}Sync failed.${tnorm} && exit 1)
+
+echob "Synced."
+
+if [ "$remote_build" = "true" ]; then
+	echob "Remoting to compile..."
+
+	remote_make $path All all
+fi
+
+echob "transfer_compile done."

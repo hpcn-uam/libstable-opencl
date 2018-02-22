@@ -29,7 +29,6 @@ Makefile.neptuno
 *.pyc
 copy_results
 parse_results
-transfer_compile
 save_results
 plot
 GKPoints.nb
