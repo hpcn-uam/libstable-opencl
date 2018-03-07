@@ -259,7 +259,7 @@ FILE * stable_set_FLOG(char * filename);
 
 
 StableDist *stable_create(double alfa, double beta, double sigma, double mu,
-						  int parametrization);
+                          int parametrization);
 
 short stable_activate_gpu(StableDist* dist);
 void stable_deactivate_gpu(StableDist* dist);
@@ -287,14 +287,14 @@ StableDist *stable_copy(StableDist *src_dist);
 void stable_free(StableDist *dist);
 
 int stable_setparams(StableDist *dist,
-					 double alfa, double beta, double sigma, double mu,
-					 int parametrization);
+                     double alfa, double beta, double sigma, double mu,
+                     int parametrization);
 
 int stable_checkparams(double alfa, double beta, double sigma, double mu,
-					   int parametrization);
+                       int parametrization);
 
 void error_handler(const char * reason, const char * file,
-				   int line, int gsl_errno);
+                   int line, int gsl_errno);
 
 /**
  * Gets the parameters of the distribution in an array.
@@ -333,14 +333,14 @@ double stable_pdf_point_ALFA_1(StableDist *dist, const double x, double *err);
 double stable_pdf_point(StableDist *dist, const double x, double *err);
 
 void stable_pdf(StableDist *dist, const double x[], const int Nx,
-				double *pdf, double *err);
+                double *pdf, double *err);
 
 void stable_pdf_gpu(StableDist *dist, const double x[], const int Nx,
-					double *pdf, double *err);
+                    double *pdf, double *err);
 
 
 void stable_pcdf_gpu(StableDist *dist, const double x[], const int Nx,
-					 double *pcdf, double *cdf);
+                     double *pcdf, double *cdf);
 
 /******************************************************************************/
 /*   PDF integrand functions                                                  */
@@ -371,10 +371,10 @@ double stable_cdf_point_ALFA_1(StableDist *dist, const double x, double *err);
 double stable_cdf_point(StableDist *dist, const double x, double *err);
 
 void stable_cdf(StableDist *dist, const double x[], const int Nx,
-				double *cdf, double *err);
+                double *cdf, double *err);
 
 void stable_cdf_gpu(StableDist *dist, const double x[], const int Nx,
-					double *cdf, double *err);
+                    double *cdf, double *err);
 
 /******************************************************************************/
 /*   CDF integrad functions                                                   */
@@ -388,10 +388,10 @@ double stable_cdf_g(double theta, void *dist);
 
 double stable_inv_point(StableDist * dist, const double q, double * err);
 void   stable_inv(StableDist *dist, const double q[], const int Nq,
-				  double * inv, double * err);
+                  double * inv, double * err);
 double stable_inv_point_gpu(StableDist* dist, const double q, double *err);
 short stable_inv_gpu(StableDist *dist, const double q[], const int Nq,
-					 double *inv, double *err);
+                     double *inv, double *err);
 
 /************************************************************************
  ************************************************************************
@@ -514,18 +514,18 @@ FILE * stable_v_get_FLOG();
 FILE * stable_v_set_FLOG(char * filename);
 
 StableDistV *stable_v_create(double alfa, double beta, double sigma, double mu,
-							 int parametrization);
+                             int parametrization);
 
 StableDistV *stable_v_copy(StableDistV *src_dist);
 
 void stable_v_free(StableDistV *dist);
 
 int stable_v_setparams(StableDistV *dist,
-					   double alfa, double beta, double sigma, double mu,
-					   int parametrization);
+                       double alfa, double beta, double sigma, double mu,
+                       int parametrization);
 
 int stable_v_checkparams(double alfa, double beta, double sigma, double mu,
-						 int parametrization);
+                         int parametrization);
 
 double stable_v_pdf_point(StableDistV *dist, const double x, double *err);
 
@@ -534,17 +534,17 @@ double stable_v_cdf_point(StableDistV *dist, const double x, double *err);
 double stable_v_rnd_value(StableDistV *dist);
 
 void stable_v_pdf(StableDistV *dist, const double x[], const unsigned int Nx,
-				  double *pdf, double *err);
+                  double *pdf, double *err);
 
 void stable_v_cdf(StableDistV *dist, const double x[], const unsigned int Nx,
-				  double *cdf, double *err);
+                  double *cdf, double *err);
 
 double *stable_v_rnd(StableDistV *dist, const unsigned int n);
 
 void stable_v_integration(StableDistV *dist, double(func)(double, void*),
-						  double a, double b, double epsabs, double epsrel,
-						  unsigned short limit,
-						  double *result, double *abserr, unsigned short method);
+                          double a, double b, double epsabs, double epsrel,
+                          unsigned short limit,
+                          double *result, double *abserr, unsigned short method);
 //void stable_v_error_handler(int errnum);
 
 
@@ -566,13 +566,36 @@ typedef struct {
 	unsigned int length;
 	double nu_c;
 	double nu_z;
-}
-stable_like_params;
+} stable_like_params;
+
+struct stable_mcmc_settings {
+	size_t max_iterations;
+	size_t burnin_period;
+	size_t location_lock_iterations;
+	size_t fix_components_during_last_n_iterations;
+	short fix_components;
+	short estimate_weight;
+	short skip_initial_estimation;
+	short decrement_generation_variance;
+	size_t num_alternative_parameters;
+	char debug_data_fname[100];
+	double*** param_values;
+	double** weights;
+	double acceptance_ratio;
+	double** final_param_avg;
+	double** final_param_std;
+	double* final_weight_avg;
+	double* final_weight_std;
+	double*** correlations;
+	double ks_test;
+	size_t num_iterations;
+	size_t num_final_components;
+};
 
 /* Estimation functions */
 
 short stable_fit_init(StableDist *dist, const double *data,
-					  const unsigned int length,  double *nu_c, double *nu_z);
+                      const unsigned int length,  double *nu_c, double *nu_z);
 
 int stable_fit_koutrouvelis(StableDist *dist, const double *data, const unsigned int length);
 
@@ -586,13 +609,18 @@ int stable_fit_whole(StableDist *dist, const double *data, const unsigned int le
 
 int stable_fit_mixture(StableDist *dist, const double* data, const unsigned int length);
 
+int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsigned int length, struct stable_mcmc_settings* settings);
+
+void stable_fit_mixture_print_results(struct stable_mcmc_settings* settings);
+void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings);
+
 /* Auxiliary functions */
 
 gsl_complex stable_samplecharfunc_point(const double x[],
-										const unsigned int N, double t);
+                                        const unsigned int N, double t);
 
 void stable_samplecharfunc(const double x[], const unsigned int Nx,
-						   const double t[], const unsigned int Nt, gsl_complex * z);
+                           const double t[], const unsigned int Nt, gsl_complex * z);
 
 void stable_fft(double *data, const unsigned int length, double * y);
 
@@ -603,7 +631,7 @@ double stable_loglikelihood(StableDist *dist, double *data, const unsigned int l
 int stable_fit_iter_whole(StableDist *dist, const double * data, const unsigned int length);
 
 int stable_fit_iter(StableDist *dist, const double * data,
-					const unsigned int length, const double nu_c, const double nu_z);
+                    const unsigned int length, const double nu_c, const double nu_z);
 
 double stable_loglike_p(stable_like_params *params);
 
@@ -650,8 +678,8 @@ void stable_rnd_seed(StableDist * dist, unsigned long int s);
  * @param eval    Evaluation function (e.g, stable_pdf, stable_cdf...)
  */
 void _stable_evaluate_mixture(StableDist *dist, const double x[], const int Nx,
-							  double *result1, double *result2,
-							  array_evaluator eval);
+                              double *result1, double *result2,
+                              array_evaluator eval);
 
 
 #endif //STABLE_API_H

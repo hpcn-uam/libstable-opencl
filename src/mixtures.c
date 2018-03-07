@@ -168,7 +168,9 @@ int main(int argc, char **argv)
 		memset(pdf, 0, sizeof(double) * epdf_points);
 
 	printf("Starting mixture estimation.\n");
-	stable_fit_mixture(dist, rnd, num_points);
+	stable_fit_mixture_default_settings(&settings);
+	stable_fit_mixture_settings(dist, rnd, num_points, &settings);
+	stable_fit_mixture_print_results(&settings);
 
 	stable_pdf(dist, x, epdf_points, pdf_predicted, NULL);
 	stable_cdf(dist, x, epdf_points, cdf, NULL);
