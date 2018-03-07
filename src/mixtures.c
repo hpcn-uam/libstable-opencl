@@ -33,6 +33,7 @@ int main(int argc, char **argv)
 	size_t min_points = 1000;
 	size_t epdf_points;
 	size_t i;
+	struct stable_mcmc_settings settings;
 
 	assert(MAX_POINTS >= num_points);
 
@@ -122,6 +123,19 @@ int main(int argc, char **argv)
 	mx = rnd[num_points - 1];
 
 	printf("Data full range is [%lf:%lf]\n", mn, mx);
+
+	if (mx - mn > 100) {
+		double midpoint;
+
+		if (has_real_pdf)
+			midpoint = gsl_stats_mean(mus, 1, num_components);
+		else
+			midpoint = (mn + mx) / 2;
+
+		mx = midpoint + 50;
+		mn = midpoint - 50;
+		printf("Range is too big, reducing to [%lf:%lf] for initial plotting (does not affect mixtures)\n", mn, mx);
+	}
 
 	epdf_points = (mx - mn) / epdf_resolution;
 
