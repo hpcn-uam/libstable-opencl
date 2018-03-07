@@ -224,6 +224,7 @@ struct component_partition {
 	size_t begin_idx;
 	size_t end_idx;
 	size_t max_idx;
+	double max_value;
 	short found_in_finer_epdf;
 };
 
@@ -234,6 +235,20 @@ static int _compar_partition(const void* a, const void* b)
 
 	// Cast to int to allow signed results
 	return ((int) pa->begin_idx) - ((int) pb->begin_idx);
+}
+
+static int _compar_partition_importance(const void* a, const void* b)
+{
+	const struct component_partition* pa = (const struct component_partition*) a;
+	const struct component_partition* pb = (const struct component_partition*) b;
+
+	if (pa->found_in_finer_epdf != pb->found_in_finer_epdf)
+		return pa->found_in_finer_epdf - pb->found_in_finer_epdf;
+
+	if (fabs(pa->max_value - pb->max_value) < 1e-10)
+		return 0;
+
+	return pa->max_value > pb->max_value ? 1 : -1;
 }
 
 static double get_dataset_typical_step(const double* vals, size_t n)
@@ -331,6 +346,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 			mixture_partition[current_partition].begin_idx = current_lowest_min_pos;
 			mixture_partition[current_partition].max_idx = maxs[max_idx];
 			mixture_partition[current_partition].found_in_finer_epdf = 0;
+			mixture_partition[current_partition].max_value = epdf[maxs[max_idx]];
 
 			if (current_partition > 0)
 				mixture_partition[current_partition - 1].end_idx = current_lowest_min_pos;
@@ -411,6 +427,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 			mixture_partition[total_partitions].max_idx = max_pos;
 			mixture_partition[total_partitions].found_in_finer_epdf = 1;
+			mixture_partition[total_partitions].max_value = epdf[maxs[max_idx]];
 
 			total_partitions++;
 			second_pass_partitions++;
@@ -421,6 +438,13 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	}
 
 	printf("Found %zu components in the second pass, for a total of %zu\n", second_pass_partitions, total_partitions);
+
+	if (total_partitions > dist->max_mixture_components) {
+		qsort(mixture_partition, total_partitions, sizeof(struct component_partition), _compar_partition_importance);
+		total_partitions = dist->max_mixture_components;
+
+		printf("More partitions than accepted in maximum, keeping only the %zu best\n", dist->max_mixture_components);
+	}
 
 	stable_set_mixture_components(dist, total_partitions);
 
