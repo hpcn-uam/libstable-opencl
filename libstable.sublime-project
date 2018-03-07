@@ -1,32 +1,46 @@
 {
+	"build_systems":
+	[
+		{
+			"file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
+			"name": "Anaconda Python Builder",
+			"selector": "source.python",
+			"shell_cmd": "\"python\" -u \"$file\""
+		}
+	],
 	"folders":
 	[
 		{
-			"path": "./",
-			"folder_exclude_patterns": ["bin", "obj", "pcap", "doc"]
+			"folder_exclude_patterns":
+			[
+				"bin",
+				"obj",
+				"pcap",
+				"doc"
+			],
+			"path": "./"
 		}
 	],
 	"settings":
 	{
+		"AStyleFormatter":
+		{
+			"autoformat_on_save": true,
+			"options_c":
+			{
+				"additional_options_file": "${project_path}/.astylerc",
+				"use_only_additional_options": true
+			}
+		},
 		"sublimeclang_options":
-    	[
-    		"-I${folder:${project_path:libstable.sublime-project}}/includes",
-    		"-I/System/Library/Frameworks/OpenCL.framework/Headers",
-    		"-I/opt/local/include/",
-    		"-Wall",
-    		"-pedantic",
-    		"-std=c99",
-    		"-D_GNU_SOURCE"
-       	],
-       	"AStyleFormatter":
-        {
-            "options_c":
-            {
-                "use_only_additional_options": true,
-                "additional_options_file": "${project_path}/.astylerc"
-                // "additional_options_file": "${folder:${project_path:hpcap.sublime-project}}/.astylerc"
-            },
-        	"autoformat_on_save": true
-        }
+		[
+			"-I${folder:${project_path:libstable.sublime-project}}/includes",
+			"-I/System/Library/Frameworks/OpenCL.framework/Headers",
+			"-I/opt/local/include/",
+			"-Wall",
+			"-pedantic",
+			"-std=c99",
+			"-D_GNU_SOURCE"
+		]
 	}
 }
