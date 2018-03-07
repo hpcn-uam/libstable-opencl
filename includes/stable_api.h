@@ -577,6 +577,7 @@ struct stable_mcmc_settings {
 	short estimate_weight;
 	short skip_initial_estimation;
 	short decrement_generation_variance;
+	short handle_signal;
 	size_t num_alternative_parameters;
 	char debug_data_fname[100];
 	double*** param_values;

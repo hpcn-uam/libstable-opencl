@@ -37,7 +37,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <gsl/gsl_sf_gamma.h>
-
+#include <gsl/gsl_statistics_double.h>
+#include <gsl/gsl_statistics.h>
 
 #define FUNC(x) ((*func)(x,args))
 
@@ -721,4 +722,35 @@ double probks(double alam)
 	}
 
 	return 1.0;
+}
+
+double gelman_rubin(struct stable_mcmc_settings* settings, size_t num_chains, size_t param_idx)
+{
+	size_t c;
+	double b = 0, w = 0, all_mean = 0;
+	double n = settings[0].num_iterations - settings[0].burnin_period;
+	double m = num_chains;
+	double v;
+
+	for (c = 0; c < num_chains; c++)
+		all_mean += settings[c].final_param_avg[0][param_idx] / num_chains;
+
+	for (c = 0; c < num_chains; c++) {
+		b += gsl_pow_2(settings[c].final_param_avg[0][param_idx] - all_mean);
+		w += gsl_pow_2(settings[c].final_param_std[0][param_idx]);
+	}
+
+	b *= n / (m - 1);
+	w /= m;
+
+	v = w * (n - 1) / n + b * (m + 1) / (m * n);
+
+	return sqrt(v / w);
+}
+
+double autocorrelation(double* values, size_t num_values, size_t lag)
+{
+	size_t valid_vals = num_values - lag;
+
+	return gsl_stats_correlation(values, 1, values + lag, 1, valid_vals);
 }

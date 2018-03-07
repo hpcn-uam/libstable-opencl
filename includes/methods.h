@@ -142,4 +142,9 @@ double kstest(const double* samples, size_t nsamples, const double* cdf, double*
  * @return      Probability
  */
 double probks(double alam);
+
+struct stable_mcmc_settings;
+
+double gelman_rubin(struct stable_mcmc_settings* settings, size_t num_chains, size_t param_idx);
+double autocorrelation(double* values, size_t num_values, size_t lag);
 #endif

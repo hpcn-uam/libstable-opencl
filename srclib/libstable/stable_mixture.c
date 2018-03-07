@@ -18,9 +18,9 @@
 
 #define RNG_STD 0.05
 
-#define VERBOSE_MIXTURE
+// #define VERBOSE_MIXTURE
 #define VERBOSE_SPLITCOMBINE
-#define DEBUG
+// #define DEBUG
 
 /**
  * A common function for evaluation of mixtures, calling a base function.
@@ -463,6 +463,8 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->fix_components = 0;
 	settings->estimate_weight = 1;
 	settings->skip_initial_estimation = 0;
+	settings->decrement_generation_variance = 0;
+	settings->handle_signal = 0;
 
 	strncpy(settings->debug_data_fname, "mixture_debug.dat", sizeof(settings->debug_data_fname));
 }
@@ -546,8 +548,10 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 			previous_param_probs[i][j] = 1;
 	}
 
-	signal(SIGINT, handle_signal);
-	signal(SIGTERM, handle_signal);
+	if (settings->handle_signal) {
+		signal(SIGINT, handle_signal);
+		signal(SIGTERM, handle_signal);
+	}
 
 	fprintf(debug_data, "0 %zu", dist->num_mixture_components);
 
@@ -559,6 +563,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 	}
 
 	fprintf(debug_data, "\n");
+	stop = 0;
 
 	for (i = 0; i < settings->burnin_period + settings->max_iterations && !stop; i++) {
 		// Async launch of all the integration orders.
@@ -859,7 +864,5 @@ void stable_fit_mixture_print_results(struct stable_mcmc_settings* settings)
 
 			printf("\n");
 		}
-
 	}
-
 }
