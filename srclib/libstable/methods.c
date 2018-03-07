@@ -728,7 +728,7 @@ double gelman_rubin(struct stable_mcmc_settings* settings, size_t num_chains, si
 {
 	size_t c;
 	double b = 0, w = 0, all_mean = 0;
-	double n = settings[0].num_iterations - settings[0].burnin_period;
+	double n = settings[0].num_samples - settings[0].burnin_period;
 	double m = num_chains;
 	double v;
 

@@ -573,6 +573,8 @@ struct stable_mcmc_settings {
 	size_t burnin_period;
 	size_t location_lock_iterations;
 	size_t fix_components_during_last_n_iterations;
+	size_t thinning;
+	size_t num_samples;
 	short fix_components;
 	short estimate_weight;
 	short skip_initial_estimation;

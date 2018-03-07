@@ -465,6 +465,7 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->skip_initial_estimation = 0;
 	settings->decrement_generation_variance = 0;
 	settings->handle_signal = 0;
+	settings->thinning = 1;
 
 	strncpy(settings->debug_data_fname, "mixture_debug.dat", sizeof(settings->debug_data_fname));
 }
@@ -485,11 +486,11 @@ static void _mcmc_settings_allocate_arrays(struct stable_mcmc_settings* settings
 		settings->param_values[i] = calloc(MAX_STABLE_PARAMS, sizeof(double*));
 		settings->final_param_avg[i] = calloc(MAX_STABLE_PARAMS, sizeof(double));
 		settings->final_param_std[i] = calloc(MAX_STABLE_PARAMS, sizeof(double));
-		settings->weights[i] = calloc(settings->max_iterations + settings->burnin_period, sizeof(double));
+		settings->weights[i] = calloc(settings->max_iterations, sizeof(double));
 		settings->correlations[i] = calloc(MAX_STABLE_PARAMS, sizeof(double**));
 
 		for (j = 0; j < MAX_STABLE_PARAMS; j++) {
-			settings->param_values[i][j] = calloc(settings->max_iterations + settings->burnin_period, sizeof(double));
+			settings->param_values[i][j] = calloc(settings->max_iterations, sizeof(double));
 			settings->correlations[i][j] = calloc(MAX_STABLE_PARAMS, sizeof(double*));
 		}
 	}
@@ -627,7 +628,8 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 					} else
 						memcpy(previous_pdf, pdf, sizeof(double) * length);
 
-					settings->param_values[comp_idx][param_idx][i] = new_params[param_idx];
+					if (i >= settings->burnin_period && (i - settings->burnin_period) % settings->thinning == 0)
+						settings->param_values[comp_idx][param_idx][(i - settings->burnin_period) / settings->thinning] = new_params[param_idx];
 
 #ifdef VERBOSE_MIXTURE
 					fprintf(stderr, "I%zuC%zu %s %.3lf -> %.3lf probability %.3g Accept %hd\n",
@@ -737,7 +739,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 		fprintf(debug_data, "\n");
 		fflush(debug_data);
 
-		if (i <= settings->burnin_period)
+		if (i < settings->burnin_period)
 			num_considered_moves = 0;
 		else
 			total_changes += num_changes;
@@ -750,6 +752,9 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 				component->mixture_montecarlo_variance *= 0.99999;
 			}
 		}
+
+		if (i > settings->burnin_period && (i - settings->burnin_period) % settings->thinning)
+			settings->num_samples++;
 	}
 
 	settings->acceptance_ratio = ((double)total_changes) / num_considered_moves;
@@ -773,20 +778,26 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 static void _stable_fix_mixture_finalize(StableDist *dist, const double* data, const unsigned int length, struct stable_mcmc_settings* settings)
 {
 	size_t comp_idx, param_idx;
-	size_t num_valid_iter = settings->num_iterations - settings->burnin_period;
+	size_t num_valid_samples = settings->num_samples;
 	double new_params[MAX_STABLE_PARAMS];
-	printf("%zu\n", num_valid_iter);
+	printf("%zu\n", num_valid_samples);
 
 	for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
-			double param_avg = gsl_stats_mean(settings->param_values[comp_idx][param_idx] + settings->burnin_period, 1, num_valid_iter);
-			double param_std = gsl_stats_sd(settings->param_values[comp_idx][param_idx] + settings->burnin_period, 1, num_valid_iter);
+			double param_avg = gsl_stats_mean(settings->param_values[comp_idx][param_idx], 1, num_valid_samples);
+			double param_std = gsl_stats_sd(settings->param_values[comp_idx][param_idx], 1, num_valid_samples);
 
 			if (settings->fix_components_during_last_n_iterations > 0 && (param_avg != 0 && param_std / fabs(param_avg) > 0.01)) {
 				size_t check_only_last = settings->fix_components_during_last_n_iterations;
-				size_t last_valid = check_only_last < num_valid_iter ? num_valid_iter - check_only_last : 0;
-				param_avg = gsl_stats_mean(settings->param_values[comp_idx][param_idx] + last_valid + settings->burnin_period, 1, check_only_last);
-				param_std = gsl_stats_sd(settings->param_values[comp_idx][param_idx] + last_valid + settings->burnin_period, 1, check_only_last);
+				size_t last_valid = num_valid_samples - check_only_last;
+
+				if (check_only_last >= num_valid_samples) {
+					last_valid = 0;
+					check_only_last = num_valid_samples;
+				}
+
+				param_avg = gsl_stats_mean(settings->param_values[comp_idx][param_idx] + last_valid, 1, check_only_last);
+				param_std = gsl_stats_sd(settings->param_values[comp_idx][param_idx] + last_valid, 1, check_only_last);
 			}
 
 			settings->final_param_avg[comp_idx][param_idx] = param_avg;
@@ -794,8 +805,8 @@ static void _stable_fix_mixture_finalize(StableDist *dist, const double* data, c
 			new_params[param_idx] = param_avg;
 		}
 
-		double weight_avg = gsl_stats_mean(settings->weights[comp_idx] + settings->burnin_period, 1, num_valid_iter);
-		double weight_sd = gsl_stats_sd(settings->weights[comp_idx] + settings->burnin_period, 1, num_valid_iter);
+		double weight_avg = gsl_stats_mean(settings->weights[comp_idx], 1, num_valid_samples);
+		double weight_sd = gsl_stats_sd(settings->weights[comp_idx], 1, num_valid_samples);
 
 		dist->mixture_weights[comp_idx] = weight_avg;
 		stable_setparams_array(dist->mixture_components[comp_idx], new_params);
@@ -810,8 +821,8 @@ static void _stable_fix_mixture_finalize(StableDist *dist, const double* data, c
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
 			for (size_t param2_idx = 0; param2_idx < MAX_STABLE_PARAMS; param2_idx++) {
 				settings->correlations[comp_idx][param_idx][param2_idx] = gsl_stats_correlation(
-							settings->param_values[comp_idx][param_idx] + settings->burnin_period, 1,
-							settings->param_values[comp_idx][param2_idx] + settings->burnin_period, 1, num_valid_iter);
+							settings->param_values[comp_idx][param_idx], 1,
+							settings->param_values[comp_idx][param2_idx], 1, num_valid_samples);
 
 			}
 		}
