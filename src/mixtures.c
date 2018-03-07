@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 	}
 
 	if (infile == NULL) {
-		printf("Generating random numbers...\n");
+		printf("Generating random numbers (%zu components)...\n", num_components);
 		stable_set_mixture_components(dist, num_components);
 
 		for (i = 0; i < dist->num_mixture_components; i++) {
@@ -165,6 +165,10 @@ int main(int argc, char **argv)
 	fclose(outfile);
 	printf("done\n");
 
+	printf("Activating GPU... ");
+	// stable_activate_gpu(dist);
+	printf("done\n");
+
 	printf("Plotting initial EPDF... ");
 	fflush(stdout);
 	outfile = fopen("mixtures_dat.dat", "w");
@@ -172,14 +176,12 @@ int main(int argc, char **argv)
 	for (i = 0; i < epdf_points; i++)
 		x[i] = mn + i * (mx - mn) / epdf_points;
 
-	printf("done\n");
-
-	stable_activate_gpu(dist);
-
 	if (has_real_pdf)
 		stable_pdf(dist, x, epdf_points, pdf, NULL);
 	else
 		memset(pdf, 0, sizeof(double) * epdf_points);
+
+	printf("done\n");
 
 	printf("Starting mixture estimation.\n");
 	stable_fit_mixture_default_settings(&settings);
