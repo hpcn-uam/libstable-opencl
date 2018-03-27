@@ -19,6 +19,7 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <signal.h>
 #include "stable_api.h"
 #include "benchmarking.h"
 #include "opencl_integ.h"
@@ -47,14 +48,14 @@ int main(int argc, char **argv)
 	size_t param_idx;
 	size_t i, j;
 	double alpha = 0.5, beta = 0, mu = 0, sigma = 1;
-	double min_alpha = 0.05, min_beta = 0.95;
+	double min_alpha = 0.45, min_beta = -0.95;
 	double max_alpha = 1.95, max_beta = 0.95;
 	double step = 0.1;
 	size_t num_chains = 10;
 	size_t chain;
 	size_t lag;
 	size_t min_lag = 0;
-	double autocorr;
+	double autocorr, lag1_autocorr, acc_ratio;
 	struct stable_mcmc_settings settings[num_chains];
 	double correlations[MAX_STABLE_PARAMS][MAX_STABLE_PARAMS];
 	double orig_params[MAX_STABLE_PARAMS], new_params[MAX_STABLE_PARAMS];
@@ -89,6 +90,8 @@ int main(int argc, char **argv)
 	signal(SIGINT, _handle_signal);
 	signal(SIGTERM, _handle_signal);
 
+	memset(settings, 0, sizeof(struct stable_mcmc_settings) * num_chains);
+
 	for (alpha = min_alpha; alpha <= max_alpha && !stop_prog; alpha += step) {
 		for (beta = min_beta; beta <= max_beta && !stop_prog; beta += step) {
 			printf("Generating %zu random numbers for α = %.2lf, β = %.2lf...\n", num_points, alpha, beta);
@@ -100,7 +103,10 @@ int main(int argc, char **argv)
 
 			stable_rnd(dist, rnd, num_points);
 			printf("Starting mixture estimation.\n");
+
 			min_lag = 0;
+			lag1_autocorr = 0;
+			acc_ratio = 0;
 
 			for (i = 0; i < MAX_STABLE_PARAMS; i++) {
 				deviations[i] = 0;
@@ -112,21 +118,26 @@ int main(int argc, char **argv)
 			for (chain = 0; chain < num_chains && !stop_prog; chain++) {
 				do {
 					for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++)
-						new_params[param_idx] = gsl_ran_gaussian(dist->gslrand, 0.5) + orig_params[param_idx];
+						new_params[param_idx] = gsl_ran_gaussian(dist->gslrand, 0.08) + orig_params[param_idx];
 				} while (stable_checkparams(new_params[0], new_params[1], new_params[2], new_params[3], 1) == NOVALID);
 
-				printf("Estimating chain %zu/%zu...\n", chain, num_chains);
+				printf("Estimating chain %zu/%zu | %zu random numbers for α = %.2lf, β = %.2lf...\n", chain, num_chains, num_points, alpha, beta);
+				stable_print_params_array(new_params, "Params");
+				stable_setparams_array(dist->mixture_components[0], new_params);
 
 				stable_fit_mixture_default_settings(settings + chain);
 				settings[chain].skip_initial_estimation = 1;
 				settings[chain].fix_components = 1;
 				settings[chain].location_lock_iterations = 0;
 				settings[chain].fix_components_during_last_n_iterations = 0;
-				settings[chain].max_iterations = 1000;
+				settings[chain].max_iterations = 10000;
 				settings[chain].handle_signal = 0;
+				settings[chain].thinning = 10;
 				sprintf(settings[chain].debug_data_fname, "mcmc_diag/mixture_debug_a%.2lf_b%.2lf_chain%zu.dat", alpha, beta, chain);
 
 				stable_fit_mixture_settings(dist, rnd, num_points, settings + chain);
+
+				acc_ratio += settings[chain].acceptance_ratio / num_chains;
 
 				for (i = 0; i < MAX_STABLE_PARAMS; i++) {
 					deviations[i] += fabs(settings[chain].final_param_avg[0][i] - orig_params[i]) / num_chains;
@@ -136,8 +147,12 @@ int main(int argc, char **argv)
 
 					autocorr = 20;
 
-					for (lag = 1; lag < 50 && fabs(autocorr) > 0.15; lag++)
-						autocorr = autocorrelation(settings[chain].param_values[0][i], settings[chain].num_iterations, lag);
+					for (lag = 1; lag < 20 && fabs(autocorr) > 0.15; lag++) {
+						autocorr = autocorrelation(settings[chain].param_values[0][i], settings[chain].num_samples, lag);
+
+						if (lag == 1)
+							lag1_autocorr += autocorr / num_chains;
+					}
 
 					if (lag > min_lag)
 						min_lag = lag;
@@ -146,10 +161,26 @@ int main(int argc, char **argv)
 				stable_fit_mixture_print_results(settings + chain);
 			}
 
+			fprintf(outfile, "%lf %lf %lf %zu %lf", alpha, beta, acc_ratio, min_lag, lag1_autocorr);
+
+			for (i = 0; i < MAX_STABLE_PARAMS; i++) {
+				double gr = gelman_rubin(settings, num_chains, i);
+				printf("PSRF %s: %.3lf\n", _param_names[i], gr);
+				fprintf(outfile, " %lf", gr);
+			}
+
+			for (i = 0; i < MAX_STABLE_PARAMS; i++) {
+				printf("Avg. Dev %s: %.3lf\n", _param_names[i], deviations[i]);
+				fprintf(outfile, " %lf", deviations[i]);
+			}
+
 			for (i = 0; i < MAX_STABLE_PARAMS; i++)
-				printf("PSRF %s: %.3lf\n", _param_names[i], gelman_rubin(settings, num_chains, i));
+				for (j = i + 1; j < MAX_STABLE_PARAMS; j++)
+					fprintf(outfile, " %lf", correlations[i][j]);
 
 			printf("Thinning: %zu\n", min_lag);
+			printf("Lag 1 autocorrelation: %lf\n", lag1_autocorr);
+			fprintf(outfile, "\n");
 		}
 	}
 
