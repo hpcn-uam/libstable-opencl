@@ -3,7 +3,7 @@
 remote="$1"
 
 if [ -z "$remote" ]; then
-	remote="azufre"
+	remote="ariane"
 fi
 
 function on_exit() # Called by trap
