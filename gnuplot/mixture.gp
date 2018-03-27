@@ -9,8 +9,9 @@ percval(n) = system(sprintf("head -n %d mixtures_rnd.dat | tail -n 1", ceil(n * 
 
 iqwidth = (STATS_up_quartile - STATS_lo_quartile)
 xstart = percval(0.02) - iqwidth * 0.1
-xend = percval(0.9)
+xend = percval(0.95)
 binwidth = (xend - xstart) / bincount
+trace_file = 'mcmc_diag/mixture_debug_a0.05_b-0.95_chain0.dat'
 
 
 if (xstart < STATS_min) xstart = STATS_min
@@ -44,26 +45,26 @@ set xrange [*:*]
 set multiplot layout 3, 3 title 'α-stable mixture estimation'
 
 set title "α estimation"
-plot for [i=0:10] 'mixture_debug.dat' u (column(3 + 5 * i)) w lines lw 2 title 'Comp. '.i
+plot for [i=0:10] trace_file u (column(3 + 5 * i)) w lines lw 2 title 'Comp. '.i
 
 set title "β estimation"
-plot for [i=0:10] 'mixture_debug.dat' u (column(4 + 5 * i)) w lines lw 2 title 'Comp. '.i
+plot for [i=0:10] trace_file u (column(4 + 5 * i)) w lines lw 2 title 'Comp. '.i
 
 set title "μ estimation"
-plot for [i=0:10] 'mixture_debug.dat' u (column(5 + 5 * i)) w lines lw 2 title 'Comp. '.i
+plot for [i=0:10] trace_file u (column(5 + 5 * i)) w lines lw 2 title 'Comp. '.i
 
 set title "σ estimation"
-plot for [i=0:10] 'mixture_debug.dat' u (column(6 + 5 * i)) w lines lw 2 title 'Comp. '.i
+plot for [i=0:10] trace_file u (column(6 + 5 * i)) w lines lw 2 title 'Comp. '.i
 
 set title "Weight estimation"
-plot for [i=0:10] 'mixture_debug.dat' u (column(7 + 5 * i)) w lines lw 2 title 'Comp. '.i
+plot for [i=0:10] trace_file u (column(7 + 5 * i)) w lines lw 2 title 'Comp. '.i
 
 set title "MonteCarlo data"
 set y2range [0:10]
 set y2tics
 set ytics nomirror
-plot 'mixture_debug.dat' u 1 w lines lw 2 title 'Changes', \
-	 'mixture_debug.dat' u 2 w lines title 'Number of components' lw 4 axes x1y2
+plot trace_file u 1 w lines lw 2 title 'Changes', \
+	 trace_file u 2 w lines title 'Number of components' lw 4 axes x1y2
 
 
 set title "μ moves"
@@ -72,7 +73,7 @@ plot \
 	'mixture_split.dat' u 1:2 w p title 'μ 1' lt 1 pt 5, \
 	'mixture_split.dat' u 1:3 w p title 'μ 2' lt 7 pt 5, \
 	'mixture_split.dat' u 1:4 w p title 'μ comb' lt 2 lw 2 pt 4, \
-	for [i=0:10] 'mixture_debug.dat' u (column(5 + 5 * i)) w lines lw 1 dt 2 title 'Comp. '.i
+	for [i=0:10] trace_file u (column(5 + 5 * i)) w lines lw 1 dt 2 title 'Comp. '.i
 
 set title 'Acc. probabilities'
 set yrange [0:1]

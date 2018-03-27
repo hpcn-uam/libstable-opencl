@@ -13,7 +13,7 @@ percval(n) = system(sprintf("head -n %d mixtures_rnd.dat | tail -n 1", ceil(n * 
 
 iqwidth = (STATS_up_quartile - STATS_lo_quartile)
 xstart = percval(0.02) - iqwidth * 0.1
-xend = percval(0.9)
+xend = percval(0.98)
 binwidth = (xend - xstart) / bincount
 
 
@@ -37,7 +37,7 @@ plot \
 	'mixtures_dat.dat' using 1:3 w l ls 2 lw 3 title 'Predicted PDF', \
 	'mixture_initial.dat' using 1:3 w l ls 1 lw 2 title 'Empirical PDF', \
 	'mixture_initial.dat' using 1:4 w l ls 4 lw 1 title 'Empirical PDF Finer', \
-	'mixture_initial.dat' using 1:2 w l ls 5 dt 2 lw 2 title 'Initial PDF estimation'
-	#'mixtures_dat.dat' using 1:2 w l ls 3 lw 3 title 'Real PDF'
+	'mixture_initial.dat' using 1:2 w l ls 5 dt 2 lw 2 title 'Initial PDF estimation', \
+	'mixtures_dat.dat' using 1:2 w l ls 3 lw 3 title 'Real PDF'
 
 # if (!exists("outfile")) pause -1
