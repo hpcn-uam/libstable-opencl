@@ -569,6 +569,7 @@ typedef struct {
 } stable_like_params;
 
 struct stable_mcmc_settings {
+	short _allocated;
 	size_t max_iterations;
 	size_t burnin_period;
 	size_t location_lock_iterations;

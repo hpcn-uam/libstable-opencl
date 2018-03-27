@@ -728,7 +728,7 @@ double gelman_rubin(struct stable_mcmc_settings* settings, size_t num_chains, si
 {
 	size_t c;
 	double b = 0, w = 0, all_mean = 0;
-	double n = settings[0].num_samples - settings[0].burnin_period;
+	double n = settings[0].num_samples;
 	double m = num_chains;
 	double v;
 
@@ -751,6 +751,9 @@ double gelman_rubin(struct stable_mcmc_settings* settings, size_t num_chains, si
 double autocorrelation(double* values, size_t num_values, size_t lag)
 {
 	size_t valid_vals = num_values - lag;
+
+	if (lag >= valid_vals)
+		return 0;
 
 	return gsl_stats_correlation(values, 1, values + lag, 1, valid_vals);
 }

@@ -466,6 +466,8 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->decrement_generation_variance = 0;
 	settings->handle_signal = 0;
 	settings->thinning = 1;
+	settings->num_samples = 0;
+	settings->num_iterations = 0;
 
 	strncpy(settings->debug_data_fname, "mixture_debug.dat", sizeof(settings->debug_data_fname));
 }
@@ -473,6 +475,9 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 static void _mcmc_settings_allocate_arrays(struct stable_mcmc_settings* settings, size_t max_components)
 {
 	size_t i, j;
+
+	if (settings->_allocated)
+		return;
 
 	settings->param_values = calloc(max_components, sizeof(double **));
 	settings->correlations = calloc(max_components, sizeof(double **));
@@ -494,6 +499,8 @@ static void _mcmc_settings_allocate_arrays(struct stable_mcmc_settings* settings
 			settings->correlations[i][j] = calloc(MAX_STABLE_PARAMS, sizeof(double*));
 		}
 	}
+
+	settings->_allocated = 1;
 }
 
 int stable_fit_mixture(StableDist * dist, const double * data, const unsigned int length)
@@ -683,8 +690,9 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 			fprintf(stderr, " Accepted %hd\n", accepted);
 #endif
 
-			for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++)
-				settings->weights[comp_idx][i] = dist->mixture_weights[comp_idx];
+			if (i >= settings->burnin_period && (i - settings->burnin_period) % settings->thinning == 0)
+				for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++)
+					settings->weights[comp_idx][i] = dist->mixture_weights[comp_idx];
 		}
 
 		if (!settings->fix_components) {
@@ -753,7 +761,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 			}
 		}
 
-		if (i > settings->burnin_period && (i - settings->burnin_period) % settings->thinning)
+		if (i > settings->burnin_period && (i - settings->burnin_period) % settings->thinning == 0)
 			settings->num_samples++;
 	}
 
