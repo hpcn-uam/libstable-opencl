@@ -248,7 +248,7 @@ static int _compar_partition_importance(const void* a, const void* b)
 	if (fabs(pa->max_value - pb->max_value) < 1e-10)
 		return 0;
 
-	return pa->max_value > pb->max_value ? 1 : -1;
+	return pa->max_value > pb->max_value ? -1 : 1;
 }
 
 static double get_dataset_typical_step(const double* vals, size_t n)
