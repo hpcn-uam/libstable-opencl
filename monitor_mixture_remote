@@ -14,7 +14,9 @@ function on_exit() # Called by trap
 trap on_exit INT
 
 # Initial sync
-rsync -v --exclude=mixtures_dat.dat "${remote}:libstable/mixture*" . > /dev/null
+if [ "$remote" != "localhost" ]; then
+	rsync -v --exclude=mixtures_dat.dat "${remote}:libstable/mixture*" . > /dev/null
+fi
 
 minx=$(head -n 1 mixtures_rnd.dat)
 maxx=$(tail -n 10 mixtures_rnd.dat | head -n 1)
@@ -24,7 +26,10 @@ echo "Data range is $minx $maxx"
 gnuplot gnuplot/mixture.gp &
 
 while true ; do
-	rsync --exclude=mixtures_dat.dat "${remote}:libstable/mixture*" . > /dev/null
+	if [ "$remote" != "localhost" ]; then
+		rsync --exclude=mixtures_dat.dat "${remote}:libstable/mixture*" . > /dev/null
+	fi
+
 	tail -n 1 mixture_debug.dat | awk '{ $1 = ""; $2 = ""; print }' | \
 		xargs -I{} sh -c "bin/release/stable_plot_mixture $minx $maxx {}" > tmp_result.dat
 
