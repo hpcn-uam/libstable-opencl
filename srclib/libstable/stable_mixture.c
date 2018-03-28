@@ -468,7 +468,10 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->thinning = 1;
 	settings->num_samples = 0;
 	settings->num_iterations = 0;
+	settings->location_lock_iterations = 300;
+	settings->_allocated = 0;
 
+	memset(settings->prior_functions, 0, sizeof(settings->prior_functions));
 	strncpy(settings->debug_data_fname, "mixture_debug.dat", sizeof(settings->debug_data_fname));
 }
 
@@ -606,11 +609,6 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 					// Generate a new parameter and set it in the distrubtion
 					new_params[param_idx] = rand_generators[param_idx](component);
 					stable_setparams_array(component, new_params);
-
-#ifdef DEBUG
-					fprintf(stderr, "Iter %zu: Fitter %zu testing component %zu, param %zu, alt %zu\n",
-							i, fitter_idx, comp_idx, param_idx, j);
-#endif
 					stable_pdf_gpu(dist, data, length, pdf, NULL);
 
 					jump_probability = 0;
@@ -750,6 +748,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 					dist->mixture_components[j]->mu_0, dist->mixture_components[j]->sigma,
 					dist->mixture_weights[j]);
 		}
+
 
 		fprintf(debug_data, "\n");
 		fflush(debug_data);
