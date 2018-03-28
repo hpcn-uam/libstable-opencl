@@ -568,6 +568,10 @@ typedef struct {
 	double nu_z;
 } stable_like_params;
 
+struct stable_mcmc_settings;
+
+typedef double (*prior_probability)(const StableDist*, double, const struct stable_mcmc_settings*, void*);
+
 struct stable_mcmc_settings {
 	short _allocated;
 	size_t max_iterations;
@@ -594,6 +598,8 @@ struct stable_mcmc_settings {
 	double ks_test;
 	size_t num_iterations;
 	size_t num_final_components;
+	prior_probability prior_functions[MAX_STABLE_PARAMS];
+	void* prior_parameters[MAX_STABLE_PARAMS];
 };
 
 /* Estimation functions */
@@ -640,6 +646,19 @@ int stable_fit_iter(StableDist *dist, const double * data,
 double stable_loglike_p(stable_like_params *params);
 
 double stable_minusloglikelihood(const gsl_vector * theta, void * p);
+
+struct gaussian_params {
+	double mean;
+	double variance;
+};
+
+struct invgamma_params {
+	double alpha;
+	double beta;
+};
+
+double _mixture_gaussian_prior(const StableDist* dist, double new_value, const struct stable_mcmc_settings*, struct gaussian_params* params);
+double _mixture_invgamma_prior(const StableDist* dist, double new_value, const struct stable_mcmc_settings*, struct invgamma_params* params);
 
 /**
  * Compute the Kolmogorov-Smirnov test, returning the confidence level

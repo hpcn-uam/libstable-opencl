@@ -551,9 +551,18 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		dist->mixture_components[i]->mixture_montecarlo_variance = 0.05;
+		stable_getparams_array(dist->mixture_components[i], dist_params);
 
-		for (j = 0; j < MAX_STABLE_PARAMS; j++)
-			previous_param_probs[i][j] = 1;
+		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
+			if (settings->prior_functions[param_idx])
+				previous_param_probs[i][param_idx] = settings->prior_functions[param_idx](dist, dist_params[param_idx], settings, settings->prior_parameters[param_idx]);
+			else
+				previous_param_probs[i][param_idx] = 1;
+
+#ifdef DEBUG
+			fprintf(stderr, "Component %zu, param %zu (prior %p): A priori probability of value %lf is %e\n", i, param_idx, settings->prior_functions[param_idx], dist_params[param_idx], previous_param_probs[i][param_idx]);
+#endif
+		}
 	}
 
 	if (settings->handle_signal) {
@@ -611,12 +620,10 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 
 					jump_probability = exp(jump_probability);
 
-					/* if (param_idx == STABLE_PARAM_MU)
-						param_probability = gsl_ran_gaussian_pdf(new_params[param_idx] - prior_mu_mean, sqrt(prior_mu_variance));
-					else if (param_idx == STABLE_PARAM_SIGMA)
-						param_probability = invgamma_pdf(prior_sigma_alpha, prior_sigma_beta, new_params[param_idx]);
-					else */
-					param_probability = 1;
+					if (settings->prior_functions[param_idx])
+						param_probability = settings->prior_functions[param_idx](dist, new_params[param_idx], settings, settings->prior_parameters[param_idx]);
+					else
+						param_probability = 1;
 
 					jump_probability *= (param_probability) / (previous_param_probs[comp_idx][param_idx]);
 					// jump_probability = exp(jump_probability);
@@ -884,4 +891,14 @@ void stable_fit_mixture_print_results(struct stable_mcmc_settings* settings)
 			printf("\n");
 		}
 	}
+}
+
+double _mixture_gaussian_prior(const StableDist* dist, double new_value, const struct stable_mcmc_settings* settings, struct gaussian_params* params)
+{
+	return gsl_ran_gaussian_pdf(new_value - params->mean, sqrt(params->variance));
+}
+
+double _mixture_invgamma_prior(const StableDist* dist, double new_value, const struct stable_mcmc_settings* settings, struct invgamma_params* params)
+{
+	return invgamma_pdf(params->alpha, params->beta, new_value);
 }
