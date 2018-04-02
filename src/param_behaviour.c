@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 {
 	double alfa, beta, sigma, mu_0;
 	double *x;
-	size_t nx = 6000;
+	size_t nx = 10000;
 	double pdf[nx];
 	double x_start = -5;
 	double x_end = 5;
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	stable_set_THREADS(1);
+	stable_set_THREADS(8);
 	stable_set_absTOL(1e-16);
 	stable_set_relTOL(1e-8);
 
@@ -100,10 +100,10 @@ int main(int argc, char *argv[])
 
 				peakdst = (max_x - left_x_1) - (right_x_1 - max_x);
 
-				fprintf(fout, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n",
+				fprintf(fout, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n",
 						alfa, beta, sigma, left_deriv_1, right_deriv_1,
 						left_deriv_2, right_deriv_2,
-						right_x_1 - left_x_1, right_x_2 - left_x_2, peakdst);
+						right_x_1 - left_x_1, right_x_2 - left_x_2, peakdst, max_value, max_x);
 			}
 		}
 	}
