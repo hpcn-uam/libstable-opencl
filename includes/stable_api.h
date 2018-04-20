@@ -600,6 +600,7 @@ struct stable_mcmc_settings {
 	size_t num_final_components;
 	prior_probability prior_functions[MAX_STABLE_PARAMS];
 	void* prior_parameters[MAX_STABLE_PARAMS];
+	short is_parameter_locked[MAX_STABLE_PARAMS];
 };
 
 /* Estimation functions */

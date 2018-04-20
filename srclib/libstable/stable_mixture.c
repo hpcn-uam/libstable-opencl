@@ -472,6 +472,7 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->_allocated = 0;
 
 	memset(settings->prior_functions, 0, sizeof(settings->prior_functions));
+	memset(settings->is_parameter_locked, 0, sizeof(settings->is_parameter_locked));
 	strncpy(settings->debug_data_fname, "mixture_debug.dat", sizeof(settings->debug_data_fname));
 }
 
@@ -593,8 +594,10 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 		_iteration = i;
 		store_iteration_values = i >= settings->burnin_period && (i - settings->burnin_period) % settings->thinning == 0;
 
+		settings->is_parameter_locked[STABLE_PARAM_MU] = i < settings->location_lock_iterations;
+
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
-			if (param_idx == STABLE_PARAM_MU && i < settings->location_lock_iterations)
+			if (settings->is_parameter_locked[param_idx])
 				continue;
 
 			for (j = 0; j < settings->num_alternative_parameters; j++) {
