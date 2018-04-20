@@ -25,12 +25,12 @@
 #define ALFA_START 0.3
 #define ALFA_END 2
 #define ALPHA_INCR 0.02
-#define BETA_START -0.95
-#define BETA_END 0.95
+#define BETA_START -1
+#define BETA_END 1
 #define BETA_INCR 0.02
-#define SIGMA_INCR 1
+#define SIGMA_INCR 0.25
 #define SIGMA_START SIGMA_INCR
-#define SIGMA_END 1
+#define SIGMA_END 2
 
 
 int main(int argc, char *argv[])
@@ -44,8 +44,8 @@ int main(int argc, char *argv[])
 	double x_step;
 	size_t max_pos, pos;
 	double max_value, max_x;
-	double left_deriv_1, left_deriv_2, right_deriv_1, right_deriv_2;
-	double left_x_1, left_x_2, right_x_1, right_x_2;
+	double left_deriv_1, left_deriv_2, left_deriv_3, right_deriv_1, right_deriv_2, right_deriv_3;
+	double left_x_1, left_x_2, left_x_3, right_x_1, right_x_2, right_x_3;
 	double peakdst;
 	FILE* fout;
 
@@ -64,8 +64,8 @@ int main(int argc, char *argv[])
 	}
 
 	stable_set_THREADS(8);
-	stable_set_absTOL(1e-16);
-	stable_set_relTOL(1e-8);
+	stable_set_absTOL(1e-2);
+	stable_set_relTOL(1e-2);
 
 	vector_npoints(&x, x_start, x_end, nx, &x_step);
 
@@ -98,12 +98,18 @@ int main(int argc, char *argv[])
 				right_deriv_2 = get_derivative_at_pctg_of_max(pdf + max_pos, nx - max_pos, max_value, 0.75, x_step, 0, &pos);
 				right_x_2 = x[pos + max_pos];
 
+				left_deriv_3 = get_derivative_at_pctg_of_max(pdf, max_pos, max_value, 0.85, x_step, 1, &pos);
+				left_x_3 = x[pos];
+				right_deriv_3 = get_derivative_at_pctg_of_max(pdf + max_pos, nx - max_pos, max_value, 0.85, x_step, 0, &pos);
+				right_x_3 = x[pos + max_pos];
+
 				peakdst = (max_x - left_x_1) - (right_x_1 - max_x);
 
-				fprintf(fout, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n",
+				fprintf(fout, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n",
 						alfa, beta, sigma, left_deriv_1, right_deriv_1,
 						left_deriv_2, right_deriv_2,
-						right_x_1 - left_x_1, right_x_2 - left_x_2, peakdst, max_value, max_x);
+						right_x_1 - left_x_1, right_x_2 - left_x_2, peakdst, max_value, max_x,
+						left_deriv_3, right_deriv_3, right_x_3 - left_x_3);
 			}
 		}
 	}
