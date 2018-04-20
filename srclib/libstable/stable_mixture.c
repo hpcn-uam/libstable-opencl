@@ -535,6 +535,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 	double param_probability;
 	double previous_weights[dist->max_mixture_components];
 	FILE* debug_data;
+	short store_iteration_values = 0;
 
 	debug_data = fopen(settings->debug_data_fname, "w");
 
@@ -585,9 +586,12 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 	fprintf(debug_data, "\n");
 	stop = 0;
 
+	settings->num_samples = 0;
+
 	for (i = 0; i < settings->burnin_period + settings->max_iterations && !stop; i++) {
 		// Async launch of all the integration orders.
 		_iteration = i;
+		store_iteration_values = i >= settings->burnin_period && (i - settings->burnin_period) % settings->thinning == 0;
 
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
 			if (param_idx == STABLE_PARAM_MU && i < settings->location_lock_iterations)
@@ -640,8 +644,8 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 					} else
 						memcpy(previous_pdf, pdf, sizeof(double) * length);
 
-					if (i >= settings->burnin_period && (i - settings->burnin_period) % settings->thinning == 0)
-						settings->param_values[comp_idx][param_idx][(i - settings->burnin_period) / settings->thinning] = new_params[param_idx];
+					if (store_iteration_values)
+						settings->param_values[comp_idx][param_idx][settings->num_samples] = new_params[param_idx];
 
 #ifdef VERBOSE_MIXTURE
 					fprintf(stderr, "I%zuC%zu %s %.3lf -> %.3lf probability %.3g Accept %hd\n",
@@ -695,9 +699,9 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 			fprintf(stderr, " Accepted %hd\n", accepted);
 #endif
 
-			if (i >= settings->burnin_period && (i - settings->burnin_period) % settings->thinning == 0)
+			if (store_iteration_values)
 				for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++)
-					settings->weights[comp_idx][i] = dist->mixture_weights[comp_idx];
+					settings->weights[comp_idx][settings->num_samples] = dist->mixture_weights[comp_idx];
 		}
 
 		if (!settings->fix_components) {
@@ -767,7 +771,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 			}
 		}
 
-		if (i > settings->burnin_period && (i - settings->burnin_period) % settings->thinning == 0)
+		if (store_iteration_values)
 			settings->num_samples++;
 	}
 
