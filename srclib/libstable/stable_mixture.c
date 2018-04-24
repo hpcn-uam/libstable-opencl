@@ -246,6 +246,9 @@ static short _calc_splitcombine_acceptance_ratio(
 	if (!is_split)
 		log_acceptance_ratio = - log_acceptance_ratio;
 
+	if (isinf(log_acceptance_ratio))
+		log_acceptance_ratio = -100000;
+
 	double acceptance_ratio = min(1, exp(log_acceptance_ratio));
 
 #ifdef VERBOSE_SPLITCOMBINE
