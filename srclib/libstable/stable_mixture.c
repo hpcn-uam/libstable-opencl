@@ -471,6 +471,156 @@ static int _check_combine_move(StableDist * dist, const double * data, const uns
 	return accepted;
 }
 
+static short _calc_birthdeath_ratio(StableDist * dist, const double * data, const unsigned int length, double * current_pdf, short is_birth, double new_weight)
+{
+	double new_pdf[length];
+	static size_t birth_acc = 0, birth_pro = 0;
+	static size_t death_acc = 0, death_pro = 0;
+	static FILE* fbirth = NULL;
+	short accepted;
+
+	if (!fbirth)
+		fbirth = fopen("mixture_birth.dat", "w");
+
+	stable_pdf_gpu(dist, data, length, new_pdf, NULL);
+
+	double log_likelihood_ratio = 0;
+
+	for (size_t k = 0; k < length; k++)
+		log_likelihood_ratio += log(new_pdf[k]) - log(current_pdf[k]);
+
+	if (!is_birth)
+		log_likelihood_ratio = - log_likelihood_ratio;
+
+	double log_weight_ratio = 0;
+
+	log_weight_ratio -= gsl_sf_beta(dist->prior_weights * dist->num_mixture_components, dist->prior_weights);
+	log_weight_ratio += (dist->prior_weights - 1) * new_weight;
+	log_weight_ratio += (length + dist->num_mixture_components * dist->prior_weights - dist->num_mixture_components) * (1 - new_weight);
+	log_weight_ratio += (dist->num_mixture_components + 1);
+	log_weight_ratio -= gsl_ran_beta_pdf(new_weight, 1, dist->num_mixture_components);
+	log_weight_ratio += dist->num_mixture_components * (1 - new_weight);
+
+	double log_acceptance_ratio = log_likelihood_ratio;// + log_weight_ratio;
+
+	if (!is_birth)
+		log_acceptance_ratio = - log_acceptance_ratio;
+
+	double acceptance_ratio = min(1, exp(log_acceptance_ratio));
+
+#ifdef VERBOSE_SPLITCOMBINE
+	printf("B/D Ratio: Likelihood %lf weight %lf final %lf\n", log_likelihood_ratio, log_weight_ratio, acceptance_ratio);
+#endif
+	accepted = rand_event(dist->gslrand, acceptance_ratio);
+
+	if (is_birth) {
+		birth_pro++;
+		birth_acc += accepted ? 1 : 0;
+	} else {
+		death_pro++;
+		death_acc += accepted ? 1 : 0;
+	}
+
+	fprintf(fbirth, "%zu %lf %lf %lf\n", _iteration, acceptance_ratio, ((double) birth_acc) / birth_pro, ((double) death_acc) / death_pro);
+	fflush(fbirth);
+
+	return accepted;
+}
+
+static int _check_birth_move(StableDist * dist, const double * data, const unsigned int length, double * current_pdf)
+{
+	size_t comp_idx;
+	short accepted;
+	size_t prev_comp_num = dist->num_mixture_components;
+	double new_params[MAX_STABLE_PARAMS];
+
+	if (dist->num_mixture_components == dist->max_mixture_components)
+		return 0;
+
+	stable_set_mixture_components(dist, dist->num_mixture_components + 1);
+	StableDist* comp = dist->mixture_components[dist->num_mixture_components];
+
+	double new_weight = gsl_ran_beta(dist->gslrand, 1, prev_comp_num);
+
+	new_params[STABLE_PARAM_ALPHA] = 2;
+	new_params[STABLE_PARAM_BETA] = 0;
+	new_params[STABLE_PARAM_MU] = gsl_ran_gaussian(dist->gslrand, sqrt(dist->prior_mu_variance)) + dist->prior_mu_avg;
+	new_params[STABLE_PARAM_SIGMA] = gsl_ran_gamma(dist->gslrand, dist->prior_sigma_alpha0, dist->prior_sigma_beta0);
+
+	stable_setparams_array(dist->mixture_components[prev_comp_num], new_params);
+	dist->mixture_weights[prev_comp_num] = new_weight;
+	printf("new weight %lf\n", new_weight);
+
+	for (comp_idx = 0; comp_idx < prev_comp_num; comp_idx++)
+		dist->mixture_weights[comp_idx] *= (1.0 - new_weight);
+
+#ifdef VERBOSE_SPLITCOMBINE
+	stable_print_params_array(new_params, "birthed");
+#endif
+
+	accepted = _calc_birthdeath_ratio(dist, data, length, current_pdf, 1, new_weight);
+
+	if (accepted) {
+		printf("Accepted!\n");
+		return 1;
+	} else {
+		stable_set_mixture_components(dist, dist->num_mixture_components - 1);
+
+		for (comp_idx = 0; comp_idx < prev_comp_num; comp_idx++)
+			dist->mixture_weights[comp_idx] /= (1.0 - new_weight);
+
+		return 0;
+	}
+}
+
+
+static int _check_death_move(StableDist * dist, const double * data, const unsigned int length, double * current_pdf)
+{
+	size_t comp_idx;
+	size_t orig_comp_idx;
+	short accepted;
+	size_t prev_comp_num = dist->num_mixture_components;
+	double new_params[MAX_STABLE_PARAMS];
+
+	if (dist->num_mixture_components == 1)
+		return 0;
+
+	comp_idx = gsl_rng_uniform_int(dist->gslrand, dist->num_mixture_components);
+
+	if (comp_idx < dist->num_mixture_components - 1) {
+		stable_swap_components(dist, comp_idx, dist->num_mixture_components - 1);
+		orig_comp_idx = comp_idx;
+		comp_idx = dist->num_mixture_components - 1;
+	}
+
+	double old_weight = dist->mixture_weights[comp_idx];
+	stable_getparams_array(dist->mixture_components[comp_idx], new_params);
+	stable_set_mixture_components(dist, dist->num_mixture_components - 1);
+
+	for (comp_idx = 0; comp_idx < prev_comp_num - 1; comp_idx++)
+		dist->mixture_weights[comp_idx] /= (1.0 - old_weight);
+
+#ifdef VERBOSE_SPLITCOMBINE
+	stable_print_params_array(new_params, "killing");
+#endif
+
+	accepted = _calc_birthdeath_ratio(dist, data, length, current_pdf, 0, old_weight);
+
+	if (accepted)
+		printf("Accepted!\n");
+	else {
+		stable_set_mixture_components(dist, dist->num_mixture_components + 1);
+
+		for (comp_idx = 0; comp_idx < prev_comp_num - 1; comp_idx++)
+			dist->mixture_weights[comp_idx] *= (1.0 - old_weight);
+
+		if (orig_comp_idx != comp_idx)
+			stable_swap_components(dist, comp_idx, orig_comp_idx);
+	}
+
+	return accepted; // Only 1 proposal
+}
+
 void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 {
 	settings->max_iterations = 10000;
@@ -740,6 +890,24 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 					if (_check_combine_move(dist, data, length, previous_pdf)) {
 						num_changes++;
 						printf("Accept combine\n");
+					}
+				}
+
+				if (rand_event(dist->gslrand, dist->birth_probs[dist->num_mixture_components])) {
+					printf("\nIteration %zu: Try birth\n", i);
+					num_considered_moves++;
+
+					if (_check_birth_move(dist, data, length, previous_pdf)) {
+						num_changes++;
+						printf("Accept birth\n");
+					}
+				} else if (rand_event(dist->gslrand, dist->death_probs[dist->num_mixture_components])) {
+					printf("\nIteration %zu: Try death\n", i);
+					num_considered_moves++;
+
+					if (_check_death_move(dist, data, length, previous_pdf)) {
+						num_changes++;
+						printf("Accept death\n");
 					}
 				}
 			}
