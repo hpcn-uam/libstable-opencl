@@ -258,7 +258,6 @@ static short _calc_splitcombine_acceptance_ratio(
 	printf("Acceptance ratio: %lf\n", acceptance_ratio);
 #endif
 
-	fprintf(fsplit, "%zu %lf %lf %lf %lf\n", _iteration, mu1, mu2, mu_comb, acceptance_ratio);
 	is_accepted = rand_event(dist->gslrand, acceptance_ratio);
 
 	if (is_split) {
