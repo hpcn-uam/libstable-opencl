@@ -167,8 +167,11 @@ static short _calc_splitcombine_acceptance_ratio(
 	double params_1[4], double params_2[4], double params_comb[4])
 {
 	double new_pdf[length];
+	static size_t split_acc = 0, split_pro = 0;
+	static size_t comb_acc = 0, comb_pro = 0;
 	static FILE* fsplit = NULL;
 	size_t removed_index;
+	short is_accepted;
 
 	if (!fsplit)
 		fsplit = fopen("mixture_split.dat", "w");
@@ -253,9 +256,20 @@ static short _calc_splitcombine_acceptance_ratio(
 #endif
 
 	fprintf(fsplit, "%zu %lf %lf %lf %lf\n", _iteration, mu1, mu2, mu_comb, acceptance_ratio);
+	is_accepted = rand_event(dist->gslrand, acceptance_ratio);
+
+	if (is_split) {
+		split_pro++;
+		split_acc += is_accepted ? 1 : 0;
+	} else {
+		comb_pro++;
+		comb_acc += is_accepted ? 1 : 0;
+	}
+
+	fprintf(fsplit, "%zu %lf %lf %lf %lf %lf %lf\n", _iteration, mu1, mu2, mu_comb, acceptance_ratio, ((double) split_acc) / split_pro, ((double) comb_acc) / comb_pro);
 	fflush(fsplit);
 
-	if (rand_event(dist->gslrand, acceptance_ratio)) {
+	if (is_accepted) {
 		memcpy(current_pdf, new_pdf, sizeof(double) * length);
 
 		// In a split, try have as less change as possible.
