@@ -131,12 +131,11 @@ static void _component_initial_estimation(StableDist* comp, double start_x, doub
 #ifdef VERBOSE_INITIALESTIM
 	printf("Estimation parameters: %lf %lf\n", sep_logratio, asym_log);
 #endif
+	double alpha = _do_alpha_estim(sep_logratio, asym_log);
+	double beta = _do_beta_estim(alpha, asym_log);
+	double sigma = _do_sigma_estim(alpha, beta, sep_95);
 
-	stable_setparams(comp,
-					 _do_alpha_estim(sep_logratio, asym_log),
-					 _do_beta_estim(comp->alfa, asym_log),
-					 _do_sigma_estim(comp->alfa, comp->beta, sep_95),
-					 epdf_x[max_pos], 0);
+	stable_setparams(comp, alpha, beta, sigma, epdf_x[max_pos], 0);
 }
 
 /**
@@ -295,11 +294,12 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	double sigma_values[dist->max_mixture_components];
 	StableDist* comp;
 	size_t data_offset = 0;
+	double min_diff_ratio;
 
 	memcpy(samples, data, sizeof(double) * length);
 
-	dist->birth_probs = calloc(dist->max_mixture_components, sizeof(double));
-	dist->death_probs = calloc(dist->max_mixture_components, sizeof(double));
+	dist->birth_probs = calloc(dist->max_mixture_components + 1, sizeof(double));
+	dist->death_probs = calloc(dist->max_mixture_components + 1, sizeof(double));
 
 	printf("Begin initial estimation\n");
 
@@ -369,6 +369,18 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	mixture_partition[current_partition - 1].end_idx = mins[max_idx]; // Add the last minimum (there must be n max, n + 1 mins).
 	total_partitions = current_partition;
 
+	// The difference ratio threshold depends on the number of points. With few points,
+	// peaks in the EPDF are more common and might not relate to mixtures. With more points,
+	// peaks are less common and we might be more confident that they are not artifacts.
+	min_diff_ratio = 1.25 + 0.95 / (1 + exp(pow(10, -2.56) * (length - 2500.0)));
+
+#ifdef VERBOSE_INITIALESTIM
+	printf("Min difference ratio set to %lf for %zu samples\n", min_diff_ratio, length);
+#endif
+
+	dist->extra_peaks_pos = calloc(total_max_finer, sizeof(double));
+	dist->num_extra_peaks = 0;
+
 	// Now a second search on the set of local min/max obtained from the finer
 	// EPDF estimation. This one has much more noise, but it does not smooth out
 	// peaks that could signal the existence of another mixture. In this case,
@@ -379,9 +391,9 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		double difference_ratio = epdf_finer[max_pos] / epdf[max_pos];
 		double max_ratio = epdf[max_pos] / max_value;
 
-		if (difference_ratio > 1.7 && max_ratio > 0.10) {
+		if (difference_ratio > min_diff_ratio && max_ratio > 0.10) {
 			// Found a peak that grows considerably when compared to the smoother EPDF.
-			// Most probably, this is a peak of a mixture, so we have to insert a new partition.
+			// This might be a peak of a mixture, so we might have to insert a new partition.
 
 			// Search for the first partition which has a maximum with X value higher than the one
 			// we're treating now
@@ -389,6 +401,11 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 			size_t minval_idx;
 			size_t part_max;
 			size_t part_end = epdf_points - 1;
+
+			dist->extra_peaks_pos[dist->num_extra_peaks] = epdf_x[max_pos];
+			dist->num_extra_peaks++;
+
+			continue;
 
 			while (part_idx < total_partitions && epdf_x[mixture_partition[part_idx].max_idx] < epdf_x[max_pos])
 				part_idx++;
@@ -509,7 +526,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	double extra_comp_factor = 0.1 * (1 + 1.5 * wide_components);
 	double extra_comp_perc = ((double)extra_components) / dist->max_mixture_components;
 
-	for (i = dist->num_mixture_components - second_pass_partitions; i < dist->max_mixture_components; i++) {
+	for (i = /* dist->num_mixture_components - second_pass_partitions */ 0; i <= dist->max_mixture_components; i++) {
 		if (i >= dist->num_mixture_components + extra_components) {
 			dist->birth_probs[i] = last_birth_prob / 2; // Marginal probability of increasing components
 			last_birth_prob = dist->birth_probs[i];
@@ -522,15 +539,24 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 			dist->birth_probs[i] = 0.4;
 
 
-		if (i == dist->num_mixture_components - second_pass_partitions)
+		if (i == dist->num_mixture_components - 1)
 			dist->death_probs[i] = 0;
 		else if (i <= dist->num_mixture_components)
 			dist->death_probs[i] = 0.05;
 		else
 			dist->death_probs[i] = max(0.01, 0.5 - extra_comp_factor) * (1 - dist->birth_probs[i - 1]);
 
+		dist->birth_probs[i] = 0.15;
+		dist->death_probs[i] = 0.15;
+
+		if (i == 0)
+			dist->death_probs[i] = 0;
+		else if (i == dist->max_mixture_components)
+			dist->birth_probs[i] = 0;
+
 #ifdef VERBOSE_INITIALESTIM
 		printf("Probabilities %zu: %lf / %lf\n", i, dist->birth_probs[i], dist->death_probs[i]);
+
 #endif
 	}
 
