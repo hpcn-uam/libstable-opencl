@@ -711,6 +711,10 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 		return -1;
 	}
 
+	if (settings->force_gaussian) {
+		settings->is_parameter_locked[STABLE_PARAM_ALPHA] = 1;
+		settings->is_parameter_locked[STABLE_PARAM_BETA] = 1;
+	}
 	_mcmc_settings_allocate_arrays(settings, dist->max_mixture_components);
 
 	gsl_set_error_handler_off();
@@ -723,6 +727,11 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		dist->mixture_components[i]->mixture_montecarlo_variance = 0.05;
 		stable_getparams_array(dist->mixture_components[i], dist_params);
+
+		if (settings->force_gaussian) {
+			dist->mixture_components[i]->alfa = 2;
+			dist->mixture_components[i]->beta = 0;
+		}
 
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
 			if (settings->prior_functions[param_idx])

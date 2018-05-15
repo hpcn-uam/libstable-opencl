@@ -601,6 +601,7 @@ struct stable_mcmc_settings {
 	prior_probability prior_functions[MAX_STABLE_PARAMS];
 	void* prior_parameters[MAX_STABLE_PARAMS];
 	short is_parameter_locked[MAX_STABLE_PARAMS];
+	short force_gaussian;
 };
 
 /* Estimation functions */
