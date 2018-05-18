@@ -566,6 +566,11 @@ static int _check_birth_move(StableDist * dist, const double * data, const unsig
 	new_params[STABLE_PARAM_BETA] = gsl_rng_uniform(dist->gslrand) * 2 - 1;
 	new_params[STABLE_PARAM_SIGMA] = min(10000, gsl_ran_gamma(dist->gslrand, dist->prior_sigma_alpha0, dist->prior_sigma_beta0));
 
+	if (rand_event(dist->gslrand, settings->prob_birth_extra_peak)) {
+		new_params[STABLE_PARAM_MU] = dist->extra_peaks_pos[gsl_rng_uniform_int(dist->gslrand, dist->num_extra_peaks)];
+		printf("Selected from extra peaks\n");
+	} else
+		new_params[STABLE_PARAM_MU] = gsl_ran_gaussian(dist->gslrand, sqrt(dist->prior_mu_variance)) + dist->prior_mu_avg;
 	stable_setparams_array(dist->mixture_components[prev_comp_num], new_params);
 	dist->mixture_weights[prev_comp_num] = new_weight;
 	printf("new weight %lf\n", new_weight);
@@ -655,6 +660,7 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->num_iterations = 0;
 	settings->location_lock_iterations = 300;
 	settings->_allocated = 0;
+	settings->prob_birth_extra_peak = 0.5;
 	settings->generator_variance_ab = RNG_STD;
 	settings->generator_variance_ms = RNG_STD;
 

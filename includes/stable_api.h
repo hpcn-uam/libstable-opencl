@@ -171,6 +171,9 @@ struct StableDistStruct {
 
 	double* birth_probs;
 	double* death_probs;
+	double* extra_peaks_pos;
+	size_t num_extra_peaks;
+
 	short enabled;
 
 	/* Particular cases indicator (Gauss, Cauchy, Levy distribution, alfa==1, etc.) */
@@ -603,6 +606,7 @@ struct stable_mcmc_settings {
 	void* prior_parameters[MAX_STABLE_PARAMS];
 	short is_parameter_locked[MAX_STABLE_PARAMS];
 	short force_gaussian;
+	double prob_birth_extra_peak;
 	double generator_variance_ms;
 	double generator_variance_ab;
 };
