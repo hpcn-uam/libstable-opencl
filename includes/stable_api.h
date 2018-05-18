@@ -672,7 +672,10 @@ double _mixture_invgamma_prior(const StableDist* dist, double new_value, const s
  * @param  nsamples Number of samples.
  * @return          Kolmogoron-Smirnov probability value.
  */
-double stable_kolmogorov_smirnov_gof(StableDist* dist, const double* samples, size_t nsamples);
+double stable_kolmogorov_smirnov_gof(StableDist* dist, const double* samples, size_t nsamples, double* distance);
+
+double stable_hellinger_gof(StableDist* dist, const double* samples, size_t nsamples);
+double stable_kullback_leibler_gof(StableDist* dist, const double* samples, size_t nsamples);
 
 /************************************************************************
  ************************************************************************
