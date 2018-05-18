@@ -26,8 +26,9 @@ int main(int argc, char **argv)
 	xmin = strtod(argv[1], NULL);
 	xmax = strtod(argv[2], NULL);
 
-	num_samples = (xmax - xmin) / resolution;
+	num_samples = 1000;
 	pdf = calloc(num_samples, sizeof(double));
+
 
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		stable_setparams(dist->mixture_components[i],
@@ -38,6 +39,8 @@ int main(int argc, char **argv)
 						 0);
 		dist->mixture_weights[i] = strtod(argv[5 + extra_args + i * args_per_component], NULL);
 	}
+
+	fprintf(stderr, "%zu components\n", dist->num_mixture_components);
 
 	vector_npoints(&x, xmin, xmax, num_samples, &step);
 	stable_pdf(dist, x, num_samples, pdf, NULL);
