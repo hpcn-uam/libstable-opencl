@@ -624,7 +624,7 @@ int stable_fit_mixture(StableDist *dist, const double* data, const unsigned int 
 
 int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsigned int length, struct stable_mcmc_settings* settings);
 
-void stable_fit_mixture_print_results(struct stable_mcmc_settings* settings);
+void stable_fit_mixture_print_results(struct stable_mcmc_settings* settings, FILE* out);
 void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings);
 
 /* Auxiliary functions */

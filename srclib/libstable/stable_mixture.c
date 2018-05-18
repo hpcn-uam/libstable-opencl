@@ -1042,7 +1042,9 @@ static void _stable_fix_mixture_finalize(StableDist *dist, const double* data, c
 		settings->final_weight_std[comp_idx] = weight_sd;
 	}
 
-	settings->ks_test = stable_kolmogorov_smirnov_gof(dist, data, length);
+	settings->ks_test = stable_kolmogorov_smirnov_gof(dist, data, length, &settings->ks_dist);
+	settings->hellinger_dist = stable_hellinger_gof(dist, data, length);
+	settings->kl_dist = stable_kullback_leibler_gof(dist, data, length);
 
 	for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++) {
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
@@ -1056,27 +1058,27 @@ static void _stable_fix_mixture_finalize(StableDist *dist, const double* data, c
 	}
 }
 
-void stable_fit_mixture_print_results(struct stable_mcmc_settings* settings)
+void stable_fit_mixture_print_results(struct stable_mcmc_settings* settings, FILE* out)
 {
 	size_t comp_idx, param_idx;
 
-	printf("Mixture estimation results:\n");
-	printf("Component |      α -  std  |      β -  std  |      μ -  std  |      σ -  std  | weight -  std  \n");
+	fprintf(out, "Mixture estimation results (%zu components):\n", settings->num_final_components);
+	fprintf(out, "Component |      α -  std  |      β -  std  |      μ -  std  |      σ -  std  | weight -  std  \n");
 
 	for (comp_idx = 0; comp_idx < settings->num_final_components; comp_idx++) {
-		printf("%9zu", comp_idx);
+		fprintf(out, "%9zu", comp_idx);
 
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
 			double param_avg = settings->final_param_avg[comp_idx][param_idx];
 			double param_std = settings->final_param_std[comp_idx][param_idx];
 
-			printf(" | %6.2lf - %5.2lf", param_avg, param_std);
+			fprintf(out, " | %6.2lf - %5.2lf", param_avg, param_std);
 		}
 
 		double weight_avg = settings->final_weight_avg[comp_idx];
 		double weight_std = settings->final_weight_std[comp_idx];
 
-		printf(" | %6.2lf - %5.2lf\n", weight_avg, weight_std);
+		fprintf(out, " | %6.2lf - %5.2lf\n", weight_avg, weight_std);
 	}
 
 	fprintf(out, "\nKS test: %lf (Distance %lf)\n", settings->ks_test, settings->ks_dist);
@@ -1087,23 +1089,23 @@ void stable_fit_mixture_print_results(struct stable_mcmc_settings* settings)
 	fprintf(out, "Correlations: \n");
 
 	for (comp_idx = 0; comp_idx < settings->num_final_components; comp_idx++) {
-		printf("Component %zu:\n", comp_idx);
+		fprintf(out, "Component %zu:\n", comp_idx);
 
-		printf("   | %7s | %7s | %7s | %7s\n", "α", "β", "μ", "σ");
+		fprintf(out, "   | %7s | %7s | %7s | %7s\n", "α", "β", "μ", "σ");
 
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
-			printf(" %s ", _param_names[param_idx]);
+			fprintf(out, " %s ", _param_names[param_idx]);
 
 			for (size_t param2_idx = 0; param2_idx < MAX_STABLE_PARAMS; param2_idx++) {
 				if (param2_idx == param_idx)
-					printf("| %7s", " ");
+					fprintf(out, "| %7s", " ");
 				else {
 					double corr = settings->correlations[comp_idx][param_idx][param2_idx];
-					printf("| %6.3lf ", corr);
+					fprintf(out, "| %6.3lf ", corr);
 				}
 			}
 
-			printf("\n");
+			fprintf(out, "\n");
 		}
 	}
 }

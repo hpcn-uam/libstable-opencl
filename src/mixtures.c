@@ -71,6 +71,7 @@ int main(int argc, char **argv)
 
 	FILE* infile = NULL;
 	FILE* outfile;
+	FILE* summary;
 	int retval = EXIT_SUCCESS;
 
 	StableDist* dist;
@@ -185,16 +186,24 @@ int main(int argc, char **argv)
 
 	printf("Starting mixture estimation.\n");
 	stable_fit_mixture_default_settings(&settings);
-	stable_fit_mixture_settings(dist, rnd, num_points, &settings);
-	stable_fit_mixture_print_results(&settings);
+	summary = fopen("mixtures_summary.txt", "w");
 
-	stable_pdf(dist, x, epdf_points, pdf_predicted, NULL);
-	stable_cdf(dist, x, epdf_points, cdf, NULL);
+	stable_fit_mixture_settings(dist, rnd, num_points, &settings);
+	stable_fit_mixture_print_results(&settings, stdout);
+	stable_fit_mixture_print_results(&settings, summary);
+
+	if (settings.num_samples > 0) {
+		stable_pdf(dist, x, epdf_points, pdf_predicted, NULL);
+		stable_cdf(dist, x, epdf_points, cdf, NULL);
+	}
+
+	printf("Writing EPDF files\n");
 
 	for (i = 0; i < epdf_points; i++)
 		fprintf(outfile, "%lf %lf %lf %lf\n", x[i], pdf[i], pdf_predicted[i], cdf[i]);
 
 	fclose(outfile);
+	fclose(summary);
 
 	printf("Done\n");
 out:
