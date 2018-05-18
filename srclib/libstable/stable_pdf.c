@@ -766,8 +766,15 @@ double stable_pdf_point_STABLE(StableDist *dist, const double x, double *err)
 double stable_pdf_point(StableDist *dist, const double x, double *err)
 {
 	double temp;
+	double res = 0.0;
 
 	if (err == NULL) err = &temp;
 
-	return (dist->stable_pdf_point)(dist, x, err);
+	if (dist->is_mixture) {
+		for (size_t i = 0; i < dist->num_mixture_components; i++)
+			res += dist->mixture_weights[i] * stable_pdf_point(dist->mixture_components[i], x, err);
+	} else
+		res = (dist->stable_pdf_point)(dist, x, err);
+
+	return res;
 }
