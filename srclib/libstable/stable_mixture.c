@@ -45,12 +45,15 @@ void _stable_evaluate_mixture(StableDist *dist, const double x[], const int Nx,
 		}
 
 		for (i = 0; i < dist->num_mixture_components; i++) {
+			if (!dist->mixture_components[i]->enabled)
+				continue;
+
 			eval(dist->mixture_components[i], x, Nx, res1_component, res2_component);
 
 			for (j = 0; j < Nx; j++) {
-				if (result1) result1[j] += res1_component[j] * dist->mixture_weights[i];
+				if (result1) result1[j] += prob_safeguard(res1_component[j] * dist->mixture_weights[i], 0);
 
-				if (result2) result2[j] += res2_component[j] * dist->mixture_weights[i];
+				if (result2) result2[j] += prob_safeguard(res2_component[j] * dist->mixture_weights[i], 0);
 			}
 		}
 

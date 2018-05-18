@@ -171,6 +171,7 @@ struct StableDistStruct {
 
 	double* birth_probs;
 	double* death_probs;
+	short enabled;
 
 	/* Particular cases indicator (Gauss, Cauchy, Levy distribution, alfa==1, etc.) */
 	int ZONE;
