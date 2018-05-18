@@ -28,7 +28,7 @@
 
 int main(int argc, char **argv)
 {
-	size_t num_points = 5000;
+	size_t num_points = 1000;
 	double epdf_resolution = 0.001;
 	size_t min_points = 1000;
 	size_t epdf_points;
@@ -37,12 +37,13 @@ int main(int argc, char **argv)
 
 	assert(MAX_POINTS >= num_points);
 
+
 	/*
-	double alphas[] = { 1.2, 0.8, 2 };
-	double betas[] = { -0.5, 0.5, 0 };
+	double alphas[] = { 1.2, 0.8, 1.8 };
+	double betas[] = { -0.5, 0.8, 0 };
 	double mus[] = { -2, 0, 2 };
-	double sigmas[] = { 0.5, 0.8, 0.2 };
-	double weights[] = { 0.2, 0.5, 0.3 };
+	double sigmas[] = { 0.25, 0.8, 0.2 };
+	double weights[] = { 0.4, 0.5, 0.1 };
 	*/
 
 	/*
@@ -185,7 +186,20 @@ int main(int argc, char **argv)
 	printf("done\n");
 
 	printf("Starting mixture estimation.\n");
+	dist->max_mixture_components = 9;
 	stable_fit_mixture_default_settings(&settings);
+	settings.max_iterations = 1000;
+	settings.fix_components_during_last_n_iterations = 1000;
+	settings.fix_components_during_first_n_iterations = 300;
+	settings.skip_initial_estimation = 1;
+	settings.location_lock_iterations = 0;
+	settings.fix_components = 1;
+	settings.force_gaussian = 0;
+
+	struct gaussian_params mu_params = { .mean = 5, .variance = 0.5};
+	//settings.prior_functions[STABLE_PARAM_MU] = (prior_probability) _mixture_gaussian_prior;
+	//settings.prior_parameters[STABLE_PARAM_MU] = &mu_params;
+
 	summary = fopen("mixtures_summary.txt", "w");
 
 	stable_fit_mixture_settings(dist, rnd, num_points, &settings);
