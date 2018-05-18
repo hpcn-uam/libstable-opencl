@@ -72,7 +72,7 @@ static double _draw_rand(StableDist* dist, double mn, double mx, double mean, do
 
 static double _draw_rand_alpha(StableDist *dist)
 {
-	return _draw_rand(dist, 0.001, 2.0, dist->alfa, RNG_STD);
+	return _draw_rand(dist, 0.1, 2.0, dist->alfa, RNG_STD);
 }
 
 static double _draw_rand_beta(StableDist *dist)
@@ -102,6 +102,9 @@ static new_rand_param rand_generators[] = { _draw_rand_alpha, _draw_rand_beta, _
  */
 static short rand_event(gsl_rng* rnd, double prob_event)
 {
+	if (isnan(prob_event))
+		return 0;
+
 	return gsl_rng_uniform(rnd) <= prob_event;
 }
 
@@ -209,8 +212,12 @@ static short _calc_splitcombine_acceptance_ratio(
 
 	double log_likelihood_ratio = 0;
 
-	for (size_t k = 0; k < length; k++)
+	for (size_t k = 0; k < length; k++) {
+		if (new_pdf[k] < 1e-4 && current_pdf[k] < 1e-4)
+			continue;
+
 		log_likelihood_ratio += log(new_pdf[k]) - log(current_pdf[k]);
+	}
 
 	double alpha_beta_ratio = 0.25;
 
@@ -514,6 +521,10 @@ static short _calc_birthdeath_ratio(StableDist * dist, const double * data, cons
 #ifdef VERBOSE_SPLITCOMBINE
 	printf("B/D Ratio: Likelihood %lf weight %lf final %lf\n", log_likelihood_ratio, log_weight_ratio, acceptance_ratio);
 #endif
+
+	if (isinf(log_likelihood_ratio))
+		acceptance_ratio = 0.0;  // Nothing good comes out of these situations.
+
 	accepted = rand_event(dist->gslrand, acceptance_ratio);
 
 	if (is_birth) {
