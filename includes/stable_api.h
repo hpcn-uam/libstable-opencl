@@ -600,12 +600,16 @@ struct stable_mcmc_settings {
 	double* final_weight_std;
 	double*** correlations;
 	double ks_test;
+	double ks_dist;
+	double kl_dist;
+	double hellinger_dist;
 	size_t num_iterations;
 	size_t num_final_components;
 	prior_probability prior_functions[MAX_STABLE_PARAMS];
 	void* prior_parameters[MAX_STABLE_PARAMS];
 	short is_parameter_locked[MAX_STABLE_PARAMS];
 	short force_gaussian;
+	short fix_components_during_first_n_iterations;
 	double prob_birth_extra_peak;
 	double generator_variance_ms;
 	double generator_variance_ab;
