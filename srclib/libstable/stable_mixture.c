@@ -22,6 +22,8 @@
 #define VERBOSE_SPLITCOMBINE
 // #define DEBUG
 
+#define prob_safeguard(n, defval) (isnan(n) || n < 0 ? (defval) : n)
+
 /**
  * A common function for evaluation of mixtures, calling a base function.
  */
