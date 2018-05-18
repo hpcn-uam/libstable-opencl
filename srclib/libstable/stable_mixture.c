@@ -734,6 +734,10 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 		settings->is_parameter_locked[STABLE_PARAM_ALPHA] = 1;
 		settings->is_parameter_locked[STABLE_PARAM_BETA] = 1;
 	}
+
+	settings->num_samples = 0;
+	settings->num_final_components = 0;
+
 	_mcmc_settings_allocate_arrays(settings, dist->max_mixture_components);
 
 	gsl_set_error_handler_off();
@@ -779,8 +783,6 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 
 	fprintf(debug_data, "\n");
 	stop = 0;
-
-	settings->num_samples = 0;
 
 	for (i = 0; i < settings->burnin_period + settings->max_iterations && !stop; i++) {
 		// Async launch of all the integration orders.
@@ -855,7 +857,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 		if (settings->estimate_weight) {
 			num_considered_moves++;
 
-			memcpy(previous_weights, dist->mixture_weights, dist->max_mixture_components * sizeof(double));
+			memcpy(previous_weights, dist->mixture_weights, dist->num_mixture_components * sizeof(double));
 
 			for (comp_idx = 0; comp_idx < dist->num_mixture_components; comp_idx++)
 				dirichlet_params[comp_idx] = dist->prior_weights * dist->mixture_weights[comp_idx];
@@ -889,7 +891,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 				accepted = 1;
 				memcpy(previous_pdf, pdf, sizeof(double) * length);
 			} else     // Change not accepted, revert to the previous value
-				memcpy(dist->mixture_weights, previous_weights, dist->max_mixture_components * sizeof(double));
+				memcpy(dist->mixture_weights, previous_weights, dist->num_mixture_components * sizeof(double));
 
 #ifdef VERBOSE_MIXTURE
 			fprintf(stderr, " Accepted %hd\n", accepted);
