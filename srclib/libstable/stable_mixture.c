@@ -543,7 +543,7 @@ static short _calc_birthdeath_ratio(StableDist * dist, const double * data, cons
 	return accepted;
 }
 
-static int _check_birth_move(StableDist * dist, const double * data, const unsigned int length, double * current_pdf)
+static int _check_birth_move(StableDist * dist, const double * data, const unsigned int length, double * current_pdf, struct stable_mcmc_settings* settings)
 {
 	size_t comp_idx;
 	short accepted;
@@ -558,10 +558,9 @@ static int _check_birth_move(StableDist * dist, const double * data, const unsig
 
 	double new_weight = gsl_ran_beta(dist->gslrand, 1, prev_comp_num);
 
-	new_params[STABLE_PARAM_ALPHA] = 2;
-	new_params[STABLE_PARAM_BETA] = 0;
-	new_params[STABLE_PARAM_MU] = gsl_ran_gaussian(dist->gslrand, sqrt(dist->prior_mu_variance)) + dist->prior_mu_avg;
-	new_params[STABLE_PARAM_SIGMA] = gsl_ran_gamma(dist->gslrand, dist->prior_sigma_alpha0, dist->prior_sigma_beta0);
+	new_params[STABLE_PARAM_ALPHA] = gsl_rng_uniform(dist->gslrand) * 1.8 + 0.2;
+	new_params[STABLE_PARAM_BETA] = gsl_rng_uniform(dist->gslrand) * 2 - 1;
+	new_params[STABLE_PARAM_SIGMA] = min(10000, gsl_ran_gamma(dist->gslrand, dist->prior_sigma_alpha0, dist->prior_sigma_beta0));
 
 	stable_setparams_array(dist->mixture_components[prev_comp_num], new_params);
 	dist->mixture_weights[prev_comp_num] = new_weight;
