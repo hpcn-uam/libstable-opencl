@@ -30,7 +30,7 @@ TARGETS = example fittest stable_array \
 			gpu_mpoints_perftest stable_plot gridfittest \
 			fit_eval gpu_precision quantile_eval quantile_perf \
 			gen_randoms mixtures param_behaviour stable_plot_mixture \
-			libtest mcmc_diagnostic_onecomp
+			libtest mcmc_diagnostic_onecomp stdist
 INCLUDES = -I./includes/
 
 INCS := $(wildcard $(INCDIR)/*.h)

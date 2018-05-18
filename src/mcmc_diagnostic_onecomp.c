@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 	size_t param_idx;
 	size_t i, j;
 	double alpha = 0.5, beta = 0, mu = 0, sigma = 1;
-	double min_alpha = 0.45, min_beta = -0.95;
+	double min_alpha = 0.85, min_beta = -0.55;
 	double max_alpha = 1.95, max_beta = 0.95;
 	double step = 0.1;
 	size_t num_chains = 10;
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
 						min_lag = lag;
 				}
 
-				stable_fit_mixture_print_results(settings + chain);
+				stable_fit_mixture_print_results(settings + chain, stdout);
 			}
 
 			fprintf(outfile, "%lf %lf %lf %zu %lf", alpha, beta, acc_ratio, min_lag, lag1_autocorr);

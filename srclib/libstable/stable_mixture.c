@@ -1066,9 +1066,12 @@ void stable_fit_mixture_print_results(struct stable_mcmc_settings* settings)
 		printf(" | %6.2lf - %5.2lf\n", weight_avg, weight_std);
 	}
 
-	printf("\nKS test: %lf\n", settings->ks_test);
-	printf("Acceptance ratio: %.3lf\n", settings->acceptance_ratio);
-	printf("Correlations: \n");
+	fprintf(out, "\nKS test: %lf (Distance %lf)\n", settings->ks_test, settings->ks_dist);
+	fprintf(out, "Hellinger dist: %lf\n", settings->hellinger_dist);
+	fprintf(out, "Kullback-Leibler dist: %lf\n", settings->kl_dist);
+
+	fprintf(out, "Acceptance ratio: %.3lf\n", settings->acceptance_ratio);
+	fprintf(out, "Correlations: \n");
 
 	for (comp_idx = 0; comp_idx < settings->num_final_components; comp_idx++) {
 		printf("Component %zu:\n", comp_idx);

@@ -29,6 +29,7 @@
 #include "stable_api.h"
 #include "mcculloch.h"
 #include "methods.h"
+#include "kde.h"
 
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_vector.h>
@@ -38,6 +39,7 @@
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_fft_real.h>
 #include <gsl/gsl_sort.h>
+#include <gsl/gsl_integration.h>
 
 #define ESTM_2D_EPSABS 0.008
 #define ESTM_2D_MAX_ITER 300
@@ -468,7 +470,7 @@ int stable_fit_mle2d(StableDist *dist, const double *data, const unsigned int le
 	return stable_fit(dist, data, length);
 }
 
-double stable_kolmogorov_smirnov_gof(StableDist* dist, const double* samples, size_t nsamples)
+double stable_kolmogorov_smirnov_gof(StableDist* dist, const double* samples, size_t nsamples, double* distance)
 {
 	double *cdf, *samples_sorted;
 	double d;
@@ -488,8 +490,101 @@ double stable_kolmogorov_smirnov_gof(StableDist* dist, const double* samples, si
 	result = kstest(samples_sorted, nsamples, cdf, &d);
 	printf("D: %lf\n", d);
 
+	if (distance != NULL)
+		*distance = d;
+
 	free(cdf);
 	free(samples_sorted);
+
+	return result;
+}
+
+struct _integr_data {
+	StableDist* dist;
+	const double* samples;
+	size_t nsamples;
+};
+
+static double _hellinger_integ(double x, void* pr)
+{
+	struct _integr_data* params = (struct _integr_data*) pr;
+	double p = stable_pdf_point(params->dist, x, NULL);
+	double q = kerneldensity(params->samples, x, params->nsamples, 0.9);
+
+	if (isnan(p) || p < 0)
+		p = 0;
+
+	return gsl_pow_2(sqrt(p) - sqrt(q));
+}
+
+double stable_hellinger_gof(StableDist* dist, const double* samples, size_t nsamples)
+{
+	gsl_integration_workspace * w = gsl_integration_workspace_alloc(10000);
+	struct _integr_data params;
+	gsl_function F;
+	double result, error;
+	double mn, mx;
+
+	params.dist = dist;
+	params.samples = samples;
+	params.nsamples = nsamples;
+
+	F.function = &_hellinger_integ;
+	F.params = &params;
+
+	gsl_stats_minmax(&mn, &mx, samples, 1, nsamples);
+
+	gsl_integration_qag(&F, mn, mx, 0.001, 1e-7, 10000,
+						GSL_INTEG_GAUSS31, w, &result, &error);
+
+	gsl_integration_workspace_free(w);
+
+	return result / 2;
+}
+
+
+static double _kl_integ(double x, void* pr)
+{
+	struct _integr_data* params = (struct _integr_data*) pr;
+	double p = stable_pdf_point(params->dist, x, NULL);
+	double q = kerneldensity(params->samples, x, params->nsamples, 0.9);
+
+	if (isnan(p) || p < 0)
+		p = 0;
+
+	if (q <= DBL_EPSILON)
+		return 0.0;
+
+	double val = q * log(q / p);
+
+	if (isnan(val))
+		val = 0.0;
+
+	return val;
+}
+
+
+double stable_kullback_leibler_gof(StableDist* dist, const double* samples, size_t nsamples)
+{
+	gsl_integration_workspace * w = gsl_integration_workspace_alloc(10000);
+	struct _integr_data params;
+	gsl_function F;
+	double result, error;
+	double mn, mx;
+
+	params.dist = dist;
+	params.samples = samples;
+	params.nsamples = nsamples;
+
+	F.function = &_kl_integ;
+	F.params = &params;
+
+	gsl_stats_minmax(&mn, &mx, samples, 1, nsamples);
+
+	gsl_integration_qag(&F, -100, 100, 0.001, 1e-7, 10000,
+						GSL_INTEG_GAUSS61, w, &result, &error);
+
+	gsl_integration_workspace_free(w);
 
 	return result;
 }

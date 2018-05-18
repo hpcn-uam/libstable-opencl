@@ -60,7 +60,7 @@ static void kolmogorov_conv_test()
 
 	for (size_t i = 1000; i < MAX_SAMPLES; i += 1000) {
 		stable_rnd(dist, samples, i);
-		ks_test = stable_kolmogorov_smirnov_gof(dist, samples, i);
+		ks_test = stable_kolmogorov_smirnov_gof(dist, samples, i, NULL);
 		printf("At size %zu KS test statistic is %lf\n", i, ks_test);
 
 		if (ks_test < 0.05) {
