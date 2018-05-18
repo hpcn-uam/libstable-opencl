@@ -498,8 +498,12 @@ static short _calc_birthdeath_ratio(StableDist * dist, const double * data, cons
 
 	double log_likelihood_ratio = 0;
 
-	for (size_t k = 0; k < length; k++)
+	for (size_t k = 0; k < length; k++) {
+		if (new_pdf[k] < 1e-4 && current_pdf[k] < 1e-4)
+			continue;
+
 		log_likelihood_ratio += log(new_pdf[k]) - log(current_pdf[k]);
+	}
 
 	if (!is_birth)
 		log_likelihood_ratio = - log_likelihood_ratio;
