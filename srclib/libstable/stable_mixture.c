@@ -719,8 +719,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 
 	gsl_set_error_handler_off();
 
-	if (!settings->skip_initial_estimation)
-		stable_mixture_prepare_initial_estimation(dist, data, length);
+	stable_mixture_prepare_initial_estimation(dist, data, length, settings->skip_initial_estimation);
 
 	stable_rnd_seed(dist, time(NULL));
 

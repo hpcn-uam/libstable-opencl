@@ -269,7 +269,7 @@ static double get_dataset_typical_step(const double* vals, size_t n)
 	return gsl_stats_median_from_sorted_data(sep, 1, num_distinct);
 }
 
-void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* data, const unsigned int length)
+void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* data, const unsigned int length, short only_priors)
 {
 	size_t epdf_points = 10000;
 	double samples[length];
@@ -295,6 +295,9 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	StableDist* comp;
 	size_t data_offset = 0;
 	double min_diff_ratio;
+
+	if (only_priors)
+		comp = stable_create(1, 0, 1, 0, 0);
 
 	memcpy(samples, data, sizeof(double) * length);
 
@@ -331,6 +334,8 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 	total_max = _find_local_minmax(epdf, maxs, mins, epdf_points, &max_value, epdf_x);
 	total_max_finer = _find_local_minmax(epdf_finer, maxs_finer, mins_finer, epdf_points, NULL, epdf_x);
+
+	printf("Found %zu maximums in the EPDF, %zu in finer pass\n", total_max, total_max_finer);
 
 	current_lowest_min_pos = mins[0];
 
@@ -463,14 +468,16 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		printf("More partitions than accepted in maximum, keeping only the %zu best\n", dist->max_mixture_components);
 	}
 
-	stable_set_mixture_components(dist, total_partitions);
+	if (!only_priors)
+		stable_set_mixture_components(dist, total_partitions);
 
 	double weightsum = 0;
 	size_t wide_components = 0;
 
 	// Compute initial estimations for each component based on the derivatives of the EPDF.
 	for (i = 0; i < dist->num_mixture_components; i++) {
-		comp = dist->mixture_components[i];
+		if (!only_priors)
+			comp = dist->mixture_components[i];
 
 		size_t comp_begin = mixture_partition[i].begin_idx;
 		size_t comp_end = mixture_partition[i].end_idx;
@@ -491,8 +498,10 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		double maxval = epdf_for_estimation[mixture_partition[i].max_idx];
 		double comp_max = stable_pdf_point(comp, x_max, NULL);
 
-		dist->mixture_weights[i] = min(1, maxval / comp_max); // Avoid over-corrections because of bad initial estimations.
-		weightsum += dist->mixture_weights[i];
+		if (!only_priors) {
+			dist->mixture_weights[i] = min(1, maxval / comp_max); // Avoid over-corrections because of bad initial estimations.
+			weightsum += dist->mixture_weights[i];
+		}
 
 		if (maxval / comp_max > 2)
 			wide_components++;
@@ -510,7 +519,9 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 	// Normalize the weights
 	for (i = 0; i < dist->num_mixture_components; i++) {
-		dist->mixture_weights[i] /= weightsum;
+		if (!only_priors)
+			dist->mixture_weights[i] /= weightsum;
+
 		printf("C%zu: Weight %lf\n", i, dist->mixture_weights[i]);
 	}
 
@@ -526,7 +537,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	double extra_comp_factor = 0.1 * (1 + 1.5 * wide_components);
 	double extra_comp_perc = ((double)extra_components) / dist->max_mixture_components;
 
-	for (i = /* dist->num_mixture_components - second_pass_partitions */ 0; i <= dist->max_mixture_components; i++) {
+	for (i = dist->num_mixture_components - second_pass_partitions; i <= dist->max_mixture_components; i++) {
 		if (i >= dist->num_mixture_components + extra_components) {
 			dist->birth_probs[i] = last_birth_prob / 2; // Marginal probability of increasing components
 			last_birth_prob = dist->birth_probs[i];
