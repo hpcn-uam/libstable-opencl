@@ -168,7 +168,7 @@ size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_
 			searching_max = 1;
 			searching_min = 0;
 		} else if (i > 1 && i < epdf_points - 1) {
-			if (searching_max && epdf[i - 1] > 0.01 && _is_local_max(epdf, i - 1)) {
+			if (searching_max && epdf[i - 1] > 0.0001 && _is_local_max(epdf, i - 1)) {
 				double minmax_ratio = epdf[mins[min_idx - 1]] / epdf[i - 1];
 
 				if (minmax_ratio < minmax_coef_threshold) {
@@ -557,10 +557,10 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		else
 			dist->death_probs[i] = max(0.01, 0.5 - extra_comp_factor) * (1 - dist->birth_probs[i - 1]);
 
-		dist->birth_probs[i] = 0.15;
-		dist->death_probs[i] = 0.15;
+		dist->birth_probs[i] = 0.05;
+		dist->death_probs[i] = 0.05;
 
-		if (i == 0)
+		if (i == dist->num_mixture_components - second_pass_partitions)
 			dist->death_probs[i] = 0;
 		else if (i == dist->max_mixture_components)
 			dist->birth_probs[i] = 0;
@@ -574,7 +574,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	// Prepare the priors for the Monte Carlo estimation.
 	dist->prior_mu_avg = gsl_stats_mean(mu_values, 1, dist->num_mixture_components);
 	dist->prior_mu_variance = gsl_stats_variance(mu_values, 1, dist->num_mixture_components);
-	dist->prior_weights = 40; // TODO: This does not look like it has any science on it.
+	dist->prior_weights = 500; // TODO: This does not look like it has any science on it.
 	double sigma_mean = gsl_stats_mean(sigma_values, 1, dist->num_mixture_components);
 	double sigma_variance = gsl_stats_variance(sigma_values, 1, dist->num_mixture_components);
 	dist->prior_sigma_alpha0 = pow(sigma_mean, 2) / sigma_variance + 2;
