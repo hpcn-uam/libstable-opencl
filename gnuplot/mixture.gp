@@ -10,12 +10,13 @@ percval(n) = system(sprintf("head -n %d mixtures_rnd.dat | tail -n 1", ceil(n * 
 iqwidth = (STATS_up_quartile - STATS_lo_quartile)
 xstart = percval(0.02) - iqwidth * 0.1
 xend = percval(0.95)
-binwidth = (xend - xstart) / bincount
-trace_file = 'mcmc_diag/mixture_debug_a0.05_b-0.95_chain0.dat'
-
+# trace_file = 'mcmc_diag/mixture_debug_a0.05_b-0.95_chain0.dat'
+trace_file = 'mixture_debug.dat'
 
 if (xstart < STATS_min) xstart = STATS_min
 if (xend > STATS_max) xend = STATS_max
+
+binwidth = (xend - xstart) / bincount
 
 if (exists("outfile")) set term pngcairo size 1920,1080
 if (exists("outfile")) set output outfile
@@ -67,17 +68,18 @@ plot trace_file u 1 w lines lw 2 title 'Changes', \
 	 trace_file u 2 w lines title 'Number of components' lw 4 axes x1y2
 
 
-set title "μ moves"
+set title "Acceptance ratios"
 unset y2tics
-plot \
-	'mixture_split.dat' u 1:2 w p title 'μ 1' lt 1 pt 5, \
-	'mixture_split.dat' u 1:3 w p title 'μ 2' lt 7 pt 5, \
-	'mixture_split.dat' u 1:4 w p title 'μ comb' lt 2 lw 2 pt 4, \
-	for [i=0:10] trace_file u (column(5 + 5 * i)) w lines lw 1 dt 2 title 'Comp. '.i
+plot -1, \
+	'mixture_split.dat' u 1:6 w lines title 'Split' lt 1 lw 2, \
+	'mixture_split.dat' u 1:7 w lines title 'Combine' lt 2 lw 2, \
+	'mixture_birth.dat' u 1:3 w lines title 'Birth' lt 3 lw 2, \
+	'mixture_birth.dat' u 1:4 w lines title 'Death' lt 4 lw 2
 
 set title 'Acc. probabilities'
 set yrange [0:1]
-plot -1, 'mixture_split.dat' u 1:5 w p title 'Prob' lw 3 pt 3
+plot -1, 'mixture_split.dat' u 1:5 w p title 'Prob' lw 3 pt 3, \
+	'mixture_birth.dat' u 1:2 w p title 'Prob' lw 3 pt 3
 set yrange [*:*]
 
 set title 'Histogram & PDF'
@@ -90,4 +92,4 @@ plot \
 	'mixtures_rnd.dat' using (bin($1,binwidth)):(1 / (binwidth * recordnum)) smooth freq with boxes title 'Data' ls 1, \
 	'mixtures_dat.dat' using 1:3 w l ls 2 lw 3 title 'Predicted PDF'
 
-if (!exists("outfile")) unset multiplot; pause 4; reread
+if (!exists("outfile")) unset multiplot; pause 10; reread
