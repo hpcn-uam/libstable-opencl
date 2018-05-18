@@ -654,12 +654,15 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->estimate_weight = 1;
 	settings->skip_initial_estimation = 0;
 	settings->decrement_generation_variance = 0;
-	settings->handle_signal = 0;
+	settings->handle_signal = 1;
 	settings->thinning = 1;
 	settings->num_samples = 0;
 	settings->num_iterations = 0;
 	settings->location_lock_iterations = 300;
 	settings->_allocated = 0;
+	settings->force_gaussian = 0;
+	settings->fix_components_during_last_n_iterations = 500;
+	settings->fix_components_during_first_n_iterations = 800;
 	settings->prob_birth_extra_peak = 0.5;
 	settings->generator_variance_ab = RNG_STD;
 	settings->generator_variance_ms = RNG_STD;
@@ -911,7 +914,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 		}
 
 		if (!settings->fix_components) {
-			if (i >= settings->location_lock_iterations && (settings->max_iterations - i) > settings->fix_components_during_last_n_iterations) {
+			if (i >= settings->fix_components_during_first_n_iterations && (settings->max_iterations - i) > settings->fix_components_during_last_n_iterations) {
 				if (rand_event(dist->gslrand, dist->birth_probs[dist->num_mixture_components])) {
 					printf("\nIteration %zu: Try split\n", i);
 					num_considered_moves++;
@@ -934,7 +937,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 					printf("\nIteration %zu: Try birth\n", i);
 					num_considered_moves++;
 
-					if (_check_birth_move(dist, data, length, previous_pdf)) {
+					if (_check_birth_move(dist, data, length, previous_pdf, settings)) {
 						num_changes++;
 						printf("Accept birth\n");
 					}
@@ -976,7 +979,6 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 					dist->mixture_components[j]->mu_0, dist->mixture_components[j]->sigma,
 					dist->mixture_weights[j]);
 		}
-
 
 		fprintf(debug_data, "\n");
 		fflush(debug_data);
