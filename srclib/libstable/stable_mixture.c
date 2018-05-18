@@ -16,7 +16,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf_gamma.h>
 
-#define RNG_STD 0.05
+#define RNG_STD 0.02
 
 // #define VERBOSE_MIXTURE
 #define VERBOSE_SPLITCOMBINE
@@ -72,27 +72,27 @@ static double _draw_rand(StableDist* dist, double mn, double mx, double mean, do
 	return min(mx, max(mn, rnd));
 }
 
-static double _draw_rand_alpha(StableDist *dist)
+static double _draw_rand_alpha(StableDist *dist, struct stable_mcmc_settings* settings)
 {
-	return _draw_rand(dist, 0.1, 2.0, dist->alfa, RNG_STD);
+	return _draw_rand(dist, 0.1, 2.0, dist->alfa, settings->generator_variance_ab);
 }
 
-static double _draw_rand_beta(StableDist *dist)
+static double _draw_rand_beta(StableDist *dist, struct stable_mcmc_settings* settings)
 {
-	return _draw_rand(dist, -1, 1, dist->beta, RNG_STD);
+	return _draw_rand(dist, -1, 1, dist->beta, settings->generator_variance_ab);
 }
 
-static double _draw_rand_mu(StableDist *dist)
+static double _draw_rand_mu(StableDist *dist, struct stable_mcmc_settings* settings)
 {
-	return _draw_rand(dist, -DBL_MAX, DBL_MAX, dist->mu_0, RNG_STD);
+	return _draw_rand(dist, -DBL_MAX, DBL_MAX, dist->mu_0, settings->generator_variance_ms);
 }
 
-static double _draw_rand_sigma(StableDist *dist)
+static double _draw_rand_sigma(StableDist *dist, struct stable_mcmc_settings* settings)
 {
-	return _draw_rand(dist, 0.001, DBL_MAX, dist->sigma, RNG_STD);
+	return _draw_rand(dist, 0.001, 10000, dist->sigma, settings->generator_variance_ms);
 }
 
-typedef double (*new_rand_param)(StableDist*);
+typedef double (*new_rand_param)(StableDist*, struct stable_mcmc_settings*);
 
 static new_rand_param rand_generators[] = { _draw_rand_alpha, _draw_rand_beta, _draw_rand_mu, _draw_rand_sigma };
 
@@ -655,6 +655,8 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->num_iterations = 0;
 	settings->location_lock_iterations = 300;
 	settings->_allocated = 0;
+	settings->generator_variance_ab = RNG_STD;
+	settings->generator_variance_ms = RNG_STD;
 
 	memset(settings->prior_functions, 0, sizeof(settings->prior_functions));
 	memset(settings->is_parameter_locked, 0, sizeof(settings->is_parameter_locked));
@@ -809,7 +811,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 					memcpy(new_params, dist_params, sizeof new_params);
 
 					// Generate a new parameter and set it in the distrubtion
-					new_params[param_idx] = rand_generators[param_idx](component);
+					new_params[param_idx] = rand_generators[param_idx](component, settings);
 					stable_setparams_array(component, new_params);
 					stable_pdf_gpu(dist, data, length, pdf, NULL);
 

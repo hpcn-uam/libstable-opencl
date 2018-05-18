@@ -603,6 +603,8 @@ struct stable_mcmc_settings {
 	void* prior_parameters[MAX_STABLE_PARAMS];
 	short is_parameter_locked[MAX_STABLE_PARAMS];
 	short force_gaussian;
+	double generator_variance_ms;
+	double generator_variance_ab;
 };
 
 /* Estimation functions */
