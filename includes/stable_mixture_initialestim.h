@@ -14,6 +14,6 @@
  * @param length Length of the data array.
  */
 void stable_mixture_prepare_initial_estimation(
-	StableDist* dist, const double* data, const unsigned int length);
+    StableDist* dist, const double* data, const unsigned int length, short only_priors);
 
 #endif
