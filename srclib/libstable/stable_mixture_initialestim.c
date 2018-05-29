@@ -536,8 +536,11 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	double last_birth_prob = 0.01;
 	double extra_comp_factor = 0.1 * (1 + 1.5 * wide_components);
 	double extra_comp_perc = ((double)extra_components) / dist->max_mixture_components;
+	size_t birth_prob_start = dist->num_mixture_components - second_pass_partitions;
 
-	for (i = dist->num_mixture_components - second_pass_partitions; i <= dist->max_mixture_components; i++) {
+	birth_prob_start = 1;
+
+	for (i = birth_prob_start; i <= dist->max_mixture_components; i++) {
 		if (i >= dist->num_mixture_components + extra_components) {
 			dist->birth_probs[i] = last_birth_prob / 2; // Marginal probability of increasing components
 			last_birth_prob = dist->birth_probs[i];
@@ -560,7 +563,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		dist->birth_probs[i] = 0.05;
 		dist->death_probs[i] = 0.05;
 
-		if (i == dist->num_mixture_components - second_pass_partitions)
+		if (i == birth_prob_start)
 			dist->death_probs[i] = 0;
 		else if (i == dist->max_mixture_components)
 			dist->birth_probs[i] = 0;
