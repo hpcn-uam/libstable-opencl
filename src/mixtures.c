@@ -19,6 +19,7 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
 #include "stable_api.h"
 #include "benchmarking.h"
 #include "opencl_integ.h"
@@ -76,6 +77,8 @@ int main(int argc, char **argv)
 	int retval = EXIT_SUCCESS;
 
 	StableDist* dist;
+
+	clock_gettime(CLOCK_MONOTONIC, &t_start);
 
 	if (argc == 2) {
 		infile = fopen(argv[1], "r");
@@ -222,6 +225,14 @@ int main(int argc, char **argv)
 	printf("Done\n");
 out:
 	stable_free(dist);
+
+	clock_gettime(CLOCK_MONOTONIC, &t_end);
+
+	double runtime_sec = (t_end.tv_sec - t_start.tv_sec);
+	double runtime_min = fmod(runtime_sec / 60, 60);
+	int runtime_hours = runtime_sec / 3600;
+
+	printf("Total time: %dh%.1lfm (%.0lf seconds)\n", runtime_hours, runtime_min, runtime_sec);
 
 	return retval;
 }
