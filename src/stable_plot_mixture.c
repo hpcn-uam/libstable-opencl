@@ -9,10 +9,10 @@ int main(int argc, char **argv)
 {
 	size_t args_per_component = 5;
 	StableDist* dist;
-	size_t i;
+	size_t i, j;
 	double xmin, xmax;
 	double resolution = 0.001;
-	double *x, *pdf, step;
+	double *x, *pdf, step, **pdf_comp;
 	size_t extra_args = 2;
 	size_t num_samples;
 
@@ -28,7 +28,9 @@ int main(int argc, char **argv)
 
 	num_samples = 1000;
 	pdf = calloc(num_samples, sizeof(double));
+	pdf_comp = calloc(dist->num_mixture_components, sizeof(double));
 
+	vector_npoints(&x, xmin, xmax, num_samples, &step);
 
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		stable_setparams(dist->mixture_components[i],
@@ -38,15 +40,24 @@ int main(int argc, char **argv)
 						 strtod(argv[3 + extra_args + i * args_per_component], NULL),
 						 0);
 		dist->mixture_weights[i] = strtod(argv[5 + extra_args + i * args_per_component], NULL);
+
+		pdf_comp[i] = calloc(num_samples, sizeof(double));
+		stable_pdf(dist->mixture_components[i], x, num_samples, pdf_comp[i], NULL);
 	}
 
 	fprintf(stderr, "%zu components\n", dist->num_mixture_components);
 
-	vector_npoints(&x, xmin, xmax, num_samples, &step);
 	stable_pdf(dist, x, num_samples, pdf, NULL);
 
-	for (i = 0; i < num_samples; i++)
-		printf("%lf 0 %lf\n", x[i], pdf[i]);
+	for (i = 0; i < num_samples; i++) {
+		printf("%lf 0 %lf", x[i], pdf[i]);
+
+		for (j = 0; j < dist->num_mixture_components; j++)
+			printf(" %lf", pdf_comp[j][i] * dist->mixture_weights[j]);
+
+		printf("\n");
+	}
+
 
 	stable_free(dist);
 	return 0;
