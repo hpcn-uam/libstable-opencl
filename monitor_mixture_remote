@@ -18,8 +18,13 @@ if [ "$remote" != "localhost" ]; then
 	rsync -v --exclude=mixtures_dat.dat "${remote}:libstable/mixture*" . > /dev/null
 fi
 
-minx=$(head -n 1 mixtures_rnd.dat)
-maxx=$(tail -n 10 mixtures_rnd.dat | head -n 1)
+nlines=$(wc -l < mixtures_rnd.dat | sed -E 's/[[:space:]]+//g')
+margin=$((5 * nlines / 200))
+
+echo "$nlines samples, margin is $margin"
+
+minx=$(head -n $margin mixtures_rnd.dat | tail -n 1)
+maxx=$(tail -n $margin mixtures_rnd.dat | head -n 1)
 
 echo "Data range is $minx $maxx"
 
