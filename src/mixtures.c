@@ -70,6 +70,7 @@ int main(int argc, char **argv)
 	double *x;
 	double mn, mx;
 	short has_real_pdf = 0;
+	struct timespec t_start, t_end;
 
 	FILE* infile = NULL;
 	FILE* outfile;
@@ -229,10 +230,11 @@ out:
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
 
 	double runtime_sec = (t_end.tv_sec - t_start.tv_sec);
-	double runtime_min = fmod(runtime_sec / 60, 60);
+	int runtime_onlysec = fmod(runtime_sec, 60);
+	int runtime_min = fmod(runtime_sec / 60, 60);
 	int runtime_hours = runtime_sec / 3600;
 
-	printf("Total time: %dh%.1lfm (%.0lf seconds)\n", runtime_hours, runtime_min, runtime_sec);
+	printf("Total time: %dh%dm%ds (%.0lf seconds total)\n", runtime_hours, runtime_min, runtime_onlysec, runtime_sec);
 
 	return retval;
 }
