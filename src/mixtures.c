@@ -27,6 +27,8 @@
 
 #define MAX_POINTS 50000
 
+#define SYN_CASE_2
+
 int main(int argc, char **argv)
 {
 	size_t num_points = 1000;
@@ -38,29 +40,38 @@ int main(int argc, char **argv)
 
 	assert(MAX_POINTS >= num_points);
 
-
-	/*
+#ifdef SYN_CASE_1
 	double alphas[] = { 1.2, 0.8, 1.8 };
 	double betas[] = { -0.5, 0.8, 0 };
 	double mus[] = { -2, 0, 2 };
 	double sigmas[] = { 0.25, 0.8, 0.2 };
 	double weights[] = { 0.4, 0.5, 0.1 };
-	*/
-
-	/*
-	double alphas[] = { 0.35, 0.6 };
-	double betas[] = { 0.8, 0 };
-	double mus[] = { 1.5, 1.65 };
-	double sigmas[] = { 0.05, 0.05 };
-	double weights[] = { 0.7, 0.3 };
-	*/
+#endif
 
 
+#ifdef SYN_CASE_2
 	double alphas[] = { 1.2, 0.8, 2, 0.6 };
 	double betas[] = { -0.5, 0.5, 0, 0 };
 	double mus[] = { -2, 0, 2, 2.5 };
 	double sigmas[] = { 0.5, 0.8, 0.15, 0.15 };
 	double weights[] = { 0.2, 0.3, 0.3, 0.2 };
+#endif
+
+#ifdef SYN_CASE_3
+	double alphas[] = { 0.6, 2 };
+	double betas[] = { 0, 0 };
+	double mus[] = {0, 0};
+	double sigmas[] = {0.2, 2};
+	double weights[] = {0.35, 0.65};
+#endif
+
+#ifdef SYN_CASE_4
+	double alphas[] = { 1.6, 2, 1.2 };
+	double betas[] = { -0.5, 0, 0.2 };
+	double mus[] = { -5, 4, 15};
+	double sigmas[] = {3.25, 3.5, 6};
+	double weights[] = {0.25, 0.25, 0.5};
+#endif
 
 	size_t num_components = sizeof weights / sizeof(double);
 
