@@ -562,8 +562,17 @@ static int _check_birth_move(StableDist * dist, const double * data, const unsig
 
 	double new_weight = gsl_ran_beta(dist->gslrand, 1, prev_comp_num);
 
-	new_params[STABLE_PARAM_ALPHA] = gsl_rng_uniform(dist->gslrand) * 1.8 + 0.2;
-	new_params[STABLE_PARAM_BETA] = gsl_rng_uniform(dist->gslrand) * 2 - 1;
+	if (settings->force_gaussian) {
+		new_params[STABLE_PARAM_ALPHA] = 2.0;
+		new_params[STABLE_PARAM_BETA] = 0.0;
+	} else if (settings->force_cauchy) {
+		new_params[STABLE_PARAM_ALPHA] = 1.0;
+		new_params[STABLE_PARAM_BETA] = 0.0;
+	} else {
+		new_params[STABLE_PARAM_ALPHA] = gsl_rng_uniform(dist->gslrand) * 1.8 + 0.2;
+		new_params[STABLE_PARAM_BETA] = gsl_rng_uniform(dist->gslrand) * 2 - 1;
+	}
+
 	new_params[STABLE_PARAM_SIGMA] = min(10000, gsl_ran_gamma(dist->gslrand, dist->prior_sigma_alpha0, dist->prior_sigma_beta0));
 
 	if (rand_event(dist->gslrand, settings->prob_birth_extra_peak)) {
@@ -741,7 +750,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 		return -1;
 	}
 
-	if (settings->force_gaussian) {
+	if (settings->force_gaussian || settings->force_cauchy) {
 		settings->is_parameter_locked[STABLE_PARAM_ALPHA] = 1;
 		settings->is_parameter_locked[STABLE_PARAM_BETA] = 1;
 	}
@@ -753,18 +762,13 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 
 	gsl_set_error_handler_off();
 
-	stable_mixture_prepare_initial_estimation(dist, data, length, settings->skip_initial_estimation);
+	stable_mixture_prepare_initial_estimation(dist, data, length, settings);
 
 	stable_rnd_seed(dist, time(NULL));
 
 	for (i = 0; i < dist->num_mixture_components; i++) {
 		dist->mixture_components[i]->mixture_montecarlo_variance = 0.05;
 		stable_getparams_array(dist->mixture_components[i], dist_params);
-
-		if (settings->force_gaussian) {
-			dist->mixture_components[i]->alfa = 2;
-			dist->mixture_components[i]->beta = 0;
-		}
 
 		for (param_idx = 0; param_idx < MAX_STABLE_PARAMS; param_idx++) {
 			if (settings->prior_functions[param_idx])

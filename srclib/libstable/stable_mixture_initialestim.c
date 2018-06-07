@@ -93,7 +93,7 @@ static double _do_sigma_estim(double alpha, double beta, double sep_95)
  * @param epdf_x      X values where the previous EPDF was sampled.
  * @param epdf_points Number of points of the EPDF.
  */
-static void _component_initial_estimation(StableDist* comp, double start_x, double end_x, double* epdf, double* epdf_x, size_t epdf_points)
+static void _component_initial_estimation(StableDist* comp, double start_x, double end_x, double* epdf, double* epdf_x, size_t epdf_points, struct stable_mcmc_settings* settings)
 {
 	double epdf_step = (end_x - start_x) / epdf_points;
 	size_t max_pos;
@@ -131,9 +131,20 @@ static void _component_initial_estimation(StableDist* comp, double start_x, doub
 #ifdef VERBOSE_INITIALESTIM
 	printf("Estimation parameters: %lf %lf\n", sep_logratio, asym_log);
 #endif
-	double alpha = _do_alpha_estim(sep_logratio, asym_log);
-	double beta = _do_beta_estim(alpha, asym_log);
-	double sigma = _do_sigma_estim(alpha, beta, sep_95);
+	double alpha, beta, sigma;
+
+	if (settings->force_gaussian) {
+		alpha = 2;
+		beta = 0;
+	} else if (settings->force_cauchy) {
+		alpha = 1;
+		beta = 0;
+	} else {
+		alpha = _do_alpha_estim(sep_logratio, asym_log);
+		beta = _do_beta_estim(alpha, asym_log);
+	}
+
+	sigma = _do_sigma_estim(alpha, beta, sep_95);
 
 	stable_setparams(comp, alpha, beta, sigma, epdf_x[max_pos], 0);
 }
@@ -269,7 +280,7 @@ static double get_dataset_typical_step(const double* vals, size_t n)
 	return gsl_stats_median_from_sorted_data(sep, 1, num_distinct);
 }
 
-void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* data, const unsigned int length, short only_priors)
+void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* data, const unsigned int length, struct stable_mcmc_settings* settings)
 {
 	size_t epdf_points = 10000;
 	double samples[length];
@@ -295,6 +306,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	StableDist* comp;
 	size_t data_offset = 0;
 	double min_diff_ratio;
+	short only_priors = settings->skip_initial_estimation;
 
 	if (only_priors)
 		comp = stable_create(1, 0, 1, 0, 0);
@@ -485,7 +497,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		double* epdf_for_estimation = mixture_partition[i].found_in_finer_epdf ? epdf_finer : epdf;
 
 		printf("Initial C%zu: [%zu:%zu] (%lf:%lf)\n", i, comp_begin, comp_end, epdf_x[comp_begin], epdf_x[comp_end]);
-		_component_initial_estimation(comp, epdf_x[comp_begin], epdf_x[comp_end], epdf_for_estimation + comp_begin, epdf_x + comp_begin, comp_end - comp_begin);
+		_component_initial_estimation(comp, epdf_x[comp_begin], epdf_x[comp_end], epdf_for_estimation + comp_begin, epdf_x + comp_begin, comp_end - comp_begin, settings);
 
 		mu_values[i] = comp->mu_0;
 		sigma_values[i] = comp->sigma;
