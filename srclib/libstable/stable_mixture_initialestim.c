@@ -182,6 +182,7 @@ size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_
 		} else if (i > 1 && i < epdf_points - 1) {
 			if (searching_max && epdf[i - 1] > 0.0001 && _is_local_max(epdf, i - 1)) {
 				double minmax_ratio = epdf[mins[min_idx - 1]] / epdf[i - 1];
+				double dst_to_min = epdf_x[i - 1] - epdf_x[mins[min_idx - 1]];
 
 				if (minmax_ratio < minmax_coef_threshold) {
 					// If this is a big enough maximum, mark it and start searching
@@ -195,6 +196,18 @@ size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_
 #ifdef VERBOSE_INITIALESTIM
 					printf("Found max %zu at %lf = %lf (ratio %lf)\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio);
 #endif
+				} else if (dst_to_min / epdf_range < 0.05 && fabs(minmax_ratio - 1.0) < 0.01) {
+					// This maximum is not big enough, but is very close to the previous minimum and with similar value
+					// It might indicate that we should still search for a minimum.
+
+#ifdef VERBOSE_INITIALESTIM
+					printf("Low max %zu at %lf = %lf (ratio %lf), discard previous min at %lf\n", max_idx, epdf_x[i - 1], epdf[i - 1], minmax_ratio, epdf_x[mins[min_idx - 1]]);
+#endif
+
+					searching_min = 1;
+					searching_max = 0;
+
+					min_idx--;
 				}
 			} else if (searching_min && _is_local_min(epdf, i - 1)) {
 				double minmax_ratio = epdf[i - 1] / epdf[maxs[max_idx - 1]];
