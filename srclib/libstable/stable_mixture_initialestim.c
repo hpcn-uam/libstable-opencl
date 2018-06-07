@@ -605,7 +605,7 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 	double sigma_variance = nan_safeguard(gsl_stats_variance(sigma_values, 1, dist->num_mixture_components), sigma_mean * 0.5);
 	dist->prior_mu_avg = gsl_stats_mean(mu_values, 1, dist->num_mixture_components);
 	dist->prior_mu_variance = nan_safeguard(gsl_stats_variance(mu_values, 1, dist->num_mixture_components), sigma_mean);
-	dist->prior_weights = 500; // TODO: This does not look like it has any science on it.
+	dist->prior_weights = settings->weight_prior; 
 	dist->prior_sigma_alpha0 = pow(sigma_mean, 2) / sigma_variance + 2;
 	dist->prior_sigma_beta0 = sigma_mean * (dist->prior_sigma_alpha0 - 1);
 
