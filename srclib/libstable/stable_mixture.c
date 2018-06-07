@@ -670,6 +670,7 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->location_lock_iterations = 300;
 	settings->_allocated = 0;
 	settings->force_gaussian = 0;
+	settings->force_cauchy = 0;
 	settings->fix_components_during_last_n_iterations = 500;
 	settings->fix_components_during_first_n_iterations = 800;
 	settings->prob_birth_extra_peak = 0.5;
