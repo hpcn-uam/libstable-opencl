@@ -573,8 +573,8 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 		else
 			dist->death_probs[i] = max(0.01, 0.5 - extra_comp_factor) * (1 - dist->birth_probs[i - 1]);
 
-		dist->birth_probs[i] = 0.05;
-		dist->death_probs[i] = 0.05;
+		dist->birth_probs[i] = settings->default_bd_prob;
+		dist->death_probs[i] = settings->default_bd_prob;
 
 		if (i == birth_prob_start)
 			dist->death_probs[i] = 0;
