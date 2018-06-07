@@ -675,6 +675,7 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->prob_birth_extra_peak = 0.5;
 	settings->generator_variance_ab = RNG_STD;
 	settings->generator_variance_ms = RNG_STD;
+	settings->force_full_epdf_range = 0;
 
 	memset(settings->prior_functions, 0, sizeof(settings->prior_functions));
 	memset(settings->is_parameter_locked, 0, sizeof(settings->is_parameter_locked));

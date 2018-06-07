@@ -614,6 +614,7 @@ struct stable_mcmc_settings {
 	double prob_birth_extra_peak;
 	double generator_variance_ms;
 	double generator_variance_ab;
+	short force_full_epdf_range;
 };
 
 /* Estimation functions */

@@ -166,6 +166,7 @@ size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_
 	size_t min_idx = 0, max_idx = 0;
 	short searching_min = 0, searching_max = 1; // Assume we're starting at a minimum.
 	double minmax_coef_threshold = 0.9;
+	double epdf_range = epdf_x[epdf_points - 1] - epdf_x[0];
 
 	if (max_value != NULL)
 		*max_value = -DBL_MAX;
@@ -328,10 +329,10 @@ void stable_mixture_prepare_initial_estimation(StableDist* dist, const double* d
 
 	// Avoid cutting too many data if we have a clear cut in the support of the
 	// distribution (e.g., α-stables with high β values).
-	if (epdf_start - samples[0] < 0.05 * epdf_range)
+	if (epdf_start - samples[0] < 0.05 * epdf_range || settings->force_full_epdf_range)
 		epdf_start = samples[0];
 
-	if (samples[length - 1] - epdf_end < 0.05 * epdf_range)
+	if (samples[length - 1] - epdf_end < 0.05 * epdf_range || settings->force_full_epdf_range)
 		epdf_end = samples[length - 1];
 
 	epdf_points = GSL_MIN(epdf_points, (epdf_end - epdf_start) / (average_dataset_step));
