@@ -19,7 +19,12 @@ if [ "$remote" != "localhost" ]; then
 fi
 
 nlines=$(wc -l < mixtures_rnd.dat | sed -E 's/[[:space:]]+//g')
-margin=$((5 * nlines / 200))
+
+if [ -z "$2" ]; then
+	margin=$((5 * nlines / 200))
+else
+	margin="$2"
+fi
 
 echo "$nlines samples, margin is $margin"
 
