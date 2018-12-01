@@ -201,15 +201,20 @@ int main(int argc, char **argv)
 	printf("done\n");
 
 	printf("Starting mixture estimation.\n");
-	dist->max_mixture_components = 9;
+	dist->max_mixture_components = 5;
 	stable_fit_mixture_default_settings(&settings);
-	settings.max_iterations = 1000;
-	settings.fix_components_during_last_n_iterations = 1000;
-	settings.fix_components_during_first_n_iterations = 300;
-	settings.skip_initial_estimation = 1;
+	settings.max_iterations = 25000;
+	settings.fix_components_during_last_n_iterations = 5000;
+	settings.fix_components_during_first_n_iterations = 0;
+	settings.skip_initial_estimation = 0;
 	settings.location_lock_iterations = 0;
-	settings.fix_components = 1;
+	settings.fix_components = 0;
 	settings.force_gaussian = 0;
+	settings.force_cauchy = 1;
+	settings.force_full_epdf_range = 1;
+	settings.generator_variance_ms = 0.5;
+	settings.default_bd_prob = 0.05;
+	settings.weight_prior = 1000;
 
 	struct gaussian_params mu_params = { .mean = 5, .variance = 0.5};
 	//settings.prior_functions[STABLE_PARAM_MU] = (prior_probability) _mixture_gaussian_prior;

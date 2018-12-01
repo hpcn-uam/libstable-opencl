@@ -580,6 +580,7 @@ static int _check_birth_move(StableDist * dist, const double * data, const unsig
 		printf("Selected from extra peaks\n");
 	} else
 		new_params[STABLE_PARAM_MU] = gsl_ran_gaussian(dist->gslrand, sqrt(dist->prior_mu_variance)) + dist->prior_mu_avg;
+
 	stable_setparams_array(dist->mixture_components[prev_comp_num], new_params);
 	dist->mixture_weights[prev_comp_num] = new_weight;
 	printf("new weight %lf\n", new_weight);
@@ -920,7 +921,7 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 		}
 
 		if (!settings->fix_components) {
-			if (i >= settings->fix_components_during_first_n_iterations && (settings->max_iterations - i) > settings->fix_components_during_last_n_iterations) {
+			if (i >= settings->fix_components_during_first_n_iterations && (settings->max_iterations + settings->burnin_period - i) > settings->fix_components_during_last_n_iterations) {
 				if (rand_event(dist->gslrand, dist->birth_probs[dist->num_mixture_components])) {
 					printf("\nIteration %zu: Try split\n", i);
 					num_considered_moves++;

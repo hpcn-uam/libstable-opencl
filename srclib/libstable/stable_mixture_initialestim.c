@@ -180,7 +180,7 @@ size_t _find_local_minmax(double* epdf, size_t* maxs, size_t* mins, size_t epdf_
 			searching_max = 1;
 			searching_min = 0;
 		} else if (i > 1 && i < epdf_points - 1) {
-			if (searching_max && epdf[i - 1] > 0.0001 && _is_local_max(epdf, i - 1)) {
+			if (searching_max && epdf[i - 1] > 0.00005 && _is_local_max(epdf, i - 1)) {
 				double minmax_ratio = epdf[mins[min_idx - 1]] / epdf[i - 1];
 				double dst_to_min = epdf_x[i - 1] - epdf_x[mins[min_idx - 1]];
 
