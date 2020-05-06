@@ -678,6 +678,8 @@ void stable_fit_mixture_default_settings(struct stable_mcmc_settings* settings)
 	settings->generator_variance_ab = RNG_STD;
 	settings->generator_variance_ms = RNG_STD;
 	settings->force_full_epdf_range = 0;
+	settings->default_bd_prob = 0.05;
+	settings->weight_prior = 1000;
 
 	memset(settings->prior_functions, 0, sizeof(settings->prior_functions));
 	memset(settings->is_parameter_locked, 0, sizeof(settings->is_parameter_locked));
@@ -844,7 +846,6 @@ int stable_fit_mixture_settings(StableDist *dist, const double* data, const unsi
 						param_probability = 1;
 
 					jump_probability *= (param_probability) / (previous_param_probs[comp_idx][param_idx]);
-					// jump_probability = exp(jump_probability);
 
 					// Only try to do the jump if we have previous likelihoods
 					short accepted = 0;

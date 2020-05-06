@@ -1,5 +1,16 @@
-/*
- * Copyright (C) 2015 - Naudit High Performance Computing and Networking
+/**
+ * @author Guillermo Julián Moreno
+ * @brief  This code creates a binary for mixture estimation.
+ *
+ * Usage of the binary: bin/release/mixtures [filename]
+ *
+ * where filename is an optional file with one value per line. The program will create
+ * an estimation for the distribution of those values.
+ *
+ * If no filename is provided, the program will generate points from a known
+ * alpha-stable mixture and try to estimate them.
+ *
+ * Copyright (C) 2018 - Naudit High Performance Computing and Networking
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,6 +51,7 @@ int main(int argc, char **argv)
 
 	assert(MAX_POINTS >= num_points);
 
+	/** Parameter definitions for synthetic cases, for tests */
 #ifdef SYN_CASE_1
 	double alphas[] = { 1.2, 0.8, 1.8 };
 	double betas[] = { -0.5, 0.8, 0 };
@@ -73,6 +85,7 @@ int main(int argc, char **argv)
 	double weights[] = {0.25, 0.25, 0.5};
 #endif
 
+	// Only used to get number of components when generating synthetic sets
 	size_t num_components = sizeof weights / sizeof(double);
 
 	double rnd[MAX_POINTS];
@@ -101,8 +114,10 @@ int main(int argc, char **argv)
 		}
 	}
 
+	// Avoid weird aborts
 	gsl_set_error_handler_off();
 
+	// Create the distribution object.
 	dist = stable_create(alphas[0], betas[0], sigmas[0], mus[0], 0);
 
 	if (!dist) {
@@ -110,6 +125,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	// Ingest data
 	if (infile == NULL) {
 		printf("Generating random numbers (%zu components)...\n", num_components);
 		stable_set_mixture_components(dist, num_components);
@@ -132,10 +148,12 @@ int main(int argc, char **argv)
 		has_real_pdf = 1;
 	}
 
+	// Records need to be sorted for plotting
 	printf("Sorting records... ");
 	gsl_sort(rnd, 1, num_points);
 	printf("done\n");
 
+	// Generate the EPDF for plotting of auxiliar files
 	mn = rnd[0];
 	mx = rnd[num_points - 1];
 
@@ -159,6 +177,7 @@ int main(int argc, char **argv)
 	if (epdf_points < min_points)
 		epdf_points = min_points;
 
+	// Allocate memory for epdf plots
 	x = calloc(epdf_points, sizeof(double));
 	pdf = calloc(epdf_points, sizeof(double));
 	cdf = calloc(epdf_points, sizeof(double));
@@ -201,6 +220,9 @@ int main(int argc, char **argv)
 	printf("done\n");
 
 	printf("Starting mixture estimation.\n");
+
+	// Adjust settings for the estimation. Read the structure stable_mcmc_settings documentation in stable_api.h
+	// for details on what these mean.
 	dist->max_mixture_components = 5;
 	stable_fit_mixture_default_settings(&settings);
 	settings.max_iterations = 25000;

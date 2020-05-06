@@ -576,47 +576,59 @@ struct stable_mcmc_settings;
 
 typedef double (*prior_probability)(const StableDist*, double, const struct stable_mcmc_settings*, void*);
 
+/**
+ * Structure with settings and information about the RJMCMC estimation process.
+ */
 struct stable_mcmc_settings {
-	short _allocated;
-	size_t max_iterations;
-	size_t burnin_period;
-	size_t location_lock_iterations;
-	size_t fix_components_during_last_n_iterations;
-	size_t thinning;
-	size_t num_samples;
-	short fix_components;
-	short estimate_weight;
-	short skip_initial_estimation;
-	short decrement_generation_variance;
-	short handle_signal;
-	size_t num_alternative_parameters;
-	char debug_data_fname[100];
-	double*** param_values;
-	double** weights;
-	double acceptance_ratio;
-	double** final_param_avg;
-	double** final_param_std;
-	double* final_weight_avg;
-	double* final_weight_std;
-	double*** correlations;
-	double ks_test;
-	double ks_dist;
-	double kl_dist;
-	double hellinger_dist;
-	size_t num_iterations;
-	size_t num_final_components;
-	prior_probability prior_functions[MAX_STABLE_PARAMS];
-	void* prior_parameters[MAX_STABLE_PARAMS];
-	short is_parameter_locked[MAX_STABLE_PARAMS];
-	short force_gaussian;
-	short force_cauchy;
-	short fix_components_during_first_n_iterations;
-	double prob_birth_extra_peak;
-	double generator_variance_ms;
-	double generator_variance_ab;
-	short force_full_epdf_range;
-	double default_bd_prob;
-	double weight_prior;
+	short _allocated; /**< Internal setting that marks whether the value arrays have been allocated or not */
+
+	/** User settings. Change this to tweak the behaviour of the estimator. */
+
+	size_t max_iterations; /**< Maximum number of iterations of the estimator */
+	size_t burnin_period; /**< Number of initial RJMCMC estimations to throw away for the burn-in period */
+	size_t location_lock_iterations; /**< Number of iterations that the estimator waits to allow changes of location. This allows refinement of the initial estimation */
+	size_t fix_components_during_last_n_iterations; /**< Do not change the number of components during the last N iterations. This setting avoids issues with new components messing the estimations, and allows refinement of the final values */
+	short fix_components_during_first_n_iterations; /**< Do not change the number of components during the first N iterations, for refinement of initial estimation. */
+	size_t thinning; /**< Thinning to use to provide posterior distributions (i.e., take one out of every 'thinning' samples for the posterior distributions) */
+
+	/** Advanced user settings. These are useful mostly for tests or for advanced tweaking. */
+
+	short fix_components; /**< If 1, do not allow RJMCMC moves that change the number of components */
+	short estimate_weight; /**< If 0, do not allow RJMCMC moves that change the weights */
+	short skip_initial_estimation; /**< If 1, do not perform the initial estimation */
+	short decrement_generation_variance; /**< If 1, decrement gradually the RNG variance (i.e., reduce the magnitude of the RJMCMC jumps) along the estimation process */
+	short handle_signal; /**< If 1, handle SIGINT/SIGTERM signals internally */
+	size_t num_alternative_parameters; /**< Number of alternatives to test for each parameter, in each iteration. Better leave this to '1'. */
+	prior_probability prior_functions[MAX_STABLE_PARAMS]; /**< Optional additional prior probability functions for parameters */
+	void* prior_parameters[MAX_STABLE_PARAMS]; /**< Extra arguments for the prior probability functions */
+	short is_parameter_locked[MAX_STABLE_PARAMS]; /**< Set a parameter to 1 in this array to lock estimations of its values */
+	short force_gaussian; /**< Force alpha-stable parameters to be Gaussian (alpha = 2, beta = 0). */
+	short force_cauchy; /**< Force alpha-stable parameters to be Cauchy (alpha = 1, beta = 0). */
+	double prob_birth_extra_peak; /**< Probability of birth moves happening at locations of possible peaks */
+	double generator_variance_ms; /**< RNG variance for mu and sigma parameters */
+	double generator_variance_ab; /**< RNG variance for alpha and beta parameters */
+	short force_full_epdf_range; /**< By default, extreme values of the EPDF are excluded to improve initial estimation. In cases where there are no extreme values, forcing the full range of the EPDF might help */
+	double default_bd_prob; /**< Default probability of a birth/death move */
+	double weight_prior; /**< Prior value for the weights. Better not change this one very much */
+
+	/** Output values. Use this to evaluate the results of the RJMCMC estimation procedure */
+
+	size_t num_samples; /**< Number of samples extracted for the posterior distributions */
+	char debug_data_fname[100]; /**< Path to the file with debug data for the estimation process */
+	double*** param_values; /**< Multiple arrays: params_value[component_index][parameter_index]  is an array with posterior samples of the parameter defined by parameter_index (STABLE_PARAM_{ALPHA,BETA,MU,SIGMA}) for the given component */
+	double** weights; /**< weights[component_index] contains the posterior distribution samples for the weights of the given component. */
+	double acceptance_ratio; /**< Cumulative acceptance ratios of the moves. */
+	double** final_param_avg; /**< final_param_avg[component_index][parameter_index] contains the final average value of the given component and parameter. */
+	double** final_param_std; /**< final_param_std[component_index][parameter_index] contains the final standard deviation of the value of the given component and parameter. */
+	double* final_weight_avg; /**< final_weight_avg[component_index] contains the final average weight of the given component. */
+	double* final_weight_std; /**< final_weight_std[component_index] contains the final standard deviation of the weight of the given component. */
+	double*** correlations; /**< correlations[component_index][parameter1_index][parameter2_index] contains the correlation between two parameters of a given component. */
+	double ks_test; /**< Kolmogorov-Smirnov goodness-of-fit test between estimated distribution and data */
+	double ks_dist; /**< Kolmogorov-Smirnov distance between estimated distribution and data */
+	double kl_dist; /**< Kullback-Leibler divergence measure between estimated distribution and data */
+	double hellinger_dist;  /**< Hellinger distance between estimated distribution and data */
+	size_t num_iterations; /**< Number of iterations performed */
+	size_t num_final_components; /**< Number of components estimated */
 };
 
 /* Estimation functions */
